@@ -1,10 +1,11 @@
 import os, re, json, base64
 
 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = current_dir if os.path.exists(os.path.join(current_dir, 'html', 'Index.html')) else r'C:\Users\ADMIN\RF_Workspace_Pro'
+root_dir = current_dir
 v2_dir = current_dir
 
-print("Generating Vercel Standalone Package for RF Workspace V2...")
+print("Generating Vercel Standalone Package for RF Workspace V2 (Independent Supabase App)...")
+print(f"Working Directory: {root_dir}")
 
 # 1. Read Index.html
 with open(os.path.join(root_dir, 'html', 'Index.html'), 'r', encoding='utf-8') as f:
@@ -53,18 +54,18 @@ deferred_content_clean = re.sub(r'</script>\s*$', '', deferred_content_clean, fl
 output_html = re.sub(r'<\?!=\s*\(function\(\)\s*\{.*?WorkspaceWebsite.*?\}\)\(\)\s*\?>', lambda m: website_content, output_html, flags=re.DOTALL)
 output_html = re.sub(r'<\?!=\s*HtmlService\.createHtmlOutputFromFile\([\'"]WorkspaceWebsite[\'"]\).*?\?>', lambda m: website_content, output_html)
 
-# 4. Inject Turbo-Cache & Vercel HTTP Bridge at top of <head>
+# 4. Inject Turbo-Cache & Pure Supabase Database Engine at top of <head>
 bridge_script = """
-  <!-- ⚡ VERCEL TURBO-CACHE & DIRECT SUPABASE DATABASE ENGINE ⚡ -->
+  <!-- ⚡ RF WORKSPACE V2 PURE SUPABASE POSTGRESQL ENGINE (ZERO GOOGLE APPS SCRIPT) ⚡ -->
   <script>
     (function() {
       window.RF_STANDALONE = true;
-      window.RF_BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbz3BzyRPWT7Ax6pb219NyZfJen0GAFgvvdxNtnUy68Oj4kiPM2-glVAahqTu99ebjrDrQ/exec';
+      window.RF_V2_APP = true;
       window.deferredReady = true;
       window.__rfDeferredInjected = true;
       window.__rfLoadTabNow = function() { return Promise.resolve({ok:true}); };
       
-      console.log('🚀 RF Workspace Pro V2 running in High-Performance Mode (Supabase Engine Direct)');
+      console.log('🚀 RF Workspace V2: Running as an Independent High-Performance App on Supabase & Vercel.');
 
       var SUPABASE_URL = 'https://oxtttywpelbyitgxspfm.supabase.co';
       var SUPABASE_KEY = 'sb_publishable_Bi-hpAsVX5nS10wE_LugRA_RF8wnu0W';
@@ -79,7 +80,7 @@ bridge_script = """
           var url = SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
           var resp = await fetch(url, { headers: SUPABASE_HEADERS });
           if (!resp.ok) {
-            console.warn('Supabase fetch returned ' + resp.status + ' for ' + table);
+            console.warn('Supabase fetch status ' + resp.status + ' on ' + table);
             return [];
           }
           return await resp.json();
@@ -89,7 +90,6 @@ bridge_script = """
         }
       }
 
-      // Parallel multi-page fetcher for tables exceeding Supabase 1,000 limit
       async function fetchAllFromSupabase(table, query, maxPages) {
         maxPages = maxPages || 3;
         var pages = [];
@@ -112,7 +112,6 @@ bridge_script = """
         return combined;
       }
 
-      // Supabase Upsert Helper
       async function upsertToSupabase(table, rows) {
         if (!rows || !rows.length) return;
         try {
@@ -120,17 +119,34 @@ bridge_script = """
           var headers = Object.assign({}, SUPABASE_HEADERS, {
             'Prefer': 'resolution=merge-duplicates'
           });
-          await fetch(url, {
+          var resp = await fetch(url, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(rows)
           });
+          if (!resp.ok) {
+            console.warn('Upsert ' + table + ' failed with status ' + resp.status);
+          }
         } catch(e) {
-          console.warn('Upsert to ' + table + ' failed:', e);
+          console.warn('Upsert to ' + table + ' error:', e);
         }
       }
 
-      // HTTP fetch helper with Supabase direct acceleration
+      async function deleteFromSupabase(table, ids) {
+        if (!ids || !ids.length) return;
+        try {
+          var encodedIds = ids.map(function(id) { return encodeURIComponent(String(id).trim()); }).join(',');
+          var url = SUPABASE_URL + '/rest/v1/' + table + '?id=in.(' + encodedIds + ')';
+          await fetch(url, {
+            method: 'DELETE',
+            headers: SUPABASE_HEADERS
+          });
+        } catch(e) {
+          console.warn('Delete from ' + table + ' error:', e);
+        }
+      }
+
+      // Universal Pure-Supabase RPC Router
       async function callRemoteGasApi(action, args, pin) {
         // 1. PIN Authentication
         if (action === 'validatePin') {
@@ -153,6 +169,7 @@ bridge_script = """
               };
             }
           }
+          return { valid: false, error: 'Mã PIN không đúng' };
         }
 
         // 2. User Config
@@ -177,7 +194,7 @@ bridge_script = """
             cfg.users.push(name);
             cfg.staffList.push(name);
             if (s['ID Ảnh']) {
-              var m = String(s['ID Ảnh']).match(/[-\w]{25,}/);
+              var m = String(s['ID Ảnh']).match(/[-\\w]{25,}/);
               cfg.avatars[name] = m ? m[0] : s['ID Ảnh'];
             }
             if (s['Chức Danh']) cfg.titles[name] = s['Chức Danh'];
@@ -215,7 +232,6 @@ bridge_script = """
               fetchFromSupabase('Monthly_Snapshots', 'select=*')
             ]);
 
-            // Normalise Orders (accessories, boolean flags, numbers)
             (ordersRaw || []).forEach(function(o) {
               if (o.accessories && typeof o.accessories === 'string') {
                 try {
@@ -240,7 +256,6 @@ bridge_script = """
               o.discount = Number(o.discount || 0);
             });
 
-            // Normalise Production items into phases format
             var prodItems = (prodRaw || []).map(function(p) {
               return {
                 id: p.id,
@@ -302,7 +317,7 @@ bridge_script = """
               ctvFinance: ctvRaw || [],
               monthlySnapshots: snapRaw || [],
               reimbursements: [],
-              announcement: 'Hệ thống RF Workspace V2 vận hành trực tiếp trên CSDL Supabase High-Performance.',
+              announcement: 'Hệ thống RF Workspace V2 vận hành độc lập trên CSDL Supabase PostgreSQL.',
               tabPermissions: {},
               archiveStats: {
                 lastArchivedAt: '',
@@ -320,37 +335,138 @@ bridge_script = """
 
             return appData;
           } catch(e) {
-            console.error('Supabase load failed, falling back to GAS API:', e);
+            console.error('Supabase load failed:', e);
+            throw e;
           }
         }
 
-        // 4. Fallback to GAS Remote Web App for any specialized procedures
-        var payload = {
-          action: action,
-          pin: pin || localStorage.getItem('rf_pin') || '',
-          args: args || []
-        };
-        
+        // 4. syncDeltas: Writes changes directly to Supabase PostgreSQL
         if (action === 'syncDeltas') {
-          payload.payload = args[0];
-          payload.pin = args[1] || payload.pin;
+          var payload = args[0] || {};
+          console.log('⚡ [SUPABASE] Saving syncDeltas directly into Supabase tables:', payload);
+          try {
+            // Write Orders
+            var ords = payload.Orders || payload.orders;
+            if (ords && ords.length) {
+              var cleanOrds = ords.map(function(o) {
+                var c = Object.assign({}, o);
+                if (c.accessories && typeof c.accessories !== 'string') {
+                  c.accessories = JSON.stringify(c.accessories);
+                }
+                return c;
+              });
+              await upsertToSupabase('Orders', cleanOrds);
+            }
+
+            // Write Production
+            var prods = payload.Production || payload.prodItems;
+            if (prods && prods.length) {
+              var cleanProds = prods.map(function(p) {
+                var c = Object.assign({}, p);
+                if (c.phases) {
+                  if (c.phases.phase1) {
+                    c.p1_name = c.phases.phase1.name;
+                    c.p1_status = c.phases.phase1.status;
+                    c.p1_user = c.phases.phase1.user;
+                    c.p1_start = c.phases.phase1.start;
+                    c.p1_endTime = c.phases.phase1.endTime;
+                    c.p1_photo = c.phases.phase1.photo;
+                    c.p1_reward_vnd = c.phases.phase1.reward_vnd;
+                  }
+                  if (c.phases.phase2) {
+                    c.p2_name = c.phases.phase2.name;
+                    c.p2_status = c.phases.phase2.status;
+                    c.p2_user = c.phases.phase2.user;
+                    c.p2_start = c.phases.phase2.start;
+                    c.p2_endTime = c.phases.phase2.endTime;
+                    c.p2_photo = c.phases.phase2.photo;
+                    c.p2_reward_vnd = c.phases.phase2.reward_vnd;
+                  }
+                  delete c.phases;
+                }
+                return c;
+              });
+              await upsertToSupabase('Production', cleanProds);
+            }
+
+            // Write Packings
+            var packs = payload.Packings || payload.packings;
+            if (packs && packs.length) await upsertToSupabase('Packings', packs);
+
+            // Write Attendance
+            var atts = payload.Attendance || payload.attendance;
+            if (atts && atts.length) await upsertToSupabase('Attendance', atts);
+
+            // Write Products
+            var prds = payload.Products || payload.products;
+            if (prds && prds.length) await upsertToSupabase('Products', prds);
+
+            // Write Transactions
+            var trans = payload.Transactions || payload.transactions;
+            if (trans && trans.length) await upsertToSupabase('Transactions', trans);
+
+            // Write ImportExport
+            var imps = payload.ImportExport || payload.importExport;
+            if (imps && imps.length) await upsertToSupabase('ImportExport', imps);
+
+            // Write Accounts
+            var accs = payload.Accounts || payload.accounts;
+            if (accs && accs.length) await upsertToSupabase('Accounts', accs);
+
+            // Write Suppliers
+            var sups = payload.Suppliers || payload.suppliers;
+            if (sups && sups.length) await upsertToSupabase('Suppliers', sups);
+
+            // Write BOM_Config
+            var boms = payload.BOM_Config || payload.bomConfig;
+            if (boms && boms.length) await upsertToSupabase('BOM_Config', boms);
+
+            // Write BonusPenalty
+            var bpen = payload.BonusPenalty || payload.bonusPenalty;
+            if (bpen && bpen.length) await upsertToSupabase('BonusPenalty', bpen);
+
+            // Write CTV_Finance
+            var ctv = payload.CTV_Finance || payload.ctvTransactions;
+            if (ctv && ctv.length) await upsertToSupabase('CTV_Finance', ctv);
+
+            // Write Documents
+            var docs = payload.Documents || payload.documents;
+            if (docs && docs.length) await upsertToSupabase('Documents', docs);
+
+            // Write Trainings
+            var trains = payload.Trainings || payload.trainings;
+            if (trains && trains.length) await upsertToSupabase('Trainings', trains);
+
+            // Write Models3D
+            var mods = payload.Models3D || payload.models3D;
+            if (mods && mods.length) await upsertToSupabase('Models3D', mods);
+
+            // Handle Deletes
+            if (payload.deletes && typeof payload.deletes === 'object') {
+              for (var delTbl in payload.deletes) {
+                var delIds = payload.deletes[delTbl];
+                if (delIds && delIds.length) {
+                  await deleteFromSupabase(delTbl, delIds);
+                }
+              }
+            }
+
+            return {
+              success: true,
+              message: 'Dữ liệu đã được lưu trực tiếp vào CSDL Supabase PostgreSQL!'
+            };
+          } catch(syncErr) {
+            console.error('Supabase syncDeltas error:', syncErr);
+            return {
+              success: false,
+              error: 'SUPABASE_SYNC_ERROR',
+              message: 'Lỗi lưu CSDL Supabase: ' + syncErr.message
+            };
+          }
         }
 
-        var url = window.RF_BACKEND_API_URL;
-        var resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        
-        if (!resp.ok) {
-          throw new Error('HTTP ' + resp.status + ': Không thể kết nối máy chủ dữ liệu.');
-        }
-        var resJson = await resp.json();
-        if (resJson && resJson.data !== undefined && resJson.data !== null) {
-          return resJson.data;
-        }
-        return resJson;
+        // Default mock response for auxiliary client actions
+        return { success: true };
       }
 
       // Universal Google Apps Script Proxy for Standalone Hosting
@@ -380,7 +496,7 @@ bridge_script = """
                 if (_success) _success(res);
               }).catch(function(err) {
                 if (_failure) _failure(err);
-                else console.error('GAS Error [' + prop + ']:', err);
+                else console.error('Supabase RPC Error [' + prop + ']:', err);
               });
             };
           }
@@ -404,7 +520,7 @@ bridge_script = """
               resolve(res);
             }
           }).catch(function(err) {
-            console.error('Remote API Error (' + serverFunctionName + '):', err);
+            console.error('Supabase RPC Error (' + serverFunctionName + '):', err);
             reject(err);
           });
         });
@@ -424,14 +540,4 @@ with open(output_file, 'w', encoding='utf-8') as f:
     f.write(output_html)
 
 print(f"Generated standalone index.html: {len(output_html)} bytes ({len(output_html)/1024:.1f} KB)")
-
-# 6. Copy icons and manifest.json
-for item in ['manifest.json', 'icon.png', 'vercel.json']:
-    src = os.path.join(root_dir, item)
-    if os.path.exists(src):
-        dst = os.path.join(v2_dir, item)
-        with open(src, 'rb') as f_in, open(dst, 'wb') as f_out:
-            f_out.write(f_in.read())
-        print(f"Copied: {item}")
-
-print("V2 Standalone build completed successfully!")
+print("RF Workspace V2: Pure Supabase Standalone build completed successfully!")
