@@ -49,28 +49,38 @@
       }
 
       // Universal Google Apps Script Proxy for Standalone Hosting
+      function createGasRunner() {
+        var _success = null;
+        var _failure = null;
+        var handler = {
+          get: function(target, prop) {
+            if (prop === 'withSuccessHandler') {
+              return function(fn) { _success = fn; return new Proxy({}, handler); };
+            }
+            if (prop === 'withFailureHandler') {
+              return function(fn) { _failure = fn; return new Proxy({}, handler); };
+            }
+            if (prop === 'withUserObject') {
+              return function() { return new Proxy({}, handler); };
+            }
+            return function() {
+              var callArgs = Array.prototype.slice.call(arguments);
+              callRemoteGasApi(prop, callArgs).then(function(res) {
+                if (_success) _success(res);
+              }).catch(function(err) {
+                if (_failure) _failure(err);
+                else console.error('GAS Error [' + prop + ']:', err);
+              });
+            };
+          }
+        };
+        return new Proxy({}, handler);
+      }
       window.google = window.google || {};
       window.google.script = window.google.script || {};
-      window.google.script.run = new Proxy({}, {
-        get: function(target, prop) {
-          var _success = null;
-          var _failure = null;
-          var runner = {
-            withSuccessHandler: function(fn) { _success = fn; return runner; },
-            withFailureHandler: function(fn) { _failure = fn; return runner; },
-            withUserObject: function() { return runner; }
-          };
-          if (prop in runner) return runner[prop];
-          return function() {
-            var callArgs = Array.prototype.slice.call(arguments);
-            callRemoteGasApi(prop, callArgs).then(function(res) {
-              if (_success) _success(res);
-            }).catch(function(err) {
-              if (_failure) _failure(err);
-              else console.error('GAS Error [' + prop + ']:', err);
-            });
-          };
-        }
+      Object.defineProperty(window.google.script, 'run', {
+        get: function() { return createGasRunner(); },
+        configurable: true
       });
 
       // Enhanced runGAS bridge
