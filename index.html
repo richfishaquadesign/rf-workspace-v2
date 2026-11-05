@@ -1345,11 +1345,14 @@ div[data-rf-sidebar-backdrop="true"] {
         window.dispatchEvent(new CustomEvent('rf-deferred-ready'));
       }
       function injectScript(encoded) {
+        if (window.__rfDeferredInjected) { markReady(); return; }
+        window.__rfDeferredInjected = true;
         var bytes = Uint8Array.from(atob(encoded), function(c){return c.charCodeAt(0);});
         var script = document.createElement('script');
         script.textContent = new TextDecoder('utf-8',{fatal:true}).decode(bytes)
           .replace(/^\s*<script[^>]*>/i, '').replace(/<\/script>\s*$/i, '');
         document.body.appendChild(script);
+        markReady();
       }
       window.__rfLoadTabNow = function (tab, forceNetwork) {
         if (modulesReady()) { markReady(); return Promise.resolve({ok:true}); }
