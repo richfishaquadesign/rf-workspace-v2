@@ -45,6 +45,31 @@
         return data;
       }
 
+      // Universal Google Apps Script Proxy for Standalone Hosting
+      window.google = window.google || {};
+      window.google.script = window.google.script || {};
+      window.google.script.run = new Proxy({}, {
+        get: function(target, prop) {
+          var _success = null;
+          var _failure = null;
+          var runner = {
+            withSuccessHandler: function(fn) { _success = fn; return runner; },
+            withFailureHandler: function(fn) { _failure = fn; return runner; },
+            withUserObject: function() { return runner; }
+          };
+          if (prop in runner) return runner[prop];
+          return function() {
+            var callArgs = Array.prototype.slice.call(arguments);
+            callRemoteGasApi(prop, callArgs).then(function(res) {
+              if (_success) _success(res);
+            }).catch(function(err) {
+              if (_failure) _failure(err);
+              else console.error('GAS Error [' + prop + ']:', err);
+            });
+          };
+        }
+      });
+
       // Enhanced runGAS bridge
       var origRunGAS = window.runGAS;
       window.runGAS = function(serverFunctionName, ...args) {
