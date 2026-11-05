@@ -1,0 +1,357 @@
+<style id="rf-v6-workspace-styles">
+/* RF V6 UI / existing Apps Script app. Scoped presentation; no hidden business state. */
+.rf-v6-workspace{--rf-v6-bg:#0b0b0b;--rf-v6-panel:#141414;--rf-v6-raised:#1d1d1d;--rf-v6-line:#363636;--rf-v6-text:#f5f5f5;--rf-v6-muted:#aaa;background:var(--rf-v6-bg)!important;color:var(--rf-v6-text)!important;font-size:13px!important;line-height:1.55!important}
+.rf-v6-workspace *:not(i){font-family:'Plus Jakarta Sans','Inter',system-ui,-apple-system,sans-serif!important}
+
+/* --- ZERO-LEAK TAB ISOLATION & STRICT DISPLAY GUARANTEE --- */
+/* KHÔNG đặt .hidden trần ở đây: display:none !important sẽ đè lên utility responsive
+   của Tailwind (hidden md:grid) và làm rỗng bảng row. Chỉ khoá display cho tab container. */
+.rf-tab-view.hidden,
+[data-rf-tab-container].hidden,
+div[data-rf-tab-container].hidden {
+  display: none !important;
+  content-visibility: hidden !important;
+}
+
+.rf-tab-view {
+  width: 100% !important;
+  min-height: 100% !important;
+  animation: tabFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rf-v6-workspace [data-rf-v6-sidebar]{background:#111!important;border-color:var(--rf-v6-line)!important;box-shadow:none!important}
+.rf-v6-workspace [data-rf-v6-sidebar]>div:first-child{border:0!important;padding-top:max(25px,env(safe-area-inset-top));padding-bottom:20px}
+.rf-v6-workspace [data-rf-v6-navigation]{padding-top:12px;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.rf-v6-workspace [data-rf-v6-navigation]>div>div:first-child{font-size:10px!important;letter-spacing:1.6px!important;color:#8d8d8d!important;font-weight:500!important;line-height:1.6}
+.rf-v6-workspace [data-rf-v6-tab]{min-height:42px;border-radius:7px!important;font-size:13px!important;line-height:1.5;font-weight:450!important;color:#aaa!important;border-color:transparent!important;box-shadow:none!important;position:relative}
+.rf-v6-workspace [data-rf-v6-tab]:hover{background:#202020!important;color:white!important}
+.rf-v6-workspace [data-rf-v6-tab][aria-current="page"]{background:#242424!important;color:white!important;box-shadow:inset 2px 0 white!important;font-weight:550!important}
+.rf-v6-workspace [data-rf-v6-tab][aria-current="page"] i{color:white!important}
+.rf-v6-workspace [data-rf-v6-tab] i{font-size:14px!important;color:#aaa!important}
+.rf-v6-workspace [data-rf-v6-topbar]{background:#101010!important;border-color:var(--rf-v6-line)!important;min-height:68px;backdrop-filter:none!important;box-shadow:none!important}
+.rf-v6-workspace [data-rf-v6-main]{background:var(--rf-v6-bg)!important;scrollbar-width:thin;scrollbar-color:#444 transparent;padding:26px 30px!important}
+.rf-v6-workspace .rf-v6-page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin:0 0 26px;padding:0 0 24px;border-bottom:1px solid var(--rf-v6-line)}
+.rf-v6-workspace .rf-v6-eyebrow{font-size:10px;letter-spacing:1.8px;color:#aaa!important;margin:0 0 5px;text-transform:uppercase}
+.rf-v6-workspace .rf-v6-page-heading h1{font-size:30px!important;font-weight:550!important;line-height:1.3;letter-spacing:-.8px;margin:0 0 8px;color:#f5f5f5!important}
+.rf-v6-workspace .rf-v6-page-description{font-size:13px!important;line-height:1.6;color:#aaa!important;margin:0;max-width:700px}
+.rf-v6-workspace .rf-v6-data-status{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;font-size:11px}
+.rf-v6-workspace .rf-v6-data-badge{display:flex;gap:8px;align-items:center;border:1px solid #444;border-radius:6px;padding:7px 10px;background:#1a1a1a;color:#ddd!important;white-space:nowrap}
+.rf-v6-workspace .rf-v6-data-status small{font-size:10px;color:#888!important;line-height:1.5}
+.rf-v6-workspace .rf-v6-exp-widget{max-width:240px}
+.rf-v6-workspace [data-rf-v6-main] table{font-size:12px!important;border-color:var(--rf-v6-line)!important}
+.rf-v6-workspace [data-rf-v6-main] th{background:#181818!important;color:#aaa!important;font-size:10px!important;letter-spacing:.5px;font-weight:550!important}
+.rf-v6-workspace [data-rf-v6-main] td,.rf-v6-workspace [data-rf-v6-main] th{border-color:#2f2f2f!important}
+.rf-v6-workspace [data-rf-v6-main] button{border-radius:7px!important;box-shadow:none!important;min-height:36px}
+.rf-v6-workspace [data-rf-v6-main] input,.rf-v6-workspace [data-rf-v6-main] select,.rf-v6-workspace [data-rf-v6-main] textarea{border-radius:7px!important;border-color:#454545!important;background:#101010!important;color:#eee!important}
+.rf-v6-workspace button:focus-visible,.rf-v6-workspace a:focus-visible,.rf-v6-workspace input:focus-visible,.rf-v6-workspace select:focus-visible,.rf-v6-workspace textarea:focus-visible{outline:2px solid #eee!important;outline-offset:3px!important;box-shadow:none!important}
+.rf-v6-workspace [data-rf-v6-main] [class*="rounded-2xl"],.rf-v6-workspace [data-rf-v6-main] [class*="rounded-xl"]{border-radius:12px!important}
+@media(min-width:1024px){.rf-v6-workspace [data-rf-v6-sidebar].w-\[240px\]{width:236px}.rf-v6-workspace [data-rf-v6-sidebar].lg\:w-\[68px\]{width:68px}}
+@media(max-width:1100px){.rf-v6-workspace .rf-v6-exp-widget{display:none}.rf-v6-workspace [data-rf-v6-main]{padding:22px!important}}
+@media(max-width:767px){.rf-v6-workspace [data-rf-v6-main]{padding:10px 10px 12px!important;scroll-padding-bottom:0!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}.rf-v6-workspace [data-rf-v6-topbar]{min-height:52px}.rf-v6-workspace .rf-v6-page-heading{align-items:flex-start;flex-direction:column;gap:10px;margin-bottom:14px;padding-bottom:14px}.rf-v6-workspace .rf-v6-page-heading h1{font-size:24px!important}.rf-v6-workspace .rf-v6-page-description{font-size:12px!important}.rf-v6-workspace .rf-v6-data-status{align-items:flex-start;flex-direction:row;flex-wrap:wrap;align-items:center;gap:9px}.rf-v6-workspace [data-rf-v6-topbar] button{min-width:40px;min-height:40px}.rf-v6-workspace [data-rf-v6-main] button{min-height:40px}.rf-v6-workspace [data-rf-v6-tab]{min-height:40px}}
+@media(prefers-reduced-motion:reduce){.rf-v6-workspace *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* RF black / mobile refinement, 14 October 2026 */
+.rf-v6-workspace{--rf-v6-bg:#050505;--rf-v6-panel:#101010;--rf-v6-raised:#191919;--rf-v6-line:#292929;--rf-v6-muted:#ababab}
+.rf-v6-workspace [data-rf-v6-sidebar]{background:#080808!important}
+.rf-v6-workspace [data-rf-v6-topbar]{background:#080808!important}
+.rf-v6-workspace .rf-v6-page-heading{border-bottom:0;padding-bottom:0}
+.rf-v6-workspace [data-rf-v6-sidebar]>div:first-child img{width:44px;height:32px}
+.rf-mobile-dock,
+.rf-v6-workspace .rf-mobile-dock,
+nav.rf-mobile-dock {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  transform: scale(0) !important;
+}
+@media(max-width:1023px){
+ .rf-mobile-dock,
+ .rf-v6-workspace .rf-mobile-dock,
+ nav.rf-mobile-dock {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+ }
+ .rf-v6-workspace [data-rf-v6-main]{padding:10px 10px 16px!important;scroll-padding-bottom:16px!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}
+ .rf-v6-workspace [data-rf-v6-main] button{min-height:40px}
+ .rf-v6-workspace [data-rf-v6-main] input,.rf-v6-workspace [data-rf-v6-main] select,.rf-v6-workspace [data-rf-v6-main] textarea{font-size:16px!important;min-height:42px}
+ .rf-v6-workspace .rf-v6-page-heading{gap:8px;margin-bottom:14px}
+ .rf-v6-workspace .rf-v6-page-heading h1{font-size:24px!important;letter-spacing:-.7px}
+ .rf-v6-workspace .rf-v6-page-description{display:none}
+ .rf-v6-workspace .rf-v6-data-badge{border:0;background:transparent;padding:0;font-size:11px}
+ .rf-v6-workspace .rf-v6-data-status small{font-size:11px}
+
+}
+
+.rf-process-details{border-top:1px solid #292929;border-bottom:1px solid #292929}
+.rf-process-details>summary{cursor:pointer;padding:16px 0;color:#eee;font-size:14px;font-weight:500;min-height:48px}
+.rf-process-details>summary span{float:right;font-size:11px;color:#a3a3a3}
+.rf-process-details[open]>summary{margin-bottom:12px}
+.rf-process-details>summary:focus-visible{outline:2px solid white;outline-offset:2px}
+.rf-v6-dashboard{background:transparent!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important;padding-bottom:12px!important}
+@media(max-width:1023px){
+ .rf-v6-dashboard>.rf-dashboard-legacy-header{display:none}
+ .rf-v6-dashboard .grid{min-width:0}
+ .rf-v6-dashboard .grid>div{min-width:0}
+ .rf-process-details>summary span{display:none}
+}
+.rf-topbar-logo{width:44px;height:32px;object-fit:contain}
+@media(max-width:1023px){.rf-order-modal input,.rf-order-modal select,.rf-order-modal textarea{font-size:16px!important;min-height:44px}.rf-order-modal button{min-height:44px}.rf-order-modal{font-family:'Segoe UI',system-ui,sans-serif}.rf-order-modal button:focus-visible{outline:2px solid white;outline-offset:2px}}
+
+/* Compact dashboard: action first, secondary detail on demand. */
+.rf-dashboard-start{display:block;width:100%;max-width:100%;overflow:hidden;box-sizing:border-box}
+.rf-priority-panel,.rf-quick-actions{min-width:0;width:100%;max-width:100%;padding:0;background:transparent;overflow:hidden;box-sizing:border-box}
+.rf-quick-actions>div:first-child{border:0!important;margin-bottom:8px!important;padding-bottom:0!important}
+.rf-quick-actions .grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+@media(min-width:640px){.rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+@media(min-width:768px){.rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+.rf-quick-actions button{background:#141414!important;border:1px solid #292929!important;border-radius:12px!important;min-height:64px!important;gap:4px!important;padding:8px 4px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
+.rf-quick-actions button>div{background:transparent!important;border:0!important;margin:0!important;width:24px!important;height:24px!important}
+.rf-quick-actions button>span{font-size:11px!important;font-weight:600!important;text-transform:none!important;white-space:nowrap!important;text-align:center!important}
+.rf-more-tools>summary,.rf-secondary-detail>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:#aaa;font-size:12px;list-style:revert}
+.rf-more-tools[open]>summary{color:white}
+.rf-secondary-detail{border-top:1px solid #292929}
+.rf-secondary-detail>summary{font-size:14px}
+.rf-metric-card{padding:14px!important;box-shadow:none!important;border-color:#252525!important;background:#101010!important;min-width:0}
+.rf-metric-card>div:first-child>span{display:none}
+.rf-metric-card>div:first-child>div>div{display:none}
+.rf-metric-card>div:first-child span{font-size:12px!important;font-weight:450!important;letter-spacing:0!important;text-transform:none!important;white-space:normal!important;color:#b8b8b8!important}
+.rf-metric-card>div:last-child{border:0!important;padding-top:0!important;font-size:11px!important}
+.rf-metric-card>div:last-child>span:last-child:not(:first-child){display:none}
+.rf-metric-card:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+@media(max-width:767px){
+ .rf-dashboard-start{display:block;width:100%;max-width:100%;overflow:hidden;box-sizing:border-box}
+ .rf-v6-dashboard{display:flex;flex-direction:column;gap:16px;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}
+ .rf-v6-dashboard>*{margin-top:0!important;margin-bottom:0!important}
+ .rf-metrics-grid>.rf-metric-card:last-child:nth-child(odd){grid-column:1/-1}
+ .rf-priority-panel>div:first-child{border-bottom:0!important}
+ .rf-priority-panel .min-h-\[64px\]{padding:10px 0}
+ .rf-v6-dashboard>.rf-dashboard-legacy-header{display:none!important}
+}
+
+/* Fill the current iframe viewport after rotation, browser chrome or keyboard resize. */
+html,body,#root{width:100%!important;max-width:100vw!important;height:100%!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
+.rf-v6-workspace[data-rf-v6-shell]{position:fixed!important;inset:0!important;width:100%!important;max-width:100vw!important;height:100%!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
+.rf-v6-workspace[data-rf-v6-shell] > div.flex-1{min-height:0!important;width:100%!important;max-width:100%!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+.rf-v6-workspace .rf-mobile-dock{display:none!important}
+
+/* =========================================================================
+   RF MOBILE SIDEBAR DRAWER & BACKDROP (FIX MÀN HÌNH ĐEN SÌ & KHÔNG MỞ ĐƯỢC MENU)
+   ========================================================================= */
+.rf-sidebar-backdrop,
+.rf-v6-workspace .rf-sidebar-backdrop,
+div[data-rf-sidebar-backdrop="true"] {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100% !important;
+  height: 100dvh !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 9998 !important;
+  cursor: pointer !important;
+  touch-action: none !important;
+}
+
+@media (min-width: 1024px) {
+  .rf-sidebar-backdrop,
+  div[data-rf-sidebar-backdrop="true"] {
+    display: none !important;
+  }
+  #rf-v6-sidebar,
+  [data-rf-v6-sidebar] {
+    position: static !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 10 !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  #rf-v6-sidebar,
+  [data-rf-v6-sidebar] {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 285px !important;
+    max-width: 85vw !important;
+    height: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    min-height: 100% !important;
+    min-height: -webkit-fill-available !important;
+    z-index: 99999 !important;
+    background: #16161a !important;
+    color: #f5f5f5 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 16px 0 45px rgba(0, 0, 0, 0.95) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
+    will-change: transform, opacity !important;
+  }
+
+  /* Khi menu mở: trượt ra mượt mà, nằm ĐÈ LÊN trên backdrop đen */
+  #rf-v6-sidebar.translate-x-0,
+  #rf-v6-sidebar.is-open,
+  [data-rf-v6-sidebar].translate-x-0,
+  [data-rf-v6-sidebar].is-open {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Bỏ menu bên dưới -> Chỉ chừa đệm an toàn vừa vặn cho vạch Home Bar */
+  .rf-v6-workspace [data-rf-v6-main] {
+    padding-bottom: max(24px, calc(16px + env(safe-area-inset-bottom, 0px))) !important;
+    scroll-padding-bottom: max(24px, calc(16px + env(safe-area-inset-bottom, 0px))) !important;
+  }
+}
+
+/* =========================================================================
+   RF MOBILE REFINEMENT: HARMONIOUS SAFE-AREA CLEARANCE FOR IPHONE
+   ========================================================================= */
+@media (max-width: 1023px) {
+  .rf-header-breadcrumbs,
+  [data-rf-breadcrumbs],
+  .rf-header-role-badge,
+  [data-rf-role-badge],
+  .rf-header-tab-perm-btn,
+  [data-rf-tab-perm],
+  .rf-topbar-subtitle,
+  [data-rf-subtitle] {
+    display: none !important;
+  }
+
+  /* TOPBAR: Đệm trên 42px an toàn tránh cụm Dynamic Island / Notch, không cấn mép đỉnh */
+  [data-rf-v6-topbar] {
+    height: auto !important;
+    min-height: 82px !important;
+    padding: 42px 14px 10px !important;
+    padding-top: max(42px, env(safe-area-inset-top, 42px)) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+  }
+
+  [data-rf-v6-topbar] > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  .rf-topbar-logo {
+    width: 32px !important;
+    height: 32px !important;
+    flex-shrink: 0 !important;
+  }
+
+  [data-rf-v6-topbar] > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* SIDEBAR: Đệm trên tránh Notch/Dynamic Island và đệm dưới tránh Home Indicator */
+  .rf-v6-workspace [data-rf-v6-sidebar] {
+    height: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+  }
+  .rf-v6-workspace [data-rf-v6-sidebar] > div:first-child {
+    padding: 44px 16px 14px !important;
+    padding-top: max(44px, env(safe-area-inset-top, 44px)) !important;
+  }
+  .rf-v6-workspace [data-rf-v6-sidebar] > div:last-child {
+    padding: 14px 16px 32px !important;
+    padding-bottom: max(32px, env(safe-area-inset-bottom, 32px)) !important;
+  }
+
+  .rf-v6-workspace [data-rf-v6-navigation] {
+    padding: 8px 12px !important;
+  }
+  .rf-v6-workspace [data-rf-v6-navigation] > div {
+    margin-top: 12px !important;
+  }
+  .rf-v6-workspace [data-rf-v6-tab] {
+    min-height: 44px !important;
+  }
+
+  /* MAIN CONTENT: Đệm đáy 44px an toàn tuyệt đối cho thanh gạt Home Bar của iPhone */
+  .rf-v6-workspace [data-rf-v6-main] {
+    padding: 14px 14px 44px !important;
+    scroll-padding-bottom: 44px !important;
+  }
+
+  /* ẨN HOÀN TOÀN BOTTOM DOCK */
+  .rf-v6-workspace .rf-mobile-dock {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+  }
+
+  .rf-v6-dashboard .rf-quick-actions .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .rf-v6-dashboard .rf-metrics-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .rf-v6-dashboard .rf-metric-card {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 6 phim thao tac nhanh: giu 1 hang tren tablet 768-1023px (ghi de khoi max-width:1023 o tren) */
+@media (min-width:768px) and (max-width:1023px){.rf-v6-dashboard .rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+
+</style>
+

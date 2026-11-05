@@ -1,0 +1,779 @@
+{
+  "1_write_without_lock": [
+    {
+      "fn": "apprenticeSheet_",
+      "file": "ApprenticeshipService.js",
+      "callers": 6,
+      "lockedCallers": 3,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "initDB",
+      "file": "Code.js",
+      "callers": 0,
+      "lockedCallers": 0,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "initDbERP",
+      "file": "Code.js",
+      "callers": 0,
+      "lockedCallers": 0,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "getAppData",
+      "file": "Code.js",
+      "callers": 3,
+      "lockedCallers": 2,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "applyDeltasToSheet",
+      "file": "Code.js",
+      "callers": 5,
+      "lockedCallers": 3,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "applyBatchAccountBalanceChanges",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 1,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "repairKPIProgressSheetHeaders",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 1,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "safeDeductInventoryOnHandover",
+      "file": "LayoutStockPolicy.js",
+      "callers": 2,
+      "lockedCallers": 1,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "rfWebsiteSheet_",
+      "file": "WorkspaceWebsiteBackend.js",
+      "callers": 2,
+      "lockedCallers": 1,
+      "risk": "HIGH"
+    },
+    {
+      "fn": "deleteDeltas",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 2,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "logBehavior",
+      "file": "Code.js",
+      "callers": 6,
+      "lockedCallers": 6,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "processGHNEmail",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 2,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "deleteRowsByMatch",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 2,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "deleteTransactionsByOrderId",
+      "file": "Code.js",
+      "callers": 2,
+      "lockedCallers": 2,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "processSmartGlassTankDispatch",
+      "file": "Code.js",
+      "callers": 1,
+      "lockedCallers": 1,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "_processMaterialDeduction_Core",
+      "file": "Code.js",
+      "callers": 3,
+      "lockedCallers": 3,
+      "risk": "LOW (caller locked)"
+    },
+    {
+      "fn": "rfWebsiteHistory_",
+      "file": "WorkspaceWebsiteBackend.js",
+      "callers": 1,
+      "lockedCallers": 1,
+      "risk": "LOW (caller locked)"
+    }
+  ],
+  "2_nested_lock_release": [
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_saveZaloWebhookConfig"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "processQCApproval"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "repairAllBomTickets"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "processCascadeCancelOrder"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "saveUserPushSubscription"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_insertManualKPI"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "repairKeo502PriceAndBom"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "syncBIDVEmails"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_applyAiQcResult"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "createGHNOrderViaServer"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_syncMasterPayroll"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "syncLayout5AnglesDrive"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_addEmployee"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_saveTelegramConfig"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_createCustomKPI"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "checkAndAutoForwardOrder"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_submitKpiSelfAssessment"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "generateMonthlySnapshot"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "syncDeltas"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_deleteEmployee"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "autoCalculateGlassTankBOM_Dual"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "processAutoAllocation"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "importAllDataFromSpreadsheet"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "processMaterialDeduction"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_saveGoogleChatConfig"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "syncBomMaterialSkusWithProducts"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_assignStockItemToOrder"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_generateMonthlyKPI_All"
+    },
+    {
+      "outer": "handleApiRequest",
+      "inner": "api_toggleOrderUrgent"
+    },
+    {
+      "outer": "processSPXReturnEmail",
+      "inner": "processCascadeCancelOrder"
+    },
+    {
+      "outer": "standardizeWarehouseSKU",
+      "inner": "api_createCustomKPI"
+    },
+    {
+      "outer": "standardizeWarehouseSKU",
+      "inner": "api_submitKpiSelfAssessment"
+    },
+    {
+      "outer": "standardizeWarehouseSKU",
+      "inner": "syncBomMaterialSkusWithProducts"
+    },
+    {
+      "outer": "syncDeltas",
+      "inner": "updateUserConfigSheet"
+    },
+    {
+      "outer": "syncDeltas",
+      "inner": "processReturnCommand_"
+    },
+    {
+      "outer": "zfCustomerHandle_",
+      "inner": "zfCustomerInitialize_"
+    },
+    {
+      "outer": "cleanupPhantomBomTickets",
+      "inner": "processMaterialDeduction"
+    },
+    {
+      "outer": "scanAutoEmails",
+      "inner": "processSPXReturnEmail"
+    },
+    {
+      "outer": "processAutoAllocation",
+      "inner": "processBatchAutoForwardSLA"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "recoverLostProduction"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "scanReturnedOrdersFromEmail"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "repairAllBomTickets"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_giftXuToAllStaff"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "autoReconcileSupplierDebt"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processCascadeCancelOrder"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processSlaAutomation"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processReconciliationBatch"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "autoGenerateAndSyncLayoutBOM"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "saveUserPushSubscription"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "hardDeleteOrderAndRelatedData"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_repairAndRestoreTasksFromXuSheet"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "updateKpiProgressData_Trang"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_insertManualKPI"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "repairKeo502PriceAndBom"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "syncBIDVEmails"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "initPushSubscriptionsSheet"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "updateKpiProgressData_Tam"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_applyAiQcResult"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "createGHNOrderViaServer"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "syncLayout5AnglesDrive"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "cleanUpOldReconciliationJunk"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_updateLeaveStatus"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "autoCalculateBOMAndProductCosts"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "updateAppealStatus"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processSPXReturnEmail"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processBatchAutoForwardSLA"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "cronCheckIncompleteTasks"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_settleMonthlyDebt"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "dailyCheckPackingsAndPenalize"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "updateKpiProgressData"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processDynamicLoadBalancing"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "auditMissingCashflowAndMargin"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "ensureGlassTankBOM"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "scanCancelledOrdersFromEmail"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_repairSupplierNegativeDebts"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "updateKpiProgressData_Duong"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processDamageControl"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_getWorkerAuditLogs"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "cronCheckUnpackedOrdersAt1930"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "autoCalculateGlassTankBOM_Dual"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "closeMonthAndArchive"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_insertManualTask"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "cleanupPhantomBomTickets"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "scanAutoEmails"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processAutoAllocation"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "autoCleanOrdersData"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_repairAdjustmentTransactions"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "processMaterialDeduction"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "emergencyCleanAllJuneData"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_assignStockItemToOrder"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_migrateXuFromBonusPenaltyToThongKeTichLuyXu"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "restoreFulfilledFromStock"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_completeBatchProduction"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "api_toggleOrderUrgent"
+    },
+    {
+      "outer": "getPackingReward",
+      "inner": "syncGHNViaAPI"
+    },
+    {
+      "outer": "rfReturnAccs",
+      "inner": "processReturnCommand_"
+    }
+  ],
+  "3_status_variants": {
+    "hàng hoàn": [
+      "Hàng Hoàn",
+      "Hàng hoàn"
+    ],
+    "sẵn sàng đóng gói": [
+      "Sẵn Sàng Đóng Gói",
+      "Sẵn sàng đóng gói"
+    ],
+    "đã huỷ": [
+      "Đã Huỷ",
+      "Đã hủy"
+    ]
+  },
+  "3b_ready_to_pack_usage": [
+    {
+      "file": "Code.js",
+      "op": "setValue(",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "status =",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "setValue(",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "setValue(",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "setValue(",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "setValue(",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "status =",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Code.js",
+      "op": "===",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "RFBotBridge.js",
+      "op": "setValue(",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": ".status===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Compiled_Core.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Modals_Orders.html",
+      "op": ".status ===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Modals_Orders.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Modals_Orders.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Modals_Orders.html",
+      "op": "===",
+      "value": "Sẵn sàng đóng gói"
+    },
+    {
+      "file": "Modals_Orders.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Tab_Orders.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    },
+    {
+      "file": "Tab_Orders.html",
+      "op": "===",
+      "value": "Sẵn Sàng Đóng Gói"
+    }
+  ],
+  "4_case_sensitive_status_lists": [
+    {
+      "fn": "checkAndAutoForwardOrder",
+      "snippet": "['Chờ Sản Xuất', 'Đang Sản Xuất', 'Quét Tự Động'].indexOf(currentStatus)"
+    },
+    {
+      "fn": "getPackingReward",
+      "snippet": "['Chờ Sản Xuất', 'Đang Sản Xuất', 'Quét Tự Động'].indexOf(curSt)"
+    },
+    {
+      "fn": "processBatchAutoForwardSLA",
+      "snippet": "['Chờ Sản Xuất', 'Đang Sản Xuất', 'Quét Tự Động'].indexOf(curSt)"
+    }
+  ],
+  "5_bom_deduction": {
+    "entry_points": [
+      "handleApiRequest",
+      "syncDeltas",
+      "getPackingReward",
+      "processRcaResolver",
+      "onEdit",
+      "cleanupPhantomBomTickets",
+      "deductInventoryBOM"
+    ],
+    "core_has_idempotency_guard": true,
+    "core_snippet_head": "function _processMaterialDeduction_Core(prodId, materialUsageData, ss) {\n  try {\n    if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();\n    var prodSheet = ss.getSheetByName('Production');\n    var bomSheet = ss.getSheetByName('BOM_Config');\n    var productSheet = ss.getSheetByName('Products');\n    var ieSheet = ss.getSheetByName('ImportExport');\n    if (!prodSheet || !productSheet || !ieSheet) {\n      return {\n        success: false,\n        message: 'Thiếu bảng dữ liệu!'\n      };\n    }\n    var prodData = prodSheet.getDataRange().getValues();\n    var prodHeaders = prodData[0];\n    var pIdIdx"
+  },
+  "6_qc_approval": {
+    "sets_passed": true,
+    "calls_bom": false,
+    "calls_forward": false,
+    "sets_production_done": false
+  },
+  "7_normalize_status_fuzzy": [
+    "GIAO HÀNG THẤT BẠI",
+    "GIAO HÀNG KHÔNG THÀNH CÔNG",
+    "GIAO THẤT BẠI",
+    "HOÀN TRẢ",
+    "TRẢ HÀNG",
+    "HOÀN TIỀN",
+    "HÀNG TRẢ VỀ",
+    "TỪ CHỐI NHẬN",
+    "HỦY",
+    "HUỶ"
+  ],
+  "8_frontend_calls_missing_backend": [
+    "DELIVERED",
+    "save"
+  ],
+  "8b_api_actions_without_function": [],
+  "9_columns_not_in_schema": {
+    "balance": [
+      "applyBatchAccountBalanceChanges"
+    ],
+    "startTime": [
+      "closeMonthAndArchive",
+      "getPackingReward"
+    ],
+    "products": [
+      "autoCleanOrdersData",
+      "getPackingReward"
+    ],
+    "totalAmount": [
+      "autoCleanOrdersData",
+      "getPackingReward",
+      "repairAllBomTickets"
+    ],
+    "target": [
+      "api_submitKpiSelfAssessment",
+      "getPackingReward",
+      "repairAllBomTickets",
+      "standardizeWarehouseSKU"
+    ],
+    "itemsData": [
+      "getPackingReward",
+      "repairAllBomTickets"
+    ],
+    "KEO": [
+      "getPackingReward",
+      "repairKeo502PriceAndBom"
+    ],
+    "quantity": [
+      "safeDeductInventoryOnHandover"
+    ],
+    "current": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "kpiName": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "reward": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "isClaimed": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "lastUpdated": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "guide": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "Guide": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "proof": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "proofUrl": [
+      "api_submitKpiSelfAssessment",
+      "standardizeWarehouseSKU"
+    ],
+    "sku": [
+      "AAA_SYNC_SHOPEE_BLACK_IMAGES_TO_PRODUCTS",
+      "rfWebsiteGetPublicProducts_",
+      "rfWebsiteManage"
+    ],
+    "image": [
+      "AAA_SYNC_SHOPEE_BLACK_IMAGES_TO_PRODUCTS",
+      "rfWebsiteGetPublicProducts_",
+      "rfWebsiteManage"
+    ],
+    "sub_category": [
+      "rfWebsiteGetPublicProducts_"
+    ],
+    "price": [
+      "rfWebsiteGetPublicProducts_",
+      "rfWebsiteManage"
+    ]
+  },
+  "10_hardcoded_ss_ids": []
+}

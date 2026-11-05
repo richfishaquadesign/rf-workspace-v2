@@ -1,0 +1,1732 @@
+<script type="text/babel">
+// =========================================================================
+// 🏭 FILE: Tab_Workspaces.html
+// CHỨC NĂNG: Quản Lý Trách Nhiệm Trạm Sản Xuất & Bàn Giao KCS (Accountability)
+// THIẾT KẾ: Hallmark Royal Workbench & Linear UX (Deep Obsidian #09090b)
+// TRIẾT LÝ: Minh bạch, không bêu rếu, quy chế kỷ luật tự động tổng hợp lương
+// =========================================================================
+
+// Helper chuẩn hóa danh sách dụng cụ trạm
+function normalizeTools(rawTools, defaultWsUser = '') {
+  if (!rawTools) return [];
+  let parsed = rawTools;
+  if (typeof rawTools === 'string') {
+    try {
+      parsed = JSON.parse(rawTools);
+    } catch(e) {
+      parsed = rawTools.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((item, idx) => {
+    if (typeof item === 'string') {
+      return {
+        id: 'TOOL_' + idx + '_' + Date.now(),
+        name: item,
+        qty: 1,
+        status: 'Tốt',
+        user: defaultWsUser || '',
+        conditionPct: 100,
+        value: 0
+      };
+    }
+    const condVal = (item.conditionPct !== undefined && item.conditionPct !== null && item.conditionPct !== '') ? Number(item.conditionPct) : 100;
+    return {
+      id: item.id || ('TOOL_' + idx + '_' + Date.now()),
+      name: item.name || 'Dụng cụ ' + (idx + 1),
+      qty: parseInt(item.qty) || 1,
+      status: item.status || 'Tốt',
+      user: (item.user || item.assignedUser || defaultWsUser || '').trim(),
+      conditionPct: isNaN(condVal) ? 100 : Math.min(100, Math.max(0, condVal)),
+      value: Math.max(0, parseInt(item.value) || 0),
+      depreciation: item.depreciation || 'Không khấu hao'
+    };
+  });
+}
+
+const WorkspaceTab = React.memo(function WorkspaceTab({ 
+  data, 
+  pushData, 
+  users = [], 
+  userConfigs, 
+  triggerToast, 
+  userRole: propUserRole, 
+  currentUser: propCurrentUser, 
+  hasPerm: propHasPerm, 
+  documents 
+}) {
+  const currentRole = propUserRole || localStorage.getItem('rf_role') || '';
+  const currentUser = (propCurrentUser || localStorage.getItem('rf_user') || '').trim();
+  const isBoss = localStorage.getItem('rf_boss') === 'true' || currentRole === 'TỐI CAO' || currentUser.includes('Tiến');
+  const isAdmin = isBoss || currentRole === 'TỐI CAO';
+
+  const hasPerm = React.useCallback((actionCode) => {
+    if (isBoss || currentRole === 'TỐI CAO') return true;
+    if (typeof propHasPerm === 'function') return propHasPerm(actionCode);
+    if (typeof canUserDo === 'function') return canUserDo(actionCode, currentRole, currentUser);
+    return isBoss;
+  }, [propHasPerm, currentRole, currentUser, isBoss]);
+
+  // Phân quyền: Boss, Quản đốc, Kỹ thuật, Kế toán, Quản lý các bộ phận
+  const canManageWorkstations = isBoss || currentRole === 'TỐI CAO' || 
+    ['QUẢN ĐỐC', 'KỸ THUẬT', 'KẾ TOÁN', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ BÁN HÀNG'].includes(currentRole);
+
+  // 4 Sub-Tabs chính của phân hệ
+  const [activeSubTab, setActiveSubTab] = React.useState('STATIONS'); // 'STATIONS' | 'SERIAL_TRACE' | 'INCIDENTS' | 'REGULATIONS'
+
+  // Dữ liệu từ Data Store
+  const rawWorkspaces = data?.Workspaces || [];
+  const prodItems = data?.Production || [];
+  const packings = data?.Packings || [];
+  const orders = data?.Orders || [];
+  const bonusPenalties = data?.BonusPenalty || [];
+
+  // Meta giao diện cho từng trạm xưởng
+  const getWorkspaceMeta = (name = '', user = '') => {
+    const n = String(name || '').toLowerCase();
+    const u = String(user || '').toLowerCase();
+    if (n.includes('kính') || u.includes('dương')) {
+      return {
+        role: 'Thủ kho & Cắt Kính',
+        color: 'border-sky-500/30 text-sky-400 bg-sky-500/10',
+        icon: 'fa-cut',
+        desc: 'Cắt phôi kính Indo, Việt Nhật, mài vi tính 4li và phân loại kích thước'
+      };
+    }
+    if (n.includes('dựng khung') || u.includes('tân')) {
+      return {
+        role: 'Nghệ nhân Layout & Dựng Khung',
+        color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10',
+        icon: 'fa-tree',
+        desc: 'Dựng lũa, ghép đá tiger/sa thạch, cắt cành lũa và hoàn thiện khung bố cục'
+      };
+    }
+    if (n.includes('gia cố') || u.includes('tâm')) {
+      return {
+        role: 'Thợ Dán Kính & Gia Cố',
+        color: 'border-amber-500/30 text-amber-400 bg-amber-500/10',
+        icon: 'fa-cubes',
+        desc: 'Dán đường keo dấu giọt, gia cố đai chống phình, hút mùi và dưỡng khô 24h'
+      };
+    }
+    if (n.includes('đóng gói') || u.includes('hương')) {
+      return {
+        role: 'QC & Đóng Gói Hoàn Thiện',
+        color: 'border-purple-500/30 text-purple-400 bg-purple-500/10',
+        icon: 'fa-box-open',
+        desc: 'Test nước áp lực, kiểm định KCS, chụp 2 ảnh đối chứng và đóng gói kiện hàng'
+      };
+    }
+    if (n.includes('trưng bày') || u.includes('tiến')) {
+      return {
+        role: 'Quản Trị Hệ Thống & Showroom',
+        color: 'border-[#d4af37]/30 text-[#d4af37] bg-[#d4af37]/10',
+        icon: 'fa-tv',
+        desc: 'Khu vực trưng bày sản phẩm mẫu, tiếp đón khách hàng và điều hành trung tâm'
+      };
+    }
+    if (n.includes('kho hàng') || n.includes('sân trước') || u.includes('nhật anh')) {
+      return {
+        role: 'Kho Vận & Sân Xuất Hàng',
+        color: 'border-indigo-500/30 text-indigo-400 bg-indigo-500/10',
+        icon: 'fa-warehouse',
+        desc: 'Tập kết kiện hàng bể/layout thành phẩm, phụ kiện và xuất kho vận chuyển'
+      };
+    }
+    return {
+      role: 'Khu Vực Làm Việc',
+      color: 'border-zinc-500/30 text-zinc-300 bg-zinc-500/10',
+      icon: 'fa-industry',
+      desc: 'Quản lý máy móc, trang thiết bị và công cụ làm việc xưởng'
+    };
+  };
+
+  // Trạm xưởng & công cụ máy móc chuẩn 100% khớp CSDL Google Sheet Workspaces
+  const DEFAULT_STATIONS = [
+    {
+      id: 'WS_1787827518418',
+      name: 'Phòng Trưng Bày',
+      manager: 'Nguyễn Ngọc Tiến',
+      role: 'Quản Trị Hệ Thống & Showroom',
+      color: 'border-[#d4af37]/30 text-[#d4af37] bg-[#d4af37]/10',
+      icon: 'fa-tv',
+      desc: 'Khu vực trưng bày sản phẩm mẫu, tiếp đón khách hàng và điều hành trung tâm',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '27/8/2026',
+      tools: [
+        { name: 'Dàn Máy Tính Màn 42inch + 27inch', qty: 1, value: 16000000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Dàn Máy Tính Màn 21inch', qty: 1, value: 6500000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Máy In Canon Khổ A4', qty: 1, value: 3500000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Thiết Bị Điện Chiếu Sáng', qty: 1, value: 2250000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Bộ Sofa Bàn Trà Tiếp Khách', qty: 1, value: 3200000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Hệ Thống Bể Trưng Bày', qty: 1, value: 66800000, conditionPct: 100, depreciation: '12 tháng', status: 'Tốt' },
+        { name: 'Ghế Massager', qty: 1, value: 22400000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Điều Hoà Casper 9000w', qty: 1, value: 4890000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Máy In Mã Vận Đơn Khổ A7', qty: 1, value: 650000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Máy In Hoá Đơn Khổ K58', qty: 1, value: 550000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Quạt Trần', qty: 1, value: 400000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Quạt Mini Để Bàn', qty: 1, value: 480000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: '12m Vuông Sàn Giả Gỗ', qty: 1, value: 3200000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' }
+      ]
+    },
+    {
+      id: 'WS_1787827930699',
+      name: 'Phòng Đóng Gói',
+      manager: 'Nguyễn Thị Diệu Hương',
+      role: 'QC & Đóng Gói Hoàn Thiện',
+      color: 'border-purple-500/30 text-purple-400 bg-purple-500/10',
+      icon: 'fa-box-open',
+      desc: 'Test nước áp lực, kiểm định KCS, chụp 2 ảnh đối chứng và đóng gói kiện hàng',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '27/8/2026',
+      tools: [
+        { name: 'Bàn Gỗ MDF Nâu 180cm', qty: 1, value: 780000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Quạt Hơi Nước Aqua', qty: 1, value: 4900000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Thước Kẻ Nhôm 120cm', qty: 1, value: 80000, conditionPct: 100, depreciation: '12 tháng', status: 'Tốt' },
+        { name: 'Tua Vít Vàng', qty: 2, value: 20000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Kìm Bẻ', qty: 1, value: 25000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Dao Dọc Giấy Inox', qty: 5, value: 22000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Thiết Bị Chiếu Sáng', qty: 1, value: 450000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' }
+      ]
+    },
+    {
+      id: 'WS_1787982556211',
+      name: 'Phòng Dựng Khung',
+      manager: 'Trần Duy Tân',
+      role: 'Nghệ nhân Layout & Dựng Khung',
+      color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10',
+      icon: 'fa-tree',
+      desc: 'Dựng lũa, ghép đá tiger/sa thạch, cắt cành lũa và hoàn thiện khung bố cục',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '29/8/2026',
+      tools: [
+        { name: 'Thước Kẻ 120cm', qty: 1, value: 80000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Thước Kẻ Nhựa 30cm', qty: 2, value: 4000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Tủ Lạnh Panasonic', qty: 1, value: 3200000, conditionPct: 80, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Đèn Leb Chống Chói 120cm', qty: 2, value: 280000, conditionPct: 90, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Bàn Làm Khung 120cm', qty: 2, value: 460000, conditionPct: 80, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Bàn Làm Khung 180cm', qty: 1, value: 550000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Bàn Kiểm Định 180cm', qty: 1, value: 550000, conditionPct: 90, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Đèn Rọi 40w Ánh Sáng Trắng', qty: 3, value: 120000, conditionPct: 100, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Kệ Để Nguyên Liệu 40cm', qty: 1, value: 520000, conditionPct: 99, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Để Nguyên Liệu 80cm', qty: 1, value: 620000, conditionPct: 99, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Đang Hoàn Thiện 120cm', qty: 1, value: 1400000, conditionPct: 90, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Chờ Nhập Kho 100cm', qty: 1, value: 1200000, conditionPct: 90, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Chờ Gia Cố 80cm', qty: 1, value: 690000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Bảng Ghim 60x40cm', qty: 1, value: 330000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Thùng Nhựa 60x40cm (Có bánh xe)', qty: 3, value: 340000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Thùng Nhựa 60x40m (Không Bánh)', qty: 2, value: 325000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kìm Cắt Cành Kèm Pin', qty: 3, value: 960000, conditionPct: 80, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Khay Nhựa 42x14cm', qty: 6, value: 135000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Khay Nhựa 32x12cm', qty: 15, value: 26000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Bảng Ghim 30x30cm', qty: 2, value: 90000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Thùng Rác Inox Đen', qty: 2, value: 180000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Ghế Tựa Xoay Đen', qty: 3, value: 370000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Ghế Tựa Xoay Trắng (Có tựa đầu)', qty: 1, value: 420000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Sàn Giả Gỗ 21m', qty: 1, value: 4800000, conditionPct: 60, depreciation: '24 tháng', status: 'Tốt' },
+        { name: 'Đèn Âm Trần Rạng Đông 9w (Đổi Màu)', qty: 8, value: 135000, conditionPct: 90, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Quạt Thông Gió', qty: 3, value: 285000, conditionPct: 80, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Cây Cảnh Trang Trí (Phát Tài Núi)', qty: 1, value: 2600000, conditionPct: 90, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Để Nguyên Liệu 60cm', qty: 1, value: 580000, conditionPct: 100, depreciation: '12 tháng', status: 'Tốt' },
+        { name: 'Quạt Công Nghiệp Trắng', qty: 1, value: 1680000, conditionPct: 90, depreciation: '12 tháng', status: 'Tốt' }
+      ]
+    },
+    {
+      id: 'WS_1787982604596',
+      name: 'Phòng Gia Cố / Khu Vực Nhà Vệ Sinh',
+      manager: 'Lại Trường Tâm',
+      role: 'Thợ Dán Kính & Gia Cố',
+      color: 'border-amber-500/30 text-amber-400 bg-amber-500/10',
+      icon: 'fa-cubes',
+      desc: 'Dán đường keo dấu giọt, gia cố đai chống phình, hút mùi và dưỡng khô 24h',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '29/8/2026',
+      tools: [
+        { name: 'Quạt Hút Mùi', qty: 2, value: 1900000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' }
+      ]
+    },
+    {
+      id: 'WS_1787982695228',
+      name: 'Khu Vực Sản Xuất Kính',
+      manager: 'Nguyễn Hoàng Dương',
+      role: 'Thủ kho & Cắt Kính',
+      color: 'border-sky-500/30 text-sky-400 bg-sky-500/10',
+      icon: 'fa-cut',
+      desc: 'Cắt phôi kính Indo, Việt Nhật, mài vi tính 4li và phân loại kích thước',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '29/8/2026',
+      tools: [
+        { name: 'Máy Mài Kính 4li Cầm Tay', qty: 1, value: 11170000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' },
+        { name: 'Bình Hơi 1200w', qty: 1, value: 1800000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' }
+      ]
+    },
+    {
+      id: 'WS_1787983136132',
+      name: 'Kho Hàng & Sân Trước',
+      manager: 'Nguyễn Nhật Anh',
+      role: 'Kho Vận & Sân Xuất Hàng',
+      color: 'border-indigo-500/30 text-indigo-400 bg-indigo-500/10',
+      icon: 'fa-warehouse',
+      desc: 'Tập kết kiện hàng bể/layout thành phẩm, phụ kiện và xuất kho vận chuyển',
+      cleanliness5S: 'ĐẠT 5S',
+      shiftStatus: 'Đang hoạt động',
+      handoverDate: '29/8/2026',
+      tools: [
+        { name: 'Kệ Hàng Bể Thành Phẩm', qty: 1, value: 890000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Hàng Phụ Kiện', qty: 1, value: 890000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Hàng Layout Thành Phẩm', qty: 2, value: 890000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Kệ Hàng Huỷ Hoàn Nguyên Kiện', qty: 1, value: 650000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Tủ Hồ Sơ Việt Tiệp', qty: 1, value: 2200000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Biển Hiệu RF Aquarium', qty: 1, value: 700000, conditionPct: 100, depreciation: 'Không khấu hao', status: 'Tốt' },
+        { name: 'Bộ Bàn Trà Ngoài Trời', qty: 1, value: 490000, conditionPct: 100, depreciation: '36 tháng', status: 'Tốt' }
+      ]
+    }
+  ];
+
+  // Trạng thái trạm đã xóa (Optimistic UI & đồng bộ LocalStorage)
+  const [deletedStationIds, setDeletedStationIds] = React.useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('rf_deleted_workstations') || '[]');
+    } catch(e) {
+      return [];
+    }
+  });
+
+  // Hợp nhất dữ liệu trạm động trực tiếp từ CSDL Google Sheets Workspaces (bảo lưu 6 trạm gốc, cập nhật ghi đè & trạm mới)
+  const workstations = React.useMemo(() => {
+    const wsMap = new Map();
+    DEFAULT_STATIONS.forEach(def => {
+      if (!deletedStationIds.includes(def.id)) {
+        wsMap.set(def.id, { ...def });
+      }
+    });
+
+    (rawWorkspaces || []).forEach(ws => {
+      if (!ws || (!ws.id && !ws.name)) return;
+      const isMarkedDeleted = ws.status === 'DELETED' || ws.status === 'Đã Xóa' || ws.status === 'ĐÃ XOÁ' || ws.isDeleted === true || String(ws.isDeleted).toUpperCase() === 'TRUE' || deletedStationIds.includes(ws.id);
+      if (isMarkedDeleted) {
+        wsMap.delete(ws.id);
+        const def = DEFAULT_STATIONS.find(d => d.id === ws.id || d.name === ws.name);
+        if (def) wsMap.delete(def.id);
+        return;
+      }
+      const matchedDef = DEFAULT_STATIONS.find(d => d.id === ws.id || d.name === ws.name);
+      const key = ws.id || (matchedDef ? matchedDef.id : ws.name);
+      if (deletedStationIds.includes(key)) {
+        wsMap.delete(key);
+        return;
+      }
+      const def = matchedDef || wsMap.get(key) || {};
+      const meta = getWorkspaceMeta(ws.name || def.name, ws.user || def.manager);
+      const toolsList = ws.tools ? normalizeTools(ws.tools, ws.user || def.manager) : (def.tools || []);
+      
+      wsMap.set(key, {
+        id: ws.id || def.id || key,
+        name: ws.name || def.name || 'Trạm Xưởng',
+        manager: ws.user || def.manager || 'Nhân sự phụ trách',
+        secondaryManager: ws.secondaryManager || def.secondaryManager || '',
+        role: meta.role || def.role || 'Trạm Vận Hành',
+        color: meta.color || def.color || 'border-zinc-500/30 text-zinc-300 bg-zinc-500/10',
+        icon: meta.icon || def.icon || 'fa-industry',
+        desc: ws.note || def.desc || meta.desc || 'Quản lý máy móc và thiết bị trạm',
+        tools: toolsList,
+        cleanliness5S: ws.status === 'Tốt' ? 'ĐẠT 5S' : (ws.status || def.cleanliness5S || 'ĐẠT 5S'),
+        shiftStatus: 'Đang hoạt động',
+        handoverDate: ws.handoverDate || def.handoverDate || ''
+      });
+    });
+
+    return Array.from(wsMap.values());
+  }, [rawWorkspaces, deletedStationIds]);
+
+  // =========================================================================
+  // SUB-TAB 2: TRA CỨU TRÁCH NHIỆM NGUỒN GỐC THEO SERIAL / MÃ ĐƠN (SERIAL TRACE)
+  // =========================================================================
+  const [searchSerialQuery, setSearchSerialQuery] = React.useState('');
+  const [traceResult, setTraceResult] = React.useState(null);
+  const [hasSearched, setHasSearched] = React.useState(false);
+
+  const handleSearchSerial = (queryOverride) => {
+    const q = (queryOverride !== undefined ? queryOverride : searchSerialQuery).trim().toLowerCase();
+    setHasSearched(true);
+    if (!q) {
+      setTraceResult(null);
+      return;
+    }
+
+    // 1. Tìm trong lệnh sản xuất Production (theo id, orderId, name)
+    const matchedProd = prodItems.find(p => {
+      const pid = String(p.id || '').toLowerCase();
+      const oid = String(p.orderId || '').toLowerCase();
+      const pname = String(p.name || '').toLowerCase();
+      return pid === q || oid === q || pid.includes(q) || oid.includes(q) || pname.includes(q);
+    });
+
+    // 2. Tìm đơn hàng tương ứng trong Orders
+    const orderIdToFind = matchedProd ? (matchedProd.orderId || matchedProd.id) : q;
+    const matchedOrder = orders.find(o => {
+      const oid = String(o.id || '').toLowerCase();
+      const oCode = String(o.orderCode || '').toLowerCase();
+      return oid === orderIdToFind || oCode === orderIdToFind || oCode.includes(q);
+    });
+
+    // 3. Tìm thông tin đóng gói trong Packings
+    const targetOrderId = matchedOrder ? matchedOrder.id : (matchedProd ? matchedProd.orderId : q);
+    const matchedPacking = packings.find(pk => {
+      return String(pk.orderId || '').toLowerCase() === String(targetOrderId).toLowerCase() ||
+             (matchedOrder && String(pk.orderId || '').toLowerCase() === String(matchedOrder.orderCode || '').toLowerCase());
+    });
+
+    if (!matchedProd && !matchedOrder && !matchedPacking) {
+      setTraceResult(null);
+      return;
+    }
+
+    setTraceResult({
+      prod: matchedProd,
+      order: matchedOrder,
+      packing: matchedPacking
+    });
+  };
+
+  // =========================================================================
+  // SUB-TAB 3: BIÊN BẢN SỰ CỐ KỸ THUẬT & PHẠT QUY CHẾ 5S TRẠM
+  // =========================================================================
+  const [showIncidentModal, setShowIncidentModal] = React.useState(false);
+  const [incidentForm, setIncidentForm] = React.useState({
+    staff: '',
+    orderCode: '',
+    incidentType: 'Hở keo / Rò nước',
+    severity: 'MEDIUM',
+    penaltyVnd: 50000,
+    note: ''
+  });
+
+  const INCIDENT_TYPES = [
+    { type: 'Hở keo / Rò nước', defaultPenalty: 50000, desc: 'Bể bị rò nước sau khi giao khách, phải bóc dán lại' },
+    { type: 'Kính trầy xước mặt tiền', defaultPenalty: 30000, desc: 'Kính bị xước nhìn thấy rõ, không đạt chuẩn KCS' },
+    { type: 'Lọt bọt khí đường keo', defaultPenalty: 30000, desc: 'Đường keo dán bị bọt khí, ảnh hưởng thẩm mỹ' },
+    { type: 'Đóng gói thiếu phụ kiện', defaultPenalty: 20000, desc: 'Thiếu quà tặng / đệm cao su / đèn theo đơn' },
+    { type: 'Vi phạm vệ sinh trạm 5S', defaultPenalty: 50000, desc: 'Hết ca không dọn dẹp mặt bàn, dụng cụ bừa bãi' },
+    { type: 'Đóng gói sai quy cách vỡ bể', defaultPenalty: 100000, desc: 'Chưa đủ 3 lớp xốp bảo vệ gây vỡ khi vận chuyển' }
+  ];
+
+  // Danh mục lỗi vi phạm 5S & Vận hành phòng ban thường gặp (chọn nhanh 1 click)
+  const STATION_5S_VIOLATIONS = [
+    { label: '💡 Không tắt đèn / Điện', type: 'Không tắt đèn / Quên tắt thiết bị điện', penalty: 50000, desc: 'Hết ca không tắt đèn chiếu sáng, để lãng phí điện năng qua đêm' },
+    { label: '🚰 Không vặn chặt nước', type: 'Không vặn chặt vòi nước / Để rò rỉ nước', penalty: 50000, desc: 'Không khóa chặt vòi nước bồn rửa / test bể, để tràn nước ra xưởng' },
+    { label: '❄️ Quên tắt quạt / Đ.hòa', type: 'Không tắt quạt / Điều hòa trước khi ra về', penalty: 50000, desc: 'Không ngắt nguồn quạt công nghiệp / quạt hút / điều hòa khi hết ca' },
+    { label: '🧹 Bừa bãi vi phạm 5S', type: 'Vi phạm dọn dẹp vệ sinh trạm (5S)', penalty: 50000, desc: 'Không thu dọn phôi rác, mặt bàn bừa bãi, không trả dụng cụ về giá treo' },
+    { label: '🔧 Hư hỏng / Mất dụng cụ', type: 'Làm mất / Làm hỏng dụng cụ máy móc trạm', penalty: 100000, desc: 'Sử dụng sai quy cách làm hỏng máy móc, hoặc để thất lạc công cụ trạm' },
+    { label: '⚠️ Vi phạm an toàn trạm', type: 'Vi phạm an toàn lao động & quy trình trạm', penalty: 50000, desc: 'Không tuân thủ quy tắc an toàn xưởng, thao tác sai quy chuẩn' }
+  ];
+
+  // State Modal Phạt Trạm / 5S (Gắn trách nhiệm trực tiếp cho phụ trách chính)
+  const [stationPenaltyModal, setStationPenaltyModal] = React.useState({
+    isOpen: false,
+    station: null,
+    staff: '',
+    violationType: 'Không tắt đèn / Quên tắt thiết bị điện',
+    penaltyVnd: 50000,
+    note: ''
+  });
+
+  const handleOpenStationPenalty = (station) => {
+    setStationPenaltyModal({
+      isOpen: true,
+      station: station,
+      staff: station.manager || '',
+      violationType: 'Không tắt đèn / Quên tắt thiết bị điện',
+      penaltyVnd: 50000,
+      note: ''
+    });
+  };
+
+  const handleSaveStationPenalty = async () => {
+    if (!stationPenaltyModal.staff) {
+      return triggerToast ? triggerToast('Vui lòng chọn nhân sự chịu trách nhiệm!', 'fa-user', 'warning') : alert('Chọn nhân sự!');
+    }
+    const st = stationPenaltyModal.station;
+    const stName = st ? st.name : 'Trạm Xưởng';
+    const amount = Number(stationPenaltyModal.penaltyVnd) || 0;
+
+    try {
+      const newPenalty = {
+        id: 'BP_' + Date.now(),
+        user: stationPenaltyModal.staff,
+        amount: amount,
+        type: 'Khoản Trừ Vi Phạm',
+        note: `[Phạt Trạm: ${stName}] ${stationPenaltyModal.violationType}${stationPenaltyModal.note ? ' - ' + stationPenaltyModal.note : ''}`,
+        date: new Date().toISOString().slice(0, 10),
+        orderCode: `TRẠM: ${stName}`
+      };
+
+      await pushData({
+        BonusPenalty: [newPenalty]
+      }, `Ghi nhận phạt 5S trạm ${stName}: ${stationPenaltyModal.staff} (-${amount.toLocaleString('vi-VN')} đ)`, 'fa-gavel');
+
+      setStationPenaltyModal({ isOpen: false, station: null, staff: '', violationType: '', penaltyVnd: 50000, note: '' });
+      if (triggerToast) triggerToast(`Đã lập biên bản phạt 5S cho ${stationPenaltyModal.staff} (-${amount.toLocaleString('vi-VN')} đ)!`, 'fa-check', 'success');
+    } catch(err) {
+      if (triggerToast) triggerToast('Lỗi ghi nhận phạt: ' + err.message, 'fa-times', 'danger');
+    }
+  };
+
+  // State Modal Cấu Hình Trạm & Phân Công Trách Nhiệm (Thêm/Bớt Thiết Bị & Giao Trách Nhiệm)
+  const [stationEditModal, setStationEditModal] = React.useState({
+    isOpen: false,
+    isNew: false,
+    form: {
+      id: '',
+      name: '',
+      manager: '',
+      secondaryManager: '',
+      desc: '',
+      cleanliness5S: 'ĐẠT 5S',
+      handoverDate: '',
+      tools: []
+    }
+  });
+
+  const handleOpenStationEdit = (station) => {
+    setStationEditModal({
+      isOpen: true,
+      isNew: false,
+      form: {
+        id: station.id,
+        name: station.name || '',
+        manager: station.manager || '',
+        secondaryManager: station.secondaryManager || '',
+        desc: station.desc || '',
+        cleanliness5S: station.cleanliness5S || 'ĐẠT 5S',
+        handoverDate: station.handoverDate || new Date().toLocaleDateString('vi-VN'),
+        tools: (station.tools || []).map(t => ({
+          id: t.id || ('TOOL_' + Math.random().toString(36).slice(2, 7)),
+          name: t.name || '',
+          qty: t.qty || 1,
+          conditionPct: t.conditionPct !== undefined ? t.conditionPct : 100,
+          value: t.value || 0,
+          status: t.status || 'Tốt',
+          depreciation: t.depreciation || 'Không khấu hao'
+        }))
+      }
+    });
+  };
+
+  const handleOpenAddStation = () => {
+    setStationEditModal({
+      isOpen: true,
+      isNew: true,
+      form: {
+        id: 'WS_' + Date.now(),
+        name: '',
+        manager: staffList[0] || 'Nguyễn Ngọc Tiến',
+        secondaryManager: '',
+        desc: '',
+        cleanliness5S: 'ĐẠT 5S',
+        handoverDate: new Date().toLocaleDateString('vi-VN'),
+        tools: [
+          { id: 'TOOL_' + Date.now(), name: '', qty: 1, conditionPct: 100, value: 0, status: 'Tốt' }
+        ]
+      }
+    });
+  };
+
+  const handleAddTool = () => {
+    setStationEditModal(prev => ({
+      ...prev,
+      form: {
+        ...prev.form,
+        tools: [
+          ...prev.form.tools,
+          { id: 'TOOL_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5), name: '', qty: 1, conditionPct: 100, value: 0, status: 'Tốt' }
+        ]
+      }
+    }));
+  };
+
+  const handleRemoveTool = (indexToRemove) => {
+    setStationEditModal(prev => ({
+      ...prev,
+      form: {
+        ...prev.form,
+        tools: prev.form.tools.filter((_, idx) => idx !== indexToRemove)
+      }
+    }));
+  };
+
+  const handleToolChange = (idx, field, val) => {
+    setStationEditModal(prev => {
+      const updated = [...prev.form.tools];
+      updated[idx] = { ...updated[idx], [field]: val };
+      return { ...prev, form: { ...prev.form, tools: updated } };
+    });
+  };
+
+  const handleSaveStationConfig = async () => {
+    const f = stationEditModal.form;
+    if (!f.name || !f.name.trim()) {
+      return triggerToast ? triggerToast('Vui lòng nhập tên trạm làm việc!', 'fa-exclamation-triangle', 'warning') : alert('Nhập tên trạm!');
+    }
+    if (!f.manager || !f.manager.trim()) {
+      return triggerToast ? triggerToast('Vui lòng phân công phụ trách chính cho trạm!', 'fa-user', 'warning') : alert('Chọn phụ trách chính!');
+    }
+
+    const cleanTools = (f.tools || [])
+      .filter(t => t && t.name && t.name.trim())
+      .map(t => ({
+        name: t.name.trim(),
+        qty: Math.max(1, parseInt(t.qty) || 1),
+        conditionPct: Math.min(100, Math.max(0, parseInt(t.conditionPct) || 100)),
+        value: Math.max(0, parseInt(t.value) || 0),
+        status: t.status || 'Tốt',
+        depreciation: t.depreciation || 'Không khấu hao'
+      }));
+
+    const updatedWs = {
+      id: f.id || ('WS_' + Date.now()),
+      name: f.name.trim(),
+      user: f.manager.trim(),
+      secondaryManager: (f.secondaryManager || '').trim(),
+      tools: JSON.stringify(cleanTools),
+      status: f.cleanliness5S === 'ĐẠT 5S' ? 'Tốt' : f.cleanliness5S,
+      handoverDate: f.handoverDate || new Date().toLocaleDateString('vi-VN'),
+      photo: '',
+      note: (f.desc || '').trim()
+    };
+
+    try {
+      await pushData({
+        Workspaces: [updatedWs]
+      }, `Đã lưu cấu hình trạm ${f.name} - Phụ trách: ${f.manager}`, 'fa-industry');
+
+      setStationEditModal(prev => ({ ...prev, isOpen: false }));
+      if (triggerToast) triggerToast(`Đã lưu cấu hình trạm ${f.name} & giao trách nhiệm cho ${f.manager}!`, 'fa-check', 'success');
+    } catch(err) {
+      if (triggerToast) triggerToast('Lỗi khi lưu cấu hình trạm: ' + err.message, 'fa-times', 'danger');
+    }
+  };
+
+  const handleDeleteStation = async (stationId, stationName) => {
+    if (!canManageWorkstations) {
+      return triggerToast ? triggerToast('Chỉ Quản lý hoặc Ban Quản Trị mới có quyền xóa trạm!', 'fa-shield-alt', 'warning') : alert('Không có quyền!');
+    }
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa "${stationName || 'trạm này'}" khỏi danh sách phân công trách nhiệm không?\nToàn bộ máy móc thiết bị và thông tin phân công của trạm sẽ bị gỡ bỏ khỏi hệ thống.`);
+    if (!confirmed) return;
+
+    // Cập nhật Optimistic UI ngay lập tức
+    setDeletedStationIds(prev => {
+      const next = [...new Set([...prev, stationId])];
+      try { localStorage.setItem('rf_deleted_workstations', JSON.stringify(next)); } catch(e){}
+      return next;
+    });
+
+    try {
+      if (typeof pushData === 'function') {
+        await pushData({
+          Workspaces: [{
+            id: stationId,
+            name: stationName,
+            status: 'DELETED',
+            isDeleted: true
+          }],
+          deletes: {
+            Workspaces: [stationId]
+          }
+        }, `Đã xóa trạm ${stationName}`, 'fa-trash-alt');
+      }
+
+      setStationEditModal(prev => ({ ...prev, isOpen: false }));
+      if (triggerToast) triggerToast(`Đã xóa trạm "${stationName}" thành công!`, 'fa-trash-alt', 'success');
+    } catch(err) {
+      setDeletedStationIds(prev => {
+        const next = prev.filter(id => id !== stationId);
+        try { localStorage.setItem('rf_deleted_workstations', JSON.stringify(next)); } catch(e){}
+        return next;
+      });
+      if (triggerToast) triggerToast('Lỗi khi xóa trạm: ' + err.message, 'fa-times', 'danger');
+    }
+  };
+
+  const handleIncidentTypeChange = (e) => {
+    const selectedType = e.target.value;
+    const found = INCIDENT_TYPES.find(it => it.type === selectedType);
+    setIncidentForm(prev => ({
+      ...prev,
+      incidentType: selectedType,
+      penaltyVnd: found ? found.defaultPenalty : 50000
+    }));
+  };
+
+  const handleSaveIncident = async () => {
+    if (!incidentForm.staff) {
+      return triggerToast ? triggerToast('Vui lòng chọn nhân sự liên quan!', 'fa-user', 'warning') : alert('Chọn nhân sự!');
+    }
+
+    try {
+      const newPenalty = {
+        id: 'BP_' + Date.now(),
+        user: incidentForm.staff,
+        amount: Number(incidentForm.penaltyVnd) || 0,
+        type: 'Khoản Trừ Vi Phạm',
+        note: `Sự cố: ${incidentForm.incidentType} (${incidentForm.note || 'Ghi nhận sự cố kỹ thuật'})`,
+        date: new Date().toISOString().slice(0, 10),
+        orderCode: incidentForm.orderCode || ''
+      };
+
+      await pushData({
+        BonusPenalty: [newPenalty]
+      }, `Ghi nhận sự cố kỹ thuật: ${incidentForm.staff}`, 'fa-gavel');
+
+      setShowIncidentModal(false);
+      setIncidentForm({
+        staff: '',
+        orderCode: '',
+        incidentType: 'Hở keo / Rò nước',
+        severity: 'MEDIUM',
+        penaltyVnd: 50000,
+        note: ''
+      });
+      if (triggerToast) triggerToast(`Đã lập biên bản sự cố và khấu trừ lương cuối tháng!`, 'fa-check', 'success');
+    } catch(err) {
+      if (triggerToast) triggerToast('Lỗi khi ghi nhận sự cố: ' + err.message, 'fa-times', 'danger');
+    }
+  };
+
+  // Danh sách nhân sự chính thức của xưởng phục vụ giao trách nhiệm & lập biên bản
+  const staffList = React.useMemo(() => {
+    let fromConfigs = [];
+    if (Array.isArray(userConfigs)) {
+      fromConfigs = userConfigs.map(u => typeof u === 'string' ? u : (u['Tên Nhân Sự'] || u.name || u.user)).filter(Boolean);
+    } else if (userConfigs && typeof userConfigs === 'object') {
+      if (Array.isArray(userConfigs.users)) {
+        fromConfigs = userConfigs.users.filter(Boolean);
+      } else if (userConfigs.pins && typeof userConfigs.pins === 'object') {
+        fromConfigs = Object.values(userConfigs.pins).map(u => u?.name || u?.['Tên Nhân Sự'] || u?.user).filter(Boolean);
+      }
+    }
+    const fromUsers = Array.isArray(users) ? users : [];
+    const defaults = ['Nguyễn Ngọc Tiến', 'Nguyễn Thị Diệu Hương', 'Trần Duy Tân', 'Lại Trường Tâm', 'Nguyễn Hoàng Dương', 'Nguyễn Nhật Anh'];
+    const merged = Array.from(new Set([...defaults, ...fromConfigs, ...fromUsers]))
+      .filter(u => u && !u.startsWith('CTV') && u !== 'Khách' && u !== 'Admin');
+    return merged;
+  }, [userConfigs, users]);
+
+  // Danh sách sự cố kỹ thuật gần đây (lấy từ BonusPenalty loại 'Khoản Trừ Vi Phạm' hoặc 'Phạt')
+  const technicalIncidents = React.useMemo(() => {
+    return (bonusPenalties || [])
+      .filter(bp => {
+        const t = String(bp.type || '').toUpperCase();
+        return t.includes('PHẠT') || t.includes('TRỪ') || t.includes('VI PHẠM');
+      })
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  }, [bonusPenalties]);
+
+  return (
+    <div className="space-y-4 sm:space-y-5 pb-8 w-full relative bg-[#09090b] text-zinc-100 font-sans">
+      
+      {/* 1. HEADER & SEGMENTED CONTROLS 4 PHÂN HỆ */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-white/[0.06] pb-3.5">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase">
+              Trạm Sản Xuất & Truy Xuất Trách Nhiệm KCS
+            </h1>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold">
+              Accountability v3.0
+            </span>
+          </div>
+          <p className="text-zinc-500 text-[11px] font-medium mt-0.5">
+            Quản lý các trạm làm việc chuẩn hóa theo CSDL Sheet Workspaces, truy xuất nguồn gốc trách nhiệm và quy chế xử lý sự cố minh bạch.
+          </p>
+        </div>
+
+        {/* Action Buttons: Thêm Trạm Mới & Lập Biên Bản Sự Cố */}
+        <div className="flex items-center gap-2">
+          {canManageWorkstations && (
+            <>
+              <button
+                onClick={handleOpenAddStation}
+                className="h-9 px-3 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Tạo trạm làm việc mới và cấu hình thiết bị ban đầu"
+              >
+                <i className="fas fa-plus text-xs"></i>
+                <span>Thêm Trạm Mới</span>
+              </button>
+              <button
+                onClick={() => setShowIncidentModal(true)}
+                className="h-9 px-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                <i className="fas fa-file-shield text-xs"></i>
+                <span>Lập Biên Bản Sự Cố</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 2. SEGMENTED CONTROL 4 TABS */}
+      <div className="flex items-center gap-1 bg-[#121214] p-1 rounded-xl border border-white/[0.06] overflow-x-auto custom-scrollbar">
+        <button
+          onClick={() => setActiveSubTab('STATIONS')}
+          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'STATIONS' ? 'bg-[#d4af37] text-black font-black shadow-sm' : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <i className="fas fa-industry"></i>
+          <span>Trạng Thái Trạm Xưởng ({workstations.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('SERIAL_TRACE')}
+          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'SERIAL_TRACE' ? 'bg-[#d4af37] text-black font-black shadow-sm' : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <i className="fas fa-search-location"></i>
+          <span>Tra Cứu Trách Nhiệm Theo Serial</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('INCIDENTS')}
+          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'INCIDENTS' ? 'bg-[#d4af37] text-black font-black shadow-sm' : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <i className="fas fa-clipboard-list"></i>
+          <span>Sổ Biên Bản Sự Cố ({technicalIncidents.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('REGULATIONS')}
+          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'REGULATIONS' ? 'bg-[#d4af37] text-black font-black shadow-sm' : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <i className="fas fa-balance-scale"></i>
+          <span>Bảng Quy Chế Vi Phạm & 5S</span>
+        </button>
+      </div>
+
+      {/* =========================================================================
+          SUB-TAB 1: TRẠNG THÁI CÁC TRẠM LÀM VIỆC (WORKSTATIONS GRID)
+          ========================================================================= */}
+      {activeSubTab === 'STATIONS' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {workstations.map(st => {
+            const stTotalVal = (st.tools || []).reduce((acc, t) => acc + ((Number(t.qty) || 1) * (Number(t.value) || 0)), 0);
+            return (
+            <div key={st.id} className="bg-[#121214] border border-white/[0.06] rounded-xl p-4 flex flex-col justify-between shadow-sm relative overflow-hidden">
+              <div>
+                {/* Header Trạm */}
+                <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center text-sm shrink-0 ${st.color}`}>
+                      <i className={`fas ${st.icon}`}></i>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black text-white truncate">{st.name}</h3>
+                      <div className="text-[11px] font-mono text-zinc-400 truncate">
+                        Phụ trách chính: <strong className="text-zinc-200">{st.manager}</strong>
+                        {st.secondaryManager && <span> • {st.secondaryManager}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {st.cleanliness5S || 'ĐẠT 5S'}
+                    </span>
+                    {canManageWorkstations && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenStationEdit(st)}
+                          title="Chỉnh sửa cấu hình & giao trách nhiệm trạm"
+                          className="p-1.5 text-zinc-400 hover:text-[#d4af37] hover:bg-[#d4af37]/10 rounded-lg transition-all border border-transparent hover:border-[#d4af37]/30 cursor-pointer"
+                        >
+                          <i className="fas fa-pen-to-square text-xs"></i>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStation(st.id, st.name)}
+                          title={`Xóa trạm "${st.name}"`}
+                          className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all border border-transparent hover:border-rose-500/30 cursor-pointer"
+                        >
+                          <i className="fas fa-trash-alt text-xs"></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-zinc-400 text-xs mt-2.5 leading-relaxed font-medium">
+                  {st.desc}
+                </p>
+
+                {/* Danh mục công cụ & thiết bị trạm */}
+                <div className="mt-3.5 space-y-1.5 pt-3 border-t border-white/[0.04]">
+                  <div className="text-[10.5px] font-black uppercase tracking-wider text-zinc-400 mb-1.5 flex items-center justify-between">
+                    <span>Công Cụ & Máy Móc Trạm:</span>
+                    <div className="flex items-center gap-2">
+                      {stTotalVal > 0 && (
+                        <span className="text-[10px] font-mono font-bold text-amber-400/90" title="Tổng giá trị tài sản trạm">
+                          {stTotalVal.toLocaleString('vi-VN')}đ
+                        </span>
+                      )}
+                      <span className="text-[9.5px] font-mono text-zinc-500">{st.tools?.length || 0} thiết bị</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                    {(st.tools || []).map((t, idx) => (
+                      <div key={idx} className="p-2 bg-white/[0.02] border border-white/[0.04] rounded-lg flex items-center justify-between text-xs font-mono">
+                        <div className="truncate pr-1">
+                          <span className="text-zinc-300 font-bold">{t.name}</span>
+                          <span className="text-zinc-500 text-[10px] ml-1">x{t.qty || 1}</span>
+                          {Number(t.value || 0) > 0 && (
+                            <span className="text-amber-400/80 text-[9.5px] ml-1 font-normal">
+                              ({Number(t.value).toLocaleString('vi-VN')}đ)
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                          (t.conditionPct || 100) >= 90 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        }`}>
+                          {t.conditionPct || 100}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Trạm */}
+              <div className="mt-4 pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-zinc-500 font-mono text-[10px] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Ca hiện tại hoạt động bình thường
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Nút Phạt 5S / Quản lý trạm - Trách nhiệm gắn thẳng cho phụ trách chính */}
+                  {canManageWorkstations && (
+                    <button
+                      onClick={() => handleOpenStationPenalty(st)}
+                      className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
+                      title={`Phạt quy chế 5S / quản lý gắn thẳng trách nhiệm cho phụ trách chính (${st.manager})`}
+                    >
+                      <i className="fas fa-gavel text-rose-400 text-[10px]"></i>
+                      <span>Phạt 5S Trạm</span>
+                    </button>
+                  )}
+
+                  {/* Nút Chỉnh sửa thêm bớt thiết bị & giao trách nhiệm */}
+                  {canManageWorkstations && (
+                    <button
+                      onClick={() => handleOpenStationEdit(st)}
+                      className="px-2.5 py-1 bg-white/[0.04] hover:bg-[#d4af37]/15 text-zinc-300 hover:text-[#d4af37] border border-white/[0.08] hover:border-[#d4af37]/30 rounded-lg text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
+                      title="Chỉnh sửa thêm bớt thiết bị hoặc giao trách nhiệm cho nhân sự khác"
+                    >
+                      <i className="fas fa-sliders text-[10px]"></i>
+                      <span>Sửa & Phân Công</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setSearchSerialQuery(st.manager);
+                      setActiveSubTab('SERIAL_TRACE');
+                      handleSearchSerial(st.manager);
+                    }}
+                    className="px-2.5 py-1 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white rounded-lg border border-white/[0.08] text-[10px] font-bold transition-colors cursor-pointer"
+                  >
+                    Xem Lịch Sử ➔
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        </div>
+      )}
+
+      {/* =========================================================================
+          SUB-TAB 2: TRA CỨU NGUỒN GỐC TRÁCH NHIỆM (SERIAL TRACE TOOL)
+          ========================================================================= */}
+      {activeSubTab === 'SERIAL_TRACE' && (
+        <div className="space-y-4">
+          {/* Ô tìm kiếm lớn */}
+          <div className="bg-[#121214] border border-white/[0.06] rounded-xl p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fas fa-barcode text-[#d4af37]"></i>
+              <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                Truy Xuất Nguồn Gốc Trách Nhiệm Sản Phẩm
+              </h2>
+            </div>
+            <p className="text-zinc-400 text-xs mb-3">
+              Nhập mã Serial bể (vd: <strong className="text-zinc-200">BE151525_001</strong>), mã đơn hàng (vd: <strong className="text-zinc-200">240825ABCD</strong>), hoặc tên thợ để phân định trách nhiệm 4 khâu.
+            </p>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 flex items-center bg-[#09090b] border border-white/[0.08] rounded-xl px-3 py-2.5 focus-within:border-[#d4af37]/50">
+                <i className="fas fa-search text-zinc-500 mr-2 text-sm"></i>
+                <input
+                  type="text"
+                  placeholder="Nhập mã Serial, mã đơn hàng, hoặc tên sản phẩm..."
+                  value={searchSerialQuery}
+                  onChange={(e) => setSearchSerialQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchSerial()}
+                  className="bg-transparent text-white text-sm outline-none w-full font-mono font-bold"
+                />
+                {searchSerialQuery && (
+                  <button onClick={() => { setSearchSerialQuery(''); setTraceResult(null); }} className="text-zinc-500 hover:text-zinc-300 text-xs">
+                    <i className="fas fa-times"></i>
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => handleSearchSerial()}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] hover:brightness-110 text-black font-black text-xs rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+              >
+                Truy Vết Ngay
+              </button>
+            </div>
+          </div>
+
+          {/* Kết quả truy vết: Timeline Trách Nhiệm 4 Khâu */}
+          {hasSearched && !traceResult && (
+            <div className="bg-[#121214] border border-white/[0.06] rounded-xl p-8 text-center text-zinc-500 italic font-mono text-xs">
+              Không tìm thấy hồ sơ sản xuất hoặc đơn hàng khớp với từ khóa "{searchSerialQuery}".
+            </div>
+          )}
+
+          {traceResult && (
+            <div className="bg-[#121214] border border-white/[0.06] rounded-xl p-5 shadow-sm space-y-5 animate-fade-in">
+              {/* Header kết quả */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-white/[0.06]">
+                <div>
+                  <span className="text-[10px] font-mono uppercase text-[#d4af37] font-bold">Hồ Sơ Trách Nhiệm Sản Phẩm</span>
+                  <h3 className="text-lg font-black text-white">
+                    {traceResult.prod?.name || traceResult.order?.orderCode || 'Bể Thủy Sinh KCS'}
+                  </h3>
+                  <div className="text-xs font-mono text-zinc-400 mt-0.5">
+                    Mã Đơn: <strong className="text-zinc-200">{traceResult.order?.orderCode || traceResult.prod?.orderId || 'N/A'}</strong>
+                    {traceResult.order?.channel && <span> • Kênh: {traceResult.order.channel}</span>}
+                    {traceResult.order?.customer && <span> • Khách: {traceResult.order.customer}</span>}
+                  </div>
+                </div>
+
+                <div className="text-right font-mono">
+                  <span className="px-2.5 py-1 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    KCS: {traceResult.prod?.qc_status || 'ĐÃ DUYỆT PASS'}
+                  </span>
+                </div>
+              </div>
+
+              {/* TIMELINE TRÁCH NHIỆM 4 KHÂU */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Khâu 1: Cắt & Dán Phôi */}
+                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase text-sky-400 font-mono">Khâu 1: Cắt Dán Phôi</span>
+                      <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                    </div>
+                    <div className="text-xs font-black text-white font-mono">
+                      Thợ: {traceResult.prod?.p1_user || traceResult.prod?.phases?.phase1?.user || 'Nguyễn Hoàng Dương'}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 mt-1">
+                      Hoàn thành: {traceResult.prod?.p1_endTime || traceResult.prod?.phases?.phase1?.endTime || 'Đã bàn giao khâu 2'}
+                    </div>
+                  </div>
+                  {traceResult.prod?.p1_photo && (
+                    <div className="mt-3 pt-2 border-t border-white/[0.04]">
+                      <a href={traceResult.prod.p1_photo} target="_blank" rel="noopener noreferrer" className="text-[10px] text-sky-400 hover:underline flex items-center gap-1 font-mono">
+                        <i className="fas fa-image"></i> Xem ảnh công đoạn 1
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Khâu 2: Gọt Keo & Gia Cố */}
+                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase text-amber-400 font-mono">Khâu 2: Gọt Keo & Gia Cố</span>
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                    </div>
+                    <div className="text-xs font-black text-white font-mono">
+                      Thợ: {traceResult.prod?.p2_user || traceResult.prod?.phases?.phase2?.user || 'Lại Trường Tâm'}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 mt-1">
+                      Hoàn thành: {traceResult.prod?.p2_endTime || traceResult.prod?.phases?.phase2?.endTime || 'Đã vào kho dưỡng'}
+                    </div>
+                  </div>
+                  {traceResult.prod?.p2_photo && (
+                    <div className="mt-3 pt-2 border-t border-white/[0.04]">
+                      <a href={traceResult.prod.p2_photo} target="_blank" rel="noopener noreferrer" className="text-[10px] text-amber-400 hover:underline flex items-center gap-1 font-mono">
+                        <i className="fas fa-image"></i> Xem ảnh công đoạn 2
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Khâu 3: Nghiệm Thu KCS */}
+                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase text-emerald-400 font-mono">Khâu 3: Nghiệm Thu KCS</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                    <div className="text-xs font-black text-white font-mono">
+                      QC: {traceResult.prod?.qc_user || 'Lại Trường Tâm'}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 mt-1">
+                      Ghi chú: {traceResult.prod?.qc_note || 'Test nước 100% không rò rỉ, đường keo phẳng'}
+                    </div>
+                  </div>
+                  {(traceResult.prod?.qc_front_photo || traceResult.prod?.qc_side_photo) && (
+                    <div className="mt-3 pt-2 border-t border-white/[0.04] flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                      {traceResult.prod?.qc_front_photo && <a href={traceResult.prod.qc_front_photo} target="_blank" rel="noreferrer" className="hover:underline">Ảnh mặt trước</a>}
+                      {traceResult.prod?.qc_side_photo && <a href={traceResult.prod.qc_side_photo} target="_blank" rel="noreferrer" className="hover:underline">• Ảnh mặt hông</a>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Khâu 4: Đóng Gói & Bưu Tá */}
+                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase text-purple-400 font-mono">Khâu 4: Đóng Gói Xuất Kho</span>
+                      <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                    </div>
+                    <div className="text-xs font-black text-white font-mono">
+                      Người gói: {traceResult.packing?.user || 'Diệu Hương'}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500 mt-1">
+                      Giờ gói: {traceResult.packing?.endTime ? String(traceResult.packing.endTime).slice(0, 16) : 'Đã giao bưu tá'}
+                    </div>
+                  </div>
+                  {traceResult.packing?.photo && (
+                    <div className="mt-3 pt-2 border-t border-white/[0.04]">
+                      <a href={traceResult.packing.photo} target="_blank" rel="noopener noreferrer" className="text-[10px] text-purple-400 hover:underline flex items-center gap-1 font-mono">
+                        <i className="fas fa-camera"></i> Xem ảnh kiện hàng bọc xốp
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* KẾT LUẬN TRÁCH NHIỆM KHI CÓ KHIẾU NẠI */}
+              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs leading-relaxed">
+                <div className="text-[10px] font-black uppercase tracking-wider text-[#d4af37] mb-1 font-mono flex items-center gap-1.5">
+                  <i className="fas fa-scale-balanced"></i> Hướng Dẫn Phân Định Khiếu Nại Sàn TMĐT:
+                </div>
+                <div className="text-zinc-300 space-y-1">
+                  <div>• <strong>Bể rò rỉ / bọt keo:</strong> Lỗi kỹ thuật thuộc Khâu 1 & Khâu 2 (Thợ chịu trách nhiệm khắc phục).</div>
+                  <div>• <strong>Bể vỡ nát khi khách nhận:</strong> Kiểm tra ảnh Khâu 3 và Khâu 4. Nếu ảnh KCS và ảnh bọc xốp nguyên vẹn $\rightarrow$ Lỗi do đơn vị vận chuyển (Bưu tá ném hàng). Dùng ảnh Khâu 4 để nộp bằng chứng khiếu nại sàn TMĐT (Tag <span className="text-emerald-400 font-mono font-bold">[KN-THANG]</span>).</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          SUB-TAB 3: SỔ BIÊN BẢN SỰ CỐ KỸ THUẬT (INCIDENT LEDGER)
+          ========================================================================= */}
+      {activeSubTab === 'INCIDENTS' && (
+        <div className="bg-[#121214] border border-white/[0.06] rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+            <div>
+              <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <i className="fas fa-clipboard-check text-rose-400"></i>
+                Sổ Biên Bản Sự Cố Kỹ Thuật & Khấu Trừ Quy Chế ({technicalIncidents.length})
+              </h2>
+              <p className="text-zinc-500 text-[11px] mt-0.5">
+                Ghi nhận nội bộ phục vụ khấu trừ lương cuối tháng. Tuyệt đối không bêu rếu lên bảng điều hành chung.
+              </p>
+            </div>
+            {canManageWorkstations && (
+              <button
+                onClick={() => setShowIncidentModal(true)}
+                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/30 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                + Lập Biên Bản Mới
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-white/[0.06] text-zinc-400 font-bold uppercase text-[10px] tracking-wider">
+                  <th className="py-2.5 px-3">Ngày</th>
+                  <th className="py-2.5 px-3">Nhân Sự Liên Quan</th>
+                  <th className="py-2.5 px-3">Nội Dung Sự Cố</th>
+                  <th className="py-2.5 px-3">Mã Đơn / Bể</th>
+                  <th className="py-2.5 px-3 text-right">Khấu Trừ Quy Chế (VNĐ)</th>
+                  <th className="py-2.5 px-3 text-center">Trạng Thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {technicalIncidents.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-8 text-zinc-500 italic font-mono">
+                      Xưởng vận hành đạt chuẩn 100%, chưa ghi nhận sự cố kỹ thuật nào trong tháng.
+                    </td>
+                  </tr>
+                ) : (
+                  technicalIncidents.map(inc => (
+                    <tr key={inc.id} className="h-12 hover:bg-white/[0.02] transition-colors font-mono">
+                      <td className="py-1 px-3 text-zinc-400">{inc.date || '--'}</td>
+                      <td className="py-1 px-3 text-zinc-200 font-bold">{inc.user}</td>
+                      <td className="py-1 px-3 text-zinc-300 font-sans max-w-xs truncate">{inc.note}</td>
+                      <td className="py-1 px-3 text-zinc-400">{inc.orderCode || 'Nội bộ xưởng'}</td>
+                      <td className="py-1 px-3 text-right text-rose-400 font-bold">
+                        -{Number(inc.amount || 0).toLocaleString('vi-VN')} đ
+                      </td>
+                      <td className="py-1 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Đã trừ lương
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          SUB-TAB 4: BẢNG QUY CHẾ VI PHẠM & 5S (MINH BẠCH - PHƯƠNG ÁN C)
+          ========================================================================= */}
+      {activeSubTab === 'REGULATIONS' && (
+        <div className="bg-[#121214] border border-white/[0.06] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="pb-3 border-b border-white/[0.06]">
+            <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <i className="fas fa-gavel text-[#d4af37]"></i>
+              Quy Chế Kỷ Luật Kỹ Thuật & Chuẩn 5S Xưởng Rich Fish
+            </h2>
+            <p className="text-zinc-500 text-[11px] mt-0.5">
+              Áp dụng công khai, minh bạch cho toàn thể đội ngũ thợ sản xuất, thủ kho và đóng gói.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {INCIDENT_TYPES.map((reg, idx) => (
+              <div key={idx} className="p-3.5 bg-white/[0.02] border border-white/[0.04] rounded-xl flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-zinc-100 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                    <span>{reg.type}</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    {reg.desc}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-black font-mono text-rose-400">
+                    -{reg.defaultPenalty.toLocaleString('vi-VN')} đ
+                  </div>
+                  <div className="text-[9px] font-mono text-zinc-500 mt-0.5">Khấu trừ lương</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Triết lý Lean 5S */}
+          <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs">
+            <div className="text-[10.5px] font-black uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
+              <i className="fas fa-broom"></i> Kỷ Luật 5S Trước Khi Tan Ca:
+            </div>
+            <div className="text-zinc-300 leading-relaxed">
+              1. <strong>Sàng lọc:</strong> Thu dọn mảnh kính vụn, bao bì rách ném vào thùng rác phế liệu.<br/>
+              2. <strong>Sắp xếp:</strong> Trả dao cắt kính, thước nhôm, súng bắn keo về đúng giá treo trạm.<br/>
+              3. <strong>Sạch sẽ:</strong> Lau sạch bàn cắt kính và bàn dán keo, không để keo thừa bám dính mặt bàn.<br/>
+              4. <strong>Săn sóc & Sẵn sàng:</strong> Kiểm tra ngắt nguồn điện, khóa van khí nén trước khi ra ca.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL LẬP BIÊN BẢN SỰ CỐ KỸ THUẬT NHANH
+          ========================================================================= */}
+      {showIncidentModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4 backdrop-blur-xs animate-fade-in" onClick={() => setShowIncidentModal(false)}>
+          <div className="bg-[#121214] border border-white/[0.1] w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-white/[0.06] pb-3">
+              <h3 className="text-white font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                <i className="fas fa-file-shield text-rose-400"></i>
+                Lập Biên Bản Sự Cố Kỹ Thuật
+              </h3>
+              <button onClick={() => setShowIncidentModal(false)} className="text-zinc-400 hover:text-white cursor-pointer"><i className="fas fa-times"></i></button>
+            </div>
+
+            <div className="space-y-3 bg-[#09090b] p-3.5 rounded-xl border border-white/[0.06]">
+              {/* Chọn thợ */}
+              <div>
+                <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Nhân sự liên quan:</label>
+                <select
+                  value={incidentForm.staff}
+                  onChange={(e) => setIncidentForm(prev => ({ ...prev, staff: e.target.value }))}
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white outline-none focus:border-[#d4af37]"
+                >
+                  <option value="">-- Chọn nhân sự --</option>
+                  {staffList.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              {/* Loại lỗi */}
+              <div>
+                <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Loại sự cố kỹ thuật:</label>
+                <select
+                  value={incidentForm.incidentType}
+                  onChange={handleIncidentTypeChange}
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white outline-none focus:border-[#d4af37]"
+                >
+                  {INCIDENT_TYPES.map(it => <option key={it.type} value={it.type}>{it.type}</option>)}
+                </select>
+              </div>
+
+              {/* Mã đơn */}
+              <div>
+                <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Mã đơn hàng / Mã Serial bể (nếu có):</label>
+                <input
+                  type="text"
+                  placeholder="VD: 240825ABCD hoặc BE151525_001..."
+                  value={incidentForm.orderCode}
+                  onChange={(e) => setIncidentForm(prev => ({ ...prev, orderCode: e.target.value }))}
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white font-mono outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              {/* Mức khấu trừ */}
+              <div>
+                <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Mức khấu trừ lương theo quy chế (VNĐ):</label>
+                <input
+                  type="number"
+                  value={incidentForm.penaltyVnd}
+                  onChange={(e) => setIncidentForm(prev => ({ ...prev, penaltyVnd: e.target.value }))}
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-rose-400 font-mono font-bold outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              {/* Ghi chú chi tiết */}
+              <div>
+                <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Mô tả chi tiết nguyên nhân sự cố:</label>
+                <textarea
+                  placeholder="Ghi rõ tình trạng thực tế để thợ rút kinh nghiệm..."
+                  value={incidentForm.note}
+                  onChange={(e) => setIncidentForm(prev => ({ ...prev, note: e.target.value }))}
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-zinc-200 outline-none min-h-[60px] custom-scrollbar focus:border-[#d4af37]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button onClick={() => setShowIncidentModal(false)} className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:bg-[#27272a] transition-colors cursor-pointer">Hủy</button>
+              <button 
+                onClick={handleSaveIncident}
+                className="px-4 py-2 rounded-lg text-xs font-black text-white bg-rose-600 hover:bg-rose-500 transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                Xác Nhận Biên Bản
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 1: PHẠT QUY CHẾ 5S & QUẢN LÝ TRẠM (GẮN TRÁCH NHIỆM CHO PHỤ TRÁCH CHÍNH)
+          ========================================================================= */}
+      {stationPenaltyModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[9999] p-4 backdrop-blur-xs animate-fade-in" onClick={() => setStationPenaltyModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="bg-[#121214] border border-rose-500/30 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-white/[0.06] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                  <i className="fas fa-gavel text-sm"></i>
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-sm uppercase tracking-wider">
+                    Phạt Quy Chế 5S & Quản Lý Trạm
+                  </h3>
+                  <div className="text-[11px] font-mono text-zinc-400">
+                    Khu vực: <strong className="text-rose-400">{stationPenaltyModal.station?.name || 'Trạm Xưởng'}</strong>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setStationPenaltyModal(prev => ({ ...prev, isOpen: false }))} 
+                className="text-zinc-400 hover:text-white cursor-pointer w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/[0.05]"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* Thông tin trách nhiệm Phụ Trách Chính */}
+            <div className="p-3 bg-rose-500/5 border border-rose-500/20 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] font-bold text-rose-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="fas fa-user-shield"></i>
+                  Trách Nhiệm Phụ Trách Chính:
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">Gắn trách nhiệm trực tiếp</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={stationPenaltyModal.staff}
+                  onChange={(e) => setStationPenaltyModal(prev => ({ ...prev, staff: e.target.value }))}
+                  className="w-full bg-[#18181b] border border-rose-500/30 text-white font-bold text-xs rounded-lg p-2 outline-none focus:border-rose-400"
+                >
+                  {staffList.map(s => (
+                    <option key={s} value={s}>
+                      {s} {s === stationPenaltyModal.station?.manager ? '⭐ (Phụ trách chính trạm)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[10.5px] text-zinc-400 italic leading-relaxed">
+                * Quy chế vận hành: Sự cố phòng ban (quên tắt đèn, để tràn nước, bừa bãi 5S...) mặc định quy trách nhiệm trực tiếp cho Phụ trách chính của phòng ban/khu vực.
+              </p>
+            </div>
+
+            {/* Danh mục vi phạm 5S chọn nhanh */}
+            <div className="space-y-1.5">
+              <label className="text-[10.5px] font-bold text-zinc-400 block">
+                Chọn nhanh lỗi vi phạm 5S & Vận hành:
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {STATION_5S_VIOLATIONS.map((v, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setStationPenaltyModal(prev => ({
+                      ...prev,
+                      violationType: v.type,
+                      penaltyVnd: v.penalty
+                    }))}
+                    className={`p-2 rounded-lg text-left text-xs transition-all border cursor-pointer ${
+                      stationPenaltyModal.violationType === v.type
+                        ? 'bg-rose-500/20 border-rose-500/50 text-white font-bold shadow-xs'
+                        : 'bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="font-bold truncate text-[11px]">{v.label}</div>
+                    <div className="text-[10px] font-mono text-rose-400 mt-0.5">-{v.penalty.toLocaleString('vi-VN')} đ</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mức khấu trừ & Loại lỗi chi tiết */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#09090b] p-3 rounded-xl border border-white/[0.06]">
+              <div>
+                <label className="text-[10px] font-bold text-zinc-400 mb-1 block">Tên lỗi vi phạm:</label>
+                <input
+                  type="text"
+                  value={stationPenaltyModal.violationType}
+                  onChange={(e) => setStationPenaltyModal(prev => ({ ...prev, violationType: e.target.value }))}
+                  placeholder="VD: Không tắt đèn / Quên vặn chặt nước..."
+                  className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white font-bold outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-zinc-400 mb-1 block">Mức phạt khấu trừ lương (VNĐ):</label>
+                <input
+                  type="number"
+                  value={stationPenaltyModal.penaltyVnd}
+                  onChange={(e) => setStationPenaltyModal(prev => ({ ...prev, penaltyVnd: e.target.value }))}
+                  className="w-full bg-[#121214] border border-rose-500/30 rounded-lg p-2 text-xs text-rose-400 font-mono font-black outline-none focus:border-rose-400"
+                />
+              </div>
+            </div>
+
+            {/* Mô tả chi tiết */}
+            <div>
+              <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">
+                Mô tả chi tiết sự việc / Bằng chứng thực tế:
+              </label>
+              <textarea
+                placeholder="VD: Hết ca tối ngày 19/09 quên tắt dàn đèn phòng mẫu, vòi nước bồn rửa quên vặn chặt chảy tràn xưởng..."
+                value={stationPenaltyModal.note}
+                onChange={(e) => setStationPenaltyModal(prev => ({ ...prev, note: e.target.value }))}
+                className="w-full bg-[#09090b] border border-white/[0.08] rounded-lg p-2.5 text-xs text-zinc-200 outline-none min-h-[65px] custom-scrollbar focus:border-rose-400"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
+              <button 
+                onClick={() => setStationPenaltyModal(prev => ({ ...prev, isOpen: false }))} 
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:bg-[#27272a] transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleSaveStationPenalty}
+                className="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-500 transition-all cursor-pointer shadow-md active:scale-95 flex items-center gap-1.5"
+              >
+                <i className="fas fa-gavel"></i>
+                <span>Xác Nhận Khấu Trừ & Lập Biên Bản</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 2: CẤU HÌNH TRẠM, THÊM BỚT THIẾT BỊ & PHÂN CÔNG TRÁCH NHIỆM
+          ========================================================================= */}
+      {stationEditModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[9999] p-4 backdrop-blur-xs animate-fade-in" onClick={() => setStationEditModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="bg-[#121214] border border-white/[0.1] w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl p-5 shadow-2xl space-y-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b border-white/[0.06] pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37]">
+                  <i className="fas fa-sliders text-sm"></i>
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-sm uppercase tracking-wider">
+                    {stationEditModal.isNew ? 'Thêm Trạm Làm Việc Mới' : 'Cấu Hình Trạm & Phân Công Trách Nhiệm'}
+                  </h3>
+                  <div className="text-[11px] font-mono text-zinc-400">
+                    Cập nhật CSDL Sheet Workspaces, trang thiết bị máy móc và nhân sự quản lý
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setStationEditModal(prev => ({ ...prev, isOpen: false }))} 
+                className="text-zinc-400 hover:text-white cursor-pointer w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/[0.05]"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* Nội dung cuộn được */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+              {/* KHỐI 1: THÔNG TIN TRẠM & PHÂN CÔNG TRÁCH NHIỆM */}
+              <div className="bg-[#09090b] p-3.5 rounded-xl border border-white/[0.06] space-y-3">
+                <div className="text-xs font-black uppercase tracking-wider text-[#d4af37] flex items-center gap-1.5">
+                  <i className="fas fa-id-card"></i>
+                  <span>Thông Tin & Phân Công Nhân Sự</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Tên trạm */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Tên Trạm / Khu Vực Làm Việc *:</label>
+                    <input
+                      type="text"
+                      value={stationEditModal.form.name}
+                      onChange={(e) => setStationEditModal(prev => ({ ...prev, form: { ...prev.form, name: e.target.value } }))}
+                      placeholder="VD: Phòng Trưng Bày, Phòng Đóng Gói..."
+                      className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white font-bold outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  {/* PHỤ TRÁCH CHÍNH - GIAO TRÁCH NHIỆM */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-amber-400 mb-1 block flex items-center justify-between">
+                      <span>Phụ Trách Chính (Giao Trách Nhiệm) *:</span>
+                      <span className="text-[9.5px] font-mono text-zinc-500">Chịu trách nhiệm 5S & thiết bị</span>
+                    </label>
+                    <select
+                      value={stationEditModal.form.manager}
+                      onChange={(e) => setStationEditModal(prev => ({ ...prev, form: { ...prev.form, manager: e.target.value } }))}
+                      className="w-full bg-[#18181b] border border-[#d4af37]/40 rounded-lg p-2 text-xs text-white font-bold outline-none focus:border-[#d4af37]"
+                    >
+                      <option value="">-- Chọn nhân sự phụ trách chính --</option>
+                      {staffList.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Phụ trách phụ */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Phụ trách phụ / Hỗ trợ (nếu có):</label>
+                    <input
+                      type="text"
+                      value={stationEditModal.form.secondaryManager}
+                      onChange={(e) => setStationEditModal(prev => ({ ...prev, form: { ...prev.form, secondaryManager: e.target.value } }))}
+                      placeholder="VD: Nguyễn Văn Tân..."
+                      className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-white outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  {/* Chuẩn 5S */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Đánh Giá Tiêu Chuẩn 5S:</label>
+                    <select
+                      value={stationEditModal.form.cleanliness5S}
+                      onChange={(e) => setStationEditModal(prev => ({ ...prev, form: { ...prev.form, cleanliness5S: e.target.value } }))}
+                      className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-emerald-400 font-bold outline-none focus:border-[#d4af37]"
+                    >
+                      <option value="ĐẠT 5S">ĐẠT 5S (Chuẩn sạch sẽ, ngăn nắp)</option>
+                      <option value="CẦN CẢI THIỆN">CẦN CẢI THIỆN (Còn bừa bãi)</option>
+                      <option value="CHƯA ĐẠT">CHƯA ĐẠT (Vi phạm quy chế 5S)</option>
+                      <option value="ĐANG BẢO TRÌ">ĐANG BẢO TRÌ (Đang nâng cấp/sửa chữa)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Mô tả chức năng */}
+                <div>
+                  <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Mô tả chức năng & phạm vi trạm:</label>
+                  <textarea
+                    rows={2}
+                    value={stationEditModal.form.desc}
+                    onChange={(e) => setStationEditModal(prev => ({ ...prev, form: { ...prev.form, desc: e.target.value } }))}
+                    placeholder="Mô tả công việc thực hiện tại trạm..."
+                    className="w-full bg-[#121214] border border-white/[0.08] rounded-lg p-2 text-xs text-zinc-200 outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+              </div>
+
+              {/* KHỐI 2: THÊM BỚT CÔNG CỤ & THIẾT BỊ MÁY MÓC */}
+              <div className="bg-[#09090b] p-3.5 rounded-xl border border-white/[0.06] space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-xs font-black uppercase tracking-wider text-[#d4af37] flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <i className="fas fa-toolbox"></i>
+                      <span>Danh Mục Công Cụ & Thiết Bị Máy Móc ({stationEditModal.form.tools.length})</span>
+                    </div>
+                    {((stationEditModal.form.tools || []).reduce((sum, t) => sum + ((Number(t.qty) || 1) * (Number(t.value) || 0)), 0) > 0) && (
+                      <span className="text-[10.5px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 normal-case">
+                        Tổng tài sản: {((stationEditModal.form.tools || []).reduce((sum, t) => sum + ((Number(t.qty) || 1) * (Number(t.value) || 0)), 0)).toLocaleString('vi-VN')}đ
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddTool}
+                    className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-xs"
+                  >
+                    <i className="fas fa-plus text-[10px]"></i>
+                    <span>+ Thêm Thiết Bị</span>
+                  </button>
+                </div>
+
+                {stationEditModal.form.tools.length === 0 ? (
+                  <div className="p-4 rounded-lg border border-dashed border-white/[0.08] text-center text-zinc-500 text-xs italic">
+                    Trạm chưa có công cụ máy móc nào. Bấm "+ Thêm Thiết Bị" để bổ sung.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-zinc-500 uppercase px-1">
+                      <div className="col-span-4">Tên công cụ / Thiết bị</div>
+                      <div className="col-span-2 text-center">Số lượng</div>
+                      <div className="col-span-3 text-right">Giá tiền (VNĐ)</div>
+                      <div className="col-span-2 text-center">Tình trạng %</div>
+                      <div className="col-span-1 text-center">Xóa</div>
+                    </div>
+
+                    {stationEditModal.form.tools.map((t, idx) => (
+                      <div key={t.id || idx} className="grid grid-cols-12 gap-2 items-center p-1.5 bg-[#121214] border border-white/[0.06] rounded-lg">
+                        <div className="col-span-4">
+                          <input
+                            type="text"
+                            value={t.name}
+                            onChange={(e) => handleToolChange(idx, 'name', e.target.value)}
+                            placeholder="Tên thiết bị..."
+                            className="w-full bg-[#18181b] border border-white/[0.08] rounded px-2 py-1 text-xs text-white font-medium outline-none focus:border-[#d4af37]"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={t.qty || 1}
+                            onChange={(e) => handleToolChange(idx, 'qty', e.target.value)}
+                            className="w-full bg-[#18181b] border border-white/[0.08] rounded px-1 py-1 text-xs text-white text-center font-mono font-bold outline-none focus:border-[#d4af37]"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <input
+                            type="number"
+                            min="0"
+                            step="10000"
+                            value={t.value !== undefined ? t.value : 0}
+                            onChange={(e) => handleToolChange(idx, 'value', e.target.value)}
+                            placeholder="0"
+                            title="Giá tiền / Đơn giá thiết bị (VNĐ)"
+                            className="w-full bg-[#18181b] border border-white/[0.08] rounded px-2 py-1 text-xs text-amber-400 font-mono font-bold text-right outline-none focus:border-[#d4af37]"
+                          />
+                        </div>
+                        <div className="col-span-2 flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={t.conditionPct !== undefined ? t.conditionPct : 100}
+                            onChange={(e) => handleToolChange(idx, 'conditionPct', e.target.value)}
+                            className="w-full bg-[#18181b] border border-white/[0.08] rounded px-1 py-1 text-xs text-emerald-400 text-center font-mono font-bold outline-none focus:border-[#d4af37]"
+                          />
+                          <span className="text-zinc-500 text-xs font-mono">%</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTool(idx)}
+                            title="Xóa thiết bị này khỏi trạm"
+                            className="w-7 h-7 rounded text-rose-400 hover:bg-rose-500/20 flex items-center justify-center transition-colors cursor-pointer mx-auto"
+                          >
+                            <i className="fas fa-trash-alt text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer hành động */}
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/[0.06] shrink-0">
+              <div>
+                {!stationEditModal.isNew && canManageWorkstations && (
+                  <button 
+                    type="button"
+                    onClick={() => handleDeleteStation(stationEditModal.form.id, stationEditModal.form.name)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
+                    title="Xóa toàn bộ khu vực làm việc / trạm này khỏi hệ thống"
+                  >
+                    <i className="fas fa-trash-alt text-xs"></i>
+                    <span>Xóa Trạm Này</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setStationEditModal(prev => ({ ...prev, isOpen: false }))} 
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:bg-[#27272a] transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleSaveStationConfig}
+                  className="px-5 py-2 rounded-xl text-xs font-black text-black bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] hover:brightness-110 transition-all cursor-pointer shadow-md active:scale-95 flex items-center gap-1.5"
+                >
+                  <i className="fas fa-check"></i>
+                  <span>Lưu Cấu Hình & Phân Công</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+});
+
+window.WorkspaceTab = WorkspaceTab;
+window.WorkspacesTab = WorkspaceTab;
+</script>

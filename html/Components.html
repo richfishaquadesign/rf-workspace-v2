@@ -1,0 +1,1271 @@
+<script type="text/babel">
+// =========================================================================
+// 👑 FILE: Components.html
+// CHỨC NĂNG: Hệ thống Atomic Components chuẩn Hallmark Royal Workbench v2.12.0
+// =========================================================================
+
+window.safeJSONParse = (jsonString) => {
+    if (!jsonString) return [];
+    try {
+        const parsed = JSON.parse(jsonString);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.error("FATAL PARSE ERROR: ", e);
+        throw new Error("FATAL_DATA_CORRUPTION");
+    }
+};
+
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    render() {
+        if (this.state.hasError) {
+            if (this.state.error && this.state.error.message === "FATAL_DATA_CORRUPTION") {
+                return (
+                    <div className="fixed inset-0 z-[999999] bg-[#09090b] flex flex-col items-center justify-center text-white p-8 animate-fade-in">
+                        <i className="fas fa-skull-crossbones text-6xl mb-6 text-rose-500 animate-pulse"></i>
+                        <h1 className="text-2xl font-black mb-4 uppercase text-center text-rose-400">Hệ Thống Tạm Khoá Tránh Mất Dữ Liệu</h1>
+                        <p className="text-sm text-center max-w-2xl mb-8 leading-relaxed text-zinc-300">
+                            Phát hiện dữ liệu lưu trữ bị gián đoạn. Để bảo vệ an toàn dữ liệu và <b className="text-white">chống đè xoá</b>, hệ thống đã tạm khoá thao tác.
+                        </p>
+                        <button onClick={() => window.location.reload()} className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wider transition-all">Tải Lại Trang (F5)</button>
+                    </div>
+                );
+            }
+            return (
+                <div className="p-8 text-center bg-[#09090b] text-white min-h-[400px] flex flex-col justify-center items-center rounded-2xl border border-white/10 m-4">
+                    <i className="fas fa-exclamation-triangle text-4xl text-amber-400 mb-4"></i>
+                    <h2 className="text-lg font-bold mb-2 text-zinc-100">Đã xảy ra lỗi hiển thị khối giao diện</h2>
+                    <p className="text-zinc-400 text-xs font-mono max-w-lg truncate">{this.state.error?.toString()}</p>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+// URL trạm xưởng AI local (Cổng 8000)
+const KCS_LOCAL_URL = 'http' + '://' + '127.0.0.1:8000';
+
+const getDrivePreviewUrl = (url) => {
+    if (!url) return '';
+    const match = url.match(/[-\w]{25,}/);
+    if (match) return ('https:\x2F\x2Fdrive.google.com/file/d/' + match[0] + '/preview');
+    return url;
+};
+
+// PERF: Chuyển đổi Google Drive URL sang thumbnail proxy nhẹ hơn ~10-20x
+// size: 'sm' (120px), 'md' (300px), 'lg' (600px), 'full' (ảnh gốc)
+window.rfOptimizeImageUrl = (url, size = 'sm') => {
+    if (!url || typeof url !== 'string') return '';
+    const str = url.trim();
+    
+    // Đã là thumbnail proxy rồi thì không cần convert lại
+    if (str.includes('lh3.googleusercontent.com/d/')) return str;
+    
+    // Nếu là postimg, imgur, hoặc URL ngoài thì giữ nguyên
+    if (!str.includes('drive.google.com') && !str.includes('googleusercontent.com')) return str;
+    
+    // Extract Google Drive file ID
+    let fileId = null;
+    const patterns = [
+        /\/d\/([a-zA-Z0-9_-]{20,})/,         // /file/d/ID/...
+        /id=([a-zA-Z0-9_-]{20,})/,            // ?id=ID
+        /[-\w]{25,}/                            // raw ID fallback
+    ];
+    for (const p of patterns) {
+        const m = str.match(p);
+        if (m) { fileId = m[1] || m[0]; break; }
+    }
+    if (!fileId) return str;
+    
+    // Chuyển sang lh3 proxy với kích thước nhỏ
+    const sizeMap = { sm: 'w120-h120', md: 'w300-h300', lg: 'w600-h600', full: 'w0' };
+    const sizeParam = sizeMap[size] || sizeMap.sm;
+    return `https:\x2F\x2Flh3.googleusercontent.com/d/${fileId}=${sizeParam}`;
+};
+
+// PERF: Component ảnh tối ưu — lazy load, skeleton, tự nén URL Drive
+window.RFImage = React.memo(function RFImage({ src, alt = 'img', className = '', size = 'sm', onClick, title, style }) {
+    const [loaded, setLoaded] = React.useState(false);
+    const [errored, setErrored] = React.useState(false);
+    const optimizedSrc = React.useMemo(() => window.rfOptimizeImageUrl(src, size), [src, size]);
+    
+    if (!optimizedSrc || errored) {
+        return (
+            <div className={`bg-[#18181c] border border-white/[0.08] flex items-center justify-center text-zinc-600 ${className}`} style={style}>
+                <i className="fas fa-box text-[11px] opacity-60"></i>
+            </div>
+        );
+    }
+    
+    return (
+        <div className={`relative overflow-hidden ${className}`} style={style}>
+            {!loaded && <div className="absolute inset-0 skeleton-loader rounded"></div>}
+            <img
+                src={optimizedSrc}
+                alt={alt}
+                loading="lazy"
+                decoding="async"
+                className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${onClick ? 'cursor-pointer' : ''}`}
+                onLoad={() => setLoaded(true)}
+                onError={() => setErrored(true)}
+                onClick={onClick}
+                title={title}
+            />
+        </div>
+    );
+});
+
+window.resizeImage = (file, maxWidth = 800, maxHeight = 800, initialQuality = 0.5) => {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type.match(/image.*/)) return reject(new Error("Not an image"));
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const image = new Image();
+            image.onload = () => {
+                let width = image.width; let height = image.height;
+                if (width > height && width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+                else if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(image, 0, 0, width, height);
+                
+                let quality = initialQuality;
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                // Google Sheets cell limit is 50,000 chars. We aim for < 45,000.
+                while (dataUrl.length > 45000 && quality > 0.1) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL('image/jpeg', Math.max(0.1, quality));
+                }
+                
+                while (dataUrl.length > 45000 && width > 100) {
+                    width = Math.round(width * 0.7);
+                    height = Math.round(height * 0.7);
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(image, 0, 0, width, height);
+                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+                
+                resolve(dataUrl);
+            };
+            image.onerror = reject;
+            image.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
+const RFLogo = React.memo(({ className = "w-9 h-9", size = 36 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <defs>
+      <linearGradient id="rfFinGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#1e3a8a" />
+        <stop offset="40%" stopColor="#0284c7" />
+        <stop offset="70%" stopColor="#06b6d4" />
+        <stop offset="100%" stopColor="#38bdf8" />
+      </linearGradient>
+    </defs>
+    <path 
+      d="M25,80 C25,80 30,45 50,30 C65,18 80,25 78,35 C75,45 60,52 65,65 C70,78 78,80 78,80 C50,80 37,80 25,80 Z" 
+      fill="url(#rfFinGrad)" 
+      style={{ filter: "drop-shadow(0px 2px 4px rgba(6, 182, 212, 0.35))" }}
+    />
+  </svg>
+));
+
+// =========================================================================
+// ATOMIC COMPONENTS (CORE DESIGN SYSTEM - ROYAL WORKBENCH)
+// =========================================================================
+
+const RFCard = React.memo(({ children, className = "", noPadding = false, onClick = null }) => {
+    return (
+        <div 
+            onClick={onClick}
+            className={`bg-[#121215] border border-white/[0.08] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-200 ${onClick ? 'cursor-pointer hover:border-[#d4af37]/40 hover:shadow-[0_4px_24px_rgba(212,175,55,0.12)] active:scale-[0.99]' : ''} ${noPadding ? '' : 'p-3.5 sm:p-4'} ${className}`}
+        >
+            {children}
+        </div>
+    );
+});
+
+const RFButton = React.memo(({ children, onClick, variant = 'primary', className = "", disabled = false, icon = null, isLoading = false, title = "" }) => {
+    let baseStyles = "relative overflow-hidden rounded-xl font-bold text-[11.5px] uppercase tracking-wider transition-all duration-180 flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 disabled:active:scale-100 disabled:cursor-not-allowed select-none whitespace-nowrap";
+    
+    const variants = {
+        primary: "bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] text-[#09090b] shadow-[0_2px_12px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_18px_rgba(212,175,55,0.4)] border border-[#f0ca5e]/40 font-black",
+        secondary: "bg-[#18181c] text-zinc-200 border border-white/[0.08] hover:border-white/[0.18] hover:bg-[#222228]",
+        danger: "bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-[0_2px_12px_rgba(225,29,72,0.25)] hover:shadow-[0_4px_18px_rgba(225,29,72,0.4)] border border-rose-400/30",
+        success: "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_2px_12px_rgba(5,150,105,0.25)] hover:shadow-[0_4px_18px_rgba(5,150,105,0.4)] border border-emerald-400/30",
+        outline: "bg-transparent text-[#d4af37] border border-[#d4af37]/40 hover:bg-[#d4af37]/10",
+        ghost: "bg-transparent text-zinc-400 hover:text-white hover:bg-white/5"
+    };
+
+    const handleClick = (e) => {
+        if (disabled || isLoading) return;
+        if (typeof window.triggerHaptic === 'function') {
+            window.triggerHaptic(variant === 'danger' ? 'heavy' : variant === 'success' ? 'success' : 'light');
+        } else {
+            try { if (navigator.vibrate) navigator.vibrate(15); } catch(err) {}
+        }
+        if (onClick) onClick(e);
+    };
+
+    return (
+        <button 
+            onClick={handleClick} 
+            disabled={disabled || isLoading} 
+            title={title}
+            className={`${baseStyles} ${variants[variant] || variants.primary} py-2.5 px-3.5 ${className}`}
+        >
+            {isLoading ? <i className="fas fa-spinner fa-spin text-xs"></i> : (icon && <i className={`fas ${icon} text-xs`}></i>)}
+            <span>{children}</span>
+        </button>
+    );
+});
+
+const RFBadge = React.memo(({ text, type = 'default', className = "", icon = null }) => {
+    const types = {
+        default: "bg-zinc-800/80 text-zinc-300 border-white/[0.08]",
+        warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+        danger: "bg-rose-500/10 text-rose-400 border-rose-500/30",
+        success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+        info: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+        primary: "bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/30",
+        purple: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    };
+    
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9.5px] font-bold tracking-wider uppercase border whitespace-nowrap ${types[type] || types.default} ${className}`}>
+            {icon && <i className={`fas ${icon} text-[8.5px]`}></i>}
+            <span>{text}</span>
+        </span>
+    );
+});
+
+const RFInput = React.memo(({ value, onChange, placeholder, icon, type = "text", className = "", label = null }) => {
+    return (
+        <div className="flex flex-col w-full">
+            {label && <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">{label}</label>}
+            <div className="relative w-full">
+                {icon && <i className={`fas ${icon} absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs`}></i>}
+                <input 
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={`rf-input-glass rounded-xl px-4 py-2.5 text-[13px] text-white outline-none font-medium placeholder-zinc-600 w-full ${icon ? 'pl-9' : ''} ${className}`}
+                />
+            </div>
+        </div>
+    );
+});
+
+// =========================================================================
+// 🤖 RICH FISH WORKSHOP ASSISTANT WIDGET (QUẢN ĐỐC ẢO XƯỞNG)
+// Đã xóa bỏ hoàn toàn nút pill góc trái và logic Quản Đốc Ảo theo yêu cầu vận hành
+// =========================================================================
+if (typeof window !== 'undefined') {
+    window.openWorkshopAssistant = () => {};
+    window.toggleWorkshopAssistant = () => {};
+}
+
+const WorkshopAssistantWidget = React.memo(function WorkshopAssistantWidget() {
+    // Đã gỡ bỏ hoàn toàn nút pill góc trái và logic Quản Đốc Ảo dưới góc trái
+    // Legacy endpoint reference: fetch(KCS_LOCAL_URL + '/api/assistant/chat')
+    return null;
+});
+
+// =========================================================================
+// 🤖 RF AI OPERATIONS COPILOT (Đã loại bỏ theo yêu cầu quản trị v2.46.45)
+// =========================================================================
+
+const RFAgentControlTower = React.memo(function RFAgentControlTower() {
+    return null;
+});
+
+window.RFAgentControlTower = RFAgentControlTower;
+window.toggleAiCopilot = function() {};
+window.toggleAgentsTower = function() {};
+window.triggerRealtimeWarRoom = function() {};
+
+function ReloadAppButton() {
+    return null;
+}
+
+const trackAction = (action, details = '') => {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+            .withSuccessHandler(() => { console.log("Đã lưu vết hành vi: ", action); })
+            .withFailureHandler((err) => { console.error("Lỗi lưu vết: ", err); })
+            .logBehavior(action, details);
+    }
+};
+
+const ToastManager = React.memo(function ToastManager({ toasts }) { 
+    if (!toasts || toasts.length === 0) return null;
+    return ( 
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2 pointer-events-none w-[90%] max-w-sm"> 
+            {toasts.map(t => {
+                let bgColors = "bg-[#141418]/95 border-white/10 text-zinc-100";
+                if(t.color === 'success') bgColors = "bg-[#064e3b]/95 border-emerald-500/40 text-emerald-300";
+                if(t.color === 'danger') bgColors = "bg-[#4c0519]/95 border-rose-500/40 text-rose-300";
+                if(t.color === 'primary') bgColors = "bg-[#1e3a8a]/95 border-sky-500/40 text-sky-300";
+                if(t.color === 'warning') bgColors = "bg-[#78350f]/95 border-amber-500/40 text-amber-300";
+                
+                return (
+                    <div key={t.id} className={`animate-slide-down flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.6)] border ${bgColors} text-[12px] font-bold tracking-wide w-full backdrop-blur-xl`}> 
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center bg-black/25 shrink-0"><i className={`fas ${t.icon} text-xs`}></i></div> 
+                        <span className="flex-1 leading-snug">{t.msg}</span> 
+                    </div> 
+                );
+            })} 
+        </div> 
+    );
+});
+
+const Avatar = React.memo(function Avatar({ name, userConfigs, className="" }) { 
+    const [hasError, setHasError] = React.useState(false);
+    let id = null;
+    try {
+        if (userConfigs && name) {
+            const cleanName = String(name).trim().toLowerCase();
+            const sourceMap = userConfigs.avatars ? userConfigs.avatars : userConfigs;
+            if (sourceMap[name]) {
+                id = sourceMap[name];
+            } else {
+                const nameParts = cleanName.split(/[\s.]+/).filter(Boolean);
+                const mainName = nameParts[nameParts.length - 1];
+                const firstLetter = nameParts[0]?.[0];
+                const matchedKey = Object.keys(sourceMap).find(key => {
+                    const keyParts = String(key).trim().toLowerCase().split(/[\s.]+/).filter(Boolean);
+                    return keyParts[keyParts.length - 1] === mainName && keyParts[0]?.[0] === firstLetter;
+                });
+                if (matchedKey) id = sourceMap[matchedKey];
+            }
+        }
+    } catch(e) {}
+
+    let cleanId = id;
+    if (id && String(id).includes('drive.google.com')) {
+        const match = String(id).match(/[-\w]{25,}/);
+        if (match) cleanId = match[0];
+    }
+
+    if (cleanId && !hasError) { 
+        const isFullUrl = String(cleanId).startsWith('http://') || String(cleanId).startsWith('https://');
+        const imgSrc = isFullUrl ? cleanId : ('https:\x2F\x2Flh3.googleusercontent.com/d/' + cleanId + '=w120-h120');
+        return <img src={imgSrc} className={`object-cover rounded-full shadow-sm bg-[#18181c] ${className}`} alt={name} onError={() => setHasError(true)} />;
+    } 
+    return <div className={`flex items-center justify-center rounded-full bg-[#18181c] text-zinc-500 border border-white/[0.08] ${className}`}><i className="fas fa-user text-[11px]"></i></div>;
+});
+
+const TimePicker24h = React.memo(function TimePicker24h({ value, onChange, label }) { 
+    const currentH = value ? value.split(':')[0] : '';
+    const currentM = value ? value.split(':')[1] : ''; 
+    const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'));
+    const mins = Array.from({length:60}, (_,i) => String(i).padStart(2,'0')); 
+    return ( 
+        <div className="flex flex-col"> 
+            {label && <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">{label}</label>} 
+            <div className="flex items-center gap-1.5"> 
+                <select value={currentH} onChange={e=>onChange(`${e.target.value}:${currentM||'00'}`)} className="rf-input-glass rounded-xl px-3 py-2 text-[13px] text-white outline-none font-medium flex-1 appearance-none text-center"> 
+                    <option value="">Giờ</option> 
+                    {hours.map(h => <option key={`h${h}`} value={h}>{h}h</option>)} 
+                </select> 
+                <span className="text-zinc-500 font-bold">:</span> 
+                <select value={currentM} onChange={e=>onChange(`${currentH||'00'}:${e.target.value}`)} className="rf-input-glass rounded-xl px-3 py-2 text-[13px] text-white outline-none font-medium flex-1 appearance-none text-center"> 
+                    <option value="">Phút</option> 
+                    {mins.map(m => <option key={`m${m}`} value={m}>{m}p</option>)} 
+                </select> 
+            </div> 
+        </div> 
+    );
+});
+
+const NavBtn = React.memo(function NavBtn({ icon, label, active, onClick }) { 
+    return ( 
+        <button onClick={onClick} className="flex flex-col items-center justify-center w-14 pt-2 pb-1 transition-all relative group active:scale-95"> 
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-all duration-200 ${active ? 'bg-[#d4af37]/20 text-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.3)]' : 'text-zinc-500 group-hover:text-zinc-300'}`}> 
+                <i className={`fas ${icon} text-base`}></i> 
+            </div> 
+            <span className={`text-[8.5px] font-bold tracking-wider uppercase transition-colors truncate max-w-full ${active ? 'text-[#d4af37]' : 'text-zinc-500 group-hover:text-zinc-300'}`}>{label}</span> 
+            {active && <div className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-[#d4af37]"></div>}
+        </button> 
+    );
+});
+
+const TimeFilter = React.memo(function TimeFilter({ filter, setFilter, start, setStart, end, setEnd }) { 
+    const isInvalidRange = start && end && start > end;
+    return ( 
+        <div className="bg-[#121215] p-3 rounded-2xl border border-white/[0.08] shadow-sm mb-3"> 
+            <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-0.5"> 
+                {['Tất Cả', 'Hôm Nay', 'Tháng Này', 'Tuỳ Chỉnh'].map(f => ( 
+                    <button key={f} onClick={()=>setFilter(f)} className={`flex-shrink-0 px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm ${filter===f ? 'bg-[#d4af37] text-zinc-950 font-black' : 'bg-[#18181c] text-zinc-400 border border-white/[0.08] hover:text-white'}`}>{f}</button> 
+                ))} 
+            </div> 
+            {filter === 'Tuỳ Chỉnh' && ( 
+                <div className="flex flex-col gap-2 mt-2.5 pt-2.5 border-t border-white/[0.08] animate-fade-in"> 
+                    <div className="flex gap-2">
+                        <div className="flex-1"><label className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">Từ ngày</label><input type="date" className="rf-input-glass w-full" value={start} onChange={e=>setStart(e.target.value)} /></div> 
+                        <div className="flex-1"><label className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">Đến ngày</label><input type="date" className="rf-input-glass w-full" value={end} onChange={e=>setEnd(e.target.value)} /></div> 
+                    </div> 
+                    {isInvalidRange && (
+                        <div className="text-rose-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 mt-1">
+                            <i className="fas fa-exclamation-triangle"></i> Từ ngày không thể lớn hơn Đến ngày!
+                        </div>
+                    )}
+                </div> 
+            )} 
+        </div> 
+    );
+});
+
+// =========================================================================
+// 🖼️ COMPONENT: TRÌNH XEM ẢNH NỘI BỘ PHÓNG TO (ROYAL IMAGE LIGHTBOX)
+// =========================================================================
+const RFImageLightboxModal = React.memo(function RFImageLightboxModal({ src, title = "Xem Ảnh", subTitle = "", onClose }) {
+    const [zoom, setZoom] = React.useState(1);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [hasError, setHasError] = React.useState(false);
+    const [imgSrc, setImgSrc] = React.useState(() => {
+        if (!src) return '';
+        if (typeof getDirectImageUrl === 'function') {
+            const cdn = getDirectImageUrl(src, 'w1600');
+            return cdn || src;
+        }
+        return src;
+    });
+
+    React.useEffect(() => {
+        setZoom(1);
+        setIsLoading(true);
+        setHasError(false);
+        if (src) {
+            const cdn = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(src, 'w1600') : src;
+            setImgSrc(cdn || src);
+        }
+    }, [src]);
+
+    React.useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose && onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    if (!src) return null;
+
+    const safeDriveUrl = typeof getSafeDriveViewUrl === 'function' ? getSafeDriveViewUrl(src) : src;
+    const isDriveImg = src.includes('drive.google.com') || src.includes('googleusercontent.com');
+
+    const handleToggleZoom = (e) => {
+        if (e) e.stopPropagation();
+        setZoom(prev => prev === 1 ? 1.75 : (prev === 1.75 ? 2.5 : 1));
+    };
+
+    const handleOpenExternal = (e) => {
+        if (e) e.stopPropagation();
+        if (typeof openSafeImageTab === 'function') {
+            openSafeImageTab(src);
+        } else {
+            window.open(safeDriveUrl, '_blank', 'noopener,noreferrer');
+        }
+    };
+
+    const handleDownload = (e) => {
+        if (e) e.stopPropagation();
+        try {
+            const a = document.createElement('a');
+            a.href = imgSrc || src;
+            a.download = (title || 'image').replace(/\s+/g, '_') + '.jpg';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            handleOpenExternal(e);
+        }
+    };
+
+    return ReactDOM.createPortal(
+        <div 
+            className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 sm:p-6 select-none animate-fade-in"
+            onClick={onClose}
+            style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+        >
+            {/* TOP BAR */}
+            <div 
+                className="w-full max-w-5xl flex items-center justify-between gap-3 bg-[#141418]/95 border border-white/10 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md z-10"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0">
+                        <i className="fas fa-image"></i>
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-black text-zinc-100 truncate tracking-wide flex items-center gap-2">
+                            <span>{title}</span>
+                            {isDriveImg && (
+                                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
+                                    <i className="fab fa-google-drive mr-1"></i>Google Drive
+                                </span>
+                            )}
+                        </h3>
+                        {subTitle && <p className="text-[11px] text-zinc-400 font-mono truncate">{subTitle}</p>}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {/* ZOOM BUTTON */}
+                    <button
+                        type="button"
+                        onClick={handleToggleZoom}
+                        className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                            zoom > 1 ? 'bg-[#d4af37] text-zinc-950 border-[#d4af37]' : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10'
+                        }`}
+                        title="Phóng to / Thu nhỏ"
+                    >
+                        <i className={zoom > 1 ? "fas fa-search-minus" : "fas fa-search-plus"}></i>
+                        <span className="hidden sm:inline">{zoom > 1 ? zoom + 'x (Thu Nhỏ)' : 'Phóng To'}</span>
+                    </button>
+
+                    {/* OPEN SAFE DRIVE TAB */}
+                    {isDriveImg && (
+                        <button
+                            type="button"
+                            onClick={handleOpenExternal}
+                            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                            title="Mở an toàn trong Google Drive (Không bao giờ bị lỗi kết nối)"
+                        >
+                            <i className="fas fa-external-link-alt text-xs"></i>
+                            <span className="hidden sm:inline">Drive</span>
+                        </button>
+                    )}
+
+                    {/* DOWNLOAD BUTTON */}
+                    <button
+                        type="button"
+                        onClick={handleDownload}
+                        className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Tải ảnh về máy"
+                    >
+                        <i className="fas fa-download text-xs"></i>
+                        <span className="hidden sm:inline">Tải Về</span>
+                    </button>
+
+                    {/* CLOSE BUTTON */}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-xl bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all flex items-center justify-center cursor-pointer active:scale-95 ml-1"
+                        title="Đóng (ESC)"
+                    >
+                        <i className="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            {/* MAIN IMAGE CONTAINER */}
+            <div 
+                className="flex-1 w-full max-w-5xl flex items-center justify-center p-2 sm:p-4 my-2 overflow-auto custom-scrollbar"
+                onClick={e => e.stopPropagation()}
+            >
+                {isLoading && !hasError && (
+                    <div className="absolute flex flex-col items-center gap-3 text-zinc-400">
+                        <i className="fas fa-circle-notch fa-spin text-3xl text-[#d4af37]"></i>
+                        <span className="text-xs font-mono">Đang tải ảnh sắc nét...</span>
+                    </div>
+                )}
+
+                {hasError ? (
+                    <div className="flex flex-col items-center gap-3 text-rose-400 p-8 bg-[#18181c] rounded-2xl border border-rose-500/30">
+                        <i className="fas fa-exclamation-triangle text-3xl"></i>
+                        <span className="text-xs font-bold">Không thể tải ảnh xem trước</span>
+                        <button 
+                            onClick={handleOpenExternal}
+                            className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded-xl text-xs font-bold text-white transition-all cursor-pointer"
+                        >
+                            Mở trực tiếp trên Google Drive
+                        </button>
+                    </div>
+                ) : (
+                    <img 
+                        src={imgSrc} 
+                        alt={title}
+                        onLoad={() => setIsLoading(false)}
+                        onError={() => {
+                            if (imgSrc !== src) {
+                                setImgSrc(src);
+                            } else {
+                                setIsLoading(false);
+                                setHasError(true);
+                            }
+                        }}
+                        onClick={handleToggleZoom}
+                        style={{
+                            transform: `scale(${zoom})`,
+                            transformOrigin: 'center center',
+                            transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                        className={`max-h-[75vh] max-w-[90vw] object-contain rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.9)] bg-black/50 cursor-pointer ${
+                            isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'
+                        }`}
+                        title="Bấm vào ảnh để phóng to / thu nhỏ"
+                    />
+                )}
+            </div>
+
+            {/* BOTTOM HELPER BAR */}
+            <div 
+                className="text-center text-[11px] text-zinc-500 flex items-center justify-center gap-4 py-1"
+                onClick={e => e.stopPropagation()}
+            >
+                <span><i className="fas fa-mouse-pointer mr-1"></i> Bấm vào ảnh hoặc nút để Phóng to</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:inline"><kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-[10px] text-zinc-300">ESC</kbd> hoặc bấm ra ngoài để Đóng</span>
+            </div>
+        </div>,
+        document.body
+    );
+});
+
+window.RFImageLightboxModal = RFImageLightboxModal;
+
+
+// =========================================================================
+// 📸 COMPONENT: MODAL XEM 5 GÓC CHỤP LAYOUT (STUDIO MULTI-ANGLE VIEWER)
+// Tích Hợp Chống Chặn Mixed Content (HTTPS / HTTP) & Nút 1-Chạm Mở Trực Tiếp
+// =========================================================================
+const Layout5AngleViewerModal = React.memo(function Layout5AngleViewerModal() {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [currentLayout, setCurrentLayout] = React.useState(null);
+    const [activeAngleKey, setActiveAngleKey] = React.useState('front');
+    const [isAutoRotating, setIsAutoRotating] = React.useState(false);
+    const [zoom, setZoom] = React.useState(1);
+    const [pan, setPan] = React.useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = React.useState(false);
+    const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
+    const [showWebData, setShowWebData] = React.useState(false);
+    const [copiedTooltip, setCopiedTooltip] = React.useState(false);
+    const [imgErrors, setImgErrors] = React.useState({});
+
+    // Reset zoom và pan khi chuyển góc
+    const selectAngle = React.useCallback((key) => {
+        setActiveAngleKey(key);
+        setIsAutoRotating(false);
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+        setIsDragging(false);
+    }, []);
+
+    // Điều khiển Zoom đa cấp (1x -> 4x, bước 0.5x)
+    const handleZoomIn = React.useCallback((e) => {
+        if (e) e.stopPropagation();
+        setZoom(prev => Math.min(4, +(prev + 0.5).toFixed(1)));
+    }, []);
+
+    const handleZoomOut = React.useCallback((e) => {
+        if (e) e.stopPropagation();
+        setZoom(prev => {
+            const next = Math.max(1, +(prev - 0.5).toFixed(1));
+            if (next <= 1) setPan({ x: 0, y: 0 });
+            return next;
+        });
+    }, []);
+
+    const handleResetZoom = React.useCallback((e) => {
+        if (e) e.stopPropagation();
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+        setIsDragging(false);
+    }, []);
+
+    const handleToggleZoomQuick = React.useCallback((e) => {
+        if (e) e.stopPropagation();
+        setZoom(prev => {
+            if (prev > 1) {
+                setPan({ x: 0, y: 0 });
+                return 1;
+            }
+            return 2.5;
+        });
+    }, []);
+
+    // Kéo rê (Pan) khi zoom > 1
+    const handleMouseDown = React.useCallback((e) => {
+        if (zoom <= 1) return;
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    }, [zoom, pan]);
+
+    const handleMouseMove = React.useCallback((e) => {
+        if (!isDragging || zoom <= 1) return;
+        setPan({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y
+        });
+    }, [isDragging, zoom, dragStart]);
+
+    const handleMouseUp = React.useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    const handleTouchStart = React.useCallback((e) => {
+        if (zoom <= 1 || !e.touches || e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        setIsDragging(true);
+        setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+    }, [zoom, pan]);
+
+    const handleTouchMove = React.useCallback((e) => {
+        if (!isDragging || zoom <= 1 || !e.touches || e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        setPan({
+            x: touch.clientX - dragStart.x,
+            y: touch.clientY - dragStart.y
+        });
+    }, [isDragging, zoom, dragStart]);
+
+    const handleTouchEnd = React.useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    const handleWheel = React.useCallback((e) => {
+        if (!e.deltaY) return;
+        e.preventDefault();
+        if (e.deltaY < 0) {
+            handleZoomIn();
+        } else {
+            handleZoomOut();
+        }
+    }, [handleZoomIn, handleZoomOut]);
+
+    React.useEffect(() => {
+        const handler = (e) => {
+            const target = e.detail;
+            if (!target) return;
+            const data = (target.angles && target.angleList) ? target : (typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(target) : null);
+            if (data) {
+                setCurrentLayout(data);
+                setActiveAngleKey('front');
+                setIsAutoRotating(false);
+                setZoom(1);
+                setPan({ x: 0, y: 0 });
+                setShowWebData(false);
+                setImgErrors({});
+                setIsOpen(true);
+            }
+        };
+        window.addEventListener('openLayout5Angles', handler);
+        return () => window.removeEventListener('openLayout5Angles', handler);
+    }, []);
+
+    React.useEffect(() => {
+        if (!isAutoRotating || !isOpen || !currentLayout) return;
+        const keys = ['front', 'distant', 'left', 'right', 'top'];
+        const timer = setInterval(() => {
+            setActiveAngleKey(prev => {
+                const idx = keys.indexOf(prev);
+                return keys[(idx + 1) % keys.length];
+            });
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+        }, 2400);
+        return () => clearInterval(timer);
+    }, [isAutoRotating, isOpen, currentLayout]);
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const keyHandler = (e) => {
+            if (e.key === 'Escape') {
+                setIsOpen(false);
+            } else if (e.key === '1') {
+                selectAngle('front');
+            } else if (e.key === '2') {
+                selectAngle('distant');
+            } else if (e.key === '3') {
+                selectAngle('left');
+            } else if (e.key === '4') {
+                selectAngle('right');
+            } else if (e.key === '5') {
+                selectAngle('top');
+            } else if (e.key === 'ArrowRight') {
+                const keys = ['front', 'distant', 'left', 'right', 'top'];
+                setActiveAngleKey(prev => keys[(keys.indexOf(prev) + 1) % keys.length]);
+                setZoom(1);
+                setPan({ x: 0, y: 0 });
+            } else if (e.key === 'ArrowLeft') {
+                const keys = ['front', 'distant', 'left', 'right', 'top'];
+                setActiveAngleKey(prev => keys[(keys.indexOf(prev) - 1 + keys.length) % keys.length]);
+                setZoom(1);
+                setPan({ x: 0, y: 0 });
+            } else if (e.key === '+' || e.key === '=') {
+                handleZoomIn();
+            } else if (e.key === '-' || e.key === '_') {
+                handleZoomOut();
+            } else if (e.key === '0') {
+                handleResetZoom();
+            } else if (e.key === ' ' && e.target === document.body) {
+                e.preventDefault();
+                setIsAutoRotating(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', keyHandler);
+        return () => window.removeEventListener('keydown', keyHandler);
+    }, [isOpen, selectAngle, handleZoomIn, handleZoomOut, handleResetZoom]);
+
+    if (!isOpen || !currentLayout) return null;
+
+    const angleKeys = ['front', 'distant', 'left', 'right', 'top'];
+    const activeAngle = currentLayout.angles[activeAngleKey] || currentLayout.angles.front;
+    const currentIdx = angleKeys.indexOf(activeAngleKey) + 1;
+    const isCurrentBlocked = !!imgErrors[activeAngleKey];
+
+    const handleCopyCurrentLink = () => {
+        if (activeAngle?.url) {
+            navigator.clipboard.writeText(activeAngle.url);
+            setCopiedTooltip(true);
+            setTimeout(() => setCopiedTooltip(false), 2000);
+        }
+    };
+
+    const handleCopyAll5Links = () => {
+        const payload = {
+            layoutName: currentLayout.name,
+            subCategory: currentLayout.subCategory,
+            angles: {
+                front: currentLayout.angles.front.url,
+                distant: currentLayout.angles.distant.url,
+                left: currentLayout.angles.left.url,
+                right: currentLayout.angles.right.url,
+                top: currentLayout.angles.top.url
+            }
+        };
+        navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+        setCopiedTooltip(true);
+        setTimeout(() => setCopiedTooltip(false), 2000);
+    };
+
+    const handleDownloadCurrentPhoto = () => {
+        if (activeAngle?.url) {
+            const a = document.createElement('a');
+            a.href = activeAngle.url;
+            a.download = activeAngle.filename || `${currentLayout.name}_${activeAngleKey}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
+
+    const handleOpenInNewTab = () => {
+        if (activeAngle?.url) {
+            window.open(activeAngle.url, '_blank', 'noopener,noreferrer');
+        }
+    };
+
+    return ReactDOM.createPortal(
+        <div 
+            className="fixed inset-0 z-[999999] bg-[#070709]/98 backdrop-blur-2xl flex flex-col justify-between p-2 sm:p-4 select-none animate-fade-in"
+            onClick={() => setIsOpen(false)}
+        >
+            {/* 1. HEADER: THOÁNG ĐÃNG, TIÊU ĐỀ RÕ RÀNG, NÚT TẮT TO DỄ BẤM */}
+            <div 
+                className="flex items-center justify-between gap-2 sm:gap-4 pb-2.5 sm:pb-3 border-b border-white/[0.08] shrink-0 z-10"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Left: Avatar & Tên layout */}
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#d4af37] via-[#b89428] to-[#6d5718] flex items-center justify-center text-zinc-950 font-black shadow-[0_0_20px_rgba(212,175,55,0.4)] shrink-0">
+                        <i className="fas fa-cube text-base sm:text-lg"></i>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base sm:text-lg font-black text-white font-display tracking-wide break-words">
+                                {currentLayout.name}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/35 shadow-sm">
+                                {currentLayout.subCategory || 'LAYOUT 3D'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-lg text-[9.5px] font-mono font-bold bg-white/[0.06] text-zinc-300 border border-white/10">
+                                Góc {currentIdx}/5: {activeAngle?.label}
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 hidden sm:flex items-center gap-2 mt-0.5">
+                            <span className="text-[#d4af37] font-semibold">Studio 5 Góc Chuẩn Thợ</span>
+                            <span className="text-zinc-600">•</span>
+                            <span className="text-zinc-400 font-mono text-[10.5px]">Phím [1-5] chuyển góc, [+/-] phóng to/thu nhỏ, [Space] xoay</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Right: Action Buttons & Nút Đóng Siêu Dễ Bấm Trên Di Động */}
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Nút Mở Thẻ Mới */}
+                    <button 
+                        type="button"
+                        onClick={handleOpenInNewTab}
+                        className="h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Mở xem ảnh góc này trong thẻ trình duyệt riêng"
+                    >
+                        <i className="fas fa-external-link-alt text-xs text-amber-400"></i>
+                        <span className="hidden md:inline">Mở Thẻ Mới</span>
+                    </button>
+
+                    {/* Nút Auto Rotate */}
+                    <button 
+                        type="button"
+                        onClick={() => setIsAutoRotating(!isAutoRotating)}
+                        className={`h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            isAutoRotating 
+                                ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.5)] font-black' 
+                                : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
+                        }`}
+                        title="Tự động xoay chuyển 5 góc chụp (Space)"
+                    >
+                        <i className={`fas fa-rotate text-xs ${isAutoRotating ? 'fa-spin text-zinc-950' : 'text-amber-400'}`}></i>
+                        <span className="hidden md:inline">{isAutoRotating ? 'Dừng Xoay' : 'Xoay 360°'}</span>
+                    </button>
+
+                    {/* Nút Copy Link */}
+                    <button 
+                        type="button"
+                        onClick={handleCopyCurrentLink}
+                        className="h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer relative"
+                        title="Sao chép link ảnh góc này"
+                    >
+                        <i className="fas fa-copy text-xs text-zinc-400"></i>
+                        <span className="hidden lg:inline">{copiedTooltip ? 'Đã Chép!' : 'Copy Link'}</span>
+                    </button>
+
+                    {/* Nút Tải Ảnh */}
+                    <button 
+                        type="button"
+                        onClick={handleDownloadCurrentPhoto}
+                        className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white border border-white/10 flex items-center justify-center transition-all cursor-pointer"
+                        title="Tải ảnh góc này về máy"
+                    >
+                        <i className="fas fa-download text-xs"></i>
+                    </button>
+
+                    {/* 🔥 NÚT ĐÓNG TO BẢN: CHUẨN TOUCH TARGET TRÊN DI ĐỘNG (44px+) KHÔNG BAO GIỜ BẤM TRƯỢT */}
+                    <button 
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-rose-500/25 hover:bg-rose-500 text-rose-200 hover:text-white border border-rose-500/50 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.3)] active:scale-95"
+                        title="Đóng (ESC)"
+                    >
+                        <i className="fas fa-times text-base font-black"></i>
+                        <span className="text-xs font-black tracking-wide">ĐÓNG</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* 2. MAIN PREVIEW STAGE CÓ ZOOM ĐA CẤP & KÉO RÊ PAN/DRAG */}
+            <div 
+                className="flex-1 min-h-0 relative flex items-center justify-center my-1 sm:my-2 overflow-hidden rounded-2xl bg-black/50 border border-white/[0.04]"
+                onClick={e => e.stopPropagation()}
+                onWheel={handleWheel}
+            >
+                {/* Mũi tên góc trước (Trái) */}
+                <button 
+                    onClick={() => {
+                        const keys = ['front', 'distant', 'left', 'right', 'top'];
+                        const prevKey = keys[(keys.indexOf(activeAngleKey) - 1 + keys.length) % keys.length];
+                        selectAngle(prevKey);
+                    }}
+                    className="absolute left-2 sm:left-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/70 hover:bg-black/90 text-white/90 hover:text-white border border-white/20 flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-2xl active:scale-90"
+                    title="Góc trước (Mũi tên trái)"
+                >
+                    <i className="fas fa-chevron-left text-base"></i>
+                </button>
+
+                {/* Mũi tên góc kế (Phải) */}
+                <button 
+                    onClick={() => {
+                        const keys = ['front', 'distant', 'left', 'right', 'top'];
+                        const nextKey = keys[(keys.indexOf(activeAngleKey) + 1) % keys.length];
+                        selectAngle(nextKey);
+                    }}
+                    className="absolute right-2 sm:right-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/70 hover:bg-black/90 text-white/90 hover:text-white border border-white/20 flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-2xl active:scale-90"
+                    title="Góc kế tiếp (Mũi tên phải)"
+                >
+                    <i className="fas fa-chevron-right text-base"></i>
+                </button>
+
+                {/* Container ảnh & cử chỉ Pan / Drag */}
+                <div 
+                    className={`w-full h-full flex items-center justify-center relative p-2 overflow-hidden ${zoom > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'}`}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onDoubleClick={handleToggleZoomQuick}
+                >
+                    {isCurrentBlocked ? (
+                        <div className="max-w-md w-full p-6 rounded-2xl bg-[#141418]/95 border border-amber-500/30 text-center space-y-4 backdrop-blur-xl shadow-2xl">
+                            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+                                <i className="fas fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <h4 className="text-white font-bold text-sm">Trình Duyệt Chặn Ảnh Nội Bộ (Mixed Content)</h4>
+                                <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+                                    Trang web HTTPS chặn tải trực tiếp ảnh từ máy chủ xưởng HTTP (<span className="text-amber-400 font-mono">127.0.0.1:8000</span>).
+                                </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
+                                <button 
+                                    type="button"
+                                    onClick={handleOpenInNewTab}
+                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                                >
+                                    <i className="fas fa-external-link-alt"></i>
+                                    <span>Mở Xem Thẻ Mới (Góc {activeAngle?.label})</span>
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setImgErrors(prev => ({ ...prev, [activeAngleKey]: false }));
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 font-bold text-xs flex items-center justify-center gap-2 border border-white/10 transition-all cursor-pointer"
+                                >
+                                    <i className="fas fa-rotate-right"></i>
+                                    <span>Thử Lại</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <img 
+                            src={activeAngle?.url} 
+                            alt={`${currentLayout.name} - ${activeAngle?.label}`}
+                            onError={() => setImgErrors(prev => ({ ...prev, [activeAngleKey]: true }))}
+                            onLoad={() => setImgErrors(prev => ({ ...prev, [activeAngleKey]: false }))}
+                            draggable={false}
+                            style={{
+                                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                                transformOrigin: 'center center',
+                                transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)'
+                            }}
+                            className="max-h-full max-w-full object-contain rounded-2xl border border-white/[0.08] shadow-[0_15px_50px_rgba(0,0,0,0.9)] select-none pointer-events-auto"
+                            title="Nhấp đúp để phóng to/thu nhỏ nhanh. Giữ chuột/ngón tay kéo để soi mấu nối, rễ, keo."
+                        />
+                    )}
+
+                    {/* Badge Góc Chụp ở góc dưới bên trái */}
+                    <div className="absolute bottom-3 left-3 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl text-xs text-zinc-200 flex items-center gap-2 shadow-lg pointer-events-none">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="font-bold text-[#d4af37]">{activeAngle?.label}</span>
+                        <span className="text-zinc-500 hidden sm:inline">|</span>
+                        <span className="font-mono text-[11px] text-zinc-400 truncate max-w-[160px] sm:max-w-xs hidden sm:inline">{activeAngle?.filename}</span>
+                    </div>
+
+                    {/* 🔥 THANH CÔNG CỤ ZOOM ĐA CẤP NỔI (FLOATING ZOOM BAR) */}
+                    {!isCurrentBlocked && (
+                        <div 
+                            className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/85 backdrop-blur-md border border-white/15 px-2 py-1.5 rounded-2xl shadow-2xl z-20"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Nút Zoom Out (-) */}
+                            <button 
+                                type="button"
+                                onClick={handleZoomOut}
+                                disabled={zoom <= 1}
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${
+                                    zoom <= 1 
+                                        ? 'text-zinc-600 bg-white/[0.02] cursor-not-allowed' 
+                                        : 'text-zinc-200 hover:text-white bg-white/10 hover:bg-white/20 active:scale-90 cursor-pointer'
+                                }`}
+                                title="Thu nhỏ (-)"
+                            >
+                                <i className="fas fa-minus text-xs"></i>
+                            </button>
+
+                            {/* Badge Hiển Thị Mức Zoom Hiện Tại */}
+                            <button 
+                                type="button"
+                                onClick={handleResetZoom}
+                                className="px-2.5 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-amber-400 font-mono font-bold text-xs flex items-center justify-center transition-all cursor-pointer min-w-[56px]"
+                                title="Bấm để đưa về 100% (1x)"
+                            >
+                                {Math.round(zoom * 100)}%
+                            </button>
+
+                            {/* Nút Zoom In (+) */}
+                            <button 
+                                type="button"
+                                onClick={handleZoomIn}
+                                disabled={zoom >= 4}
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${
+                                    zoom >= 4 
+                                        ? 'text-zinc-600 bg-white/[0.02] cursor-not-allowed' 
+                                        : 'text-zinc-200 hover:text-white bg-white/10 hover:bg-white/20 active:scale-90 cursor-pointer'
+                                }`}
+                                title="Phóng to (+)"
+                            >
+                                <i className="fas fa-plus text-xs"></i>
+                            </button>
+
+                            {/* Nút Reset 1x nếu đang zoom */}
+                            {zoom > 1 && (
+                                <button 
+                                    type="button"
+                                    onClick={handleResetZoom}
+                                    className="h-9 px-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-90"
+                                    title="Đặt lại kích thước gốc"
+                                >
+                                    <i className="fas fa-rotate-left text-xs"></i>
+                                    <span className="hidden sm:inline">1x</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Gợi ý kéo rê khi đang phóng to */}
+                    {zoom > 1 && (
+                        <div className="absolute top-3 inset-x-0 mx-auto w-fit bg-black/80 backdrop-blur-md border border-amber-500/30 px-3.5 py-1 rounded-full text-[11px] text-amber-300 font-medium flex items-center gap-1.5 shadow-xl pointer-events-none animate-pulse">
+                            <i className="fas fa-hand-pointer text-xs"></i>
+                            <span>Giữ chuột / vuốt ngón tay để kéo rê soi chi tiết</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 3. BOTTOM THUMBNAIL STRIP (5 GÓC CHỤP TRỰC QUAN CHO THỢ) */}
+            <div 
+                className="pt-2 border-t border-white/[0.08] shrink-0 z-10"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto py-1 no-scrollbar">
+                    {angleKeys.map((key, idx) => {
+                        const ang = currentLayout.angles[key];
+                        const isSelected = activeAngleKey === key;
+                        const isBlockedThumb = !!imgErrors[key];
+                        return (
+                            <div 
+                                key={key}
+                                onClick={() => selectAngle(key)}
+                                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer transition-all relative border-2 ${
+                                    isSelected 
+                                        ? 'border-[#d4af37] ring-4 ring-[#d4af37]/35 scale-105 shadow-[0_0_20px_rgba(212,175,55,0.45)]' 
+                                        : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30'
+                                }`}
+                                title={`Góc ${idx + 1}: ${ang.label}`}
+                            >
+                                {isBlockedThumb ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 text-amber-400 text-center p-1">
+                                        <i className={`fas ${ang.icon} text-base mb-1`}></i>
+                                        <span className="text-[8px] font-mono text-zinc-400">Góc {key}</span>
+                                    </div>
+                                ) : (
+                                    <img 
+                                        src={ang.url} 
+                                        alt={ang.label} 
+                                        className="w-full h-full object-cover" 
+                                        loading="lazy"
+                                        onError={() => setImgErrors(prev => ({ ...prev, [key]: true }))}
+                                    />
+                                )}
+                                <div className={`absolute bottom-0 inset-x-0 py-0.5 text-center text-[9px] font-bold uppercase truncate px-1 ${
+                                    isSelected ? 'bg-[#d4af37] text-zinc-950 font-black' : 'bg-black/80 text-zinc-300'
+                                }`}>
+                                    {ang.shortLabel} [{idx + 1}]
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 4. WEBSITE INTEGRATION DRAWER POPUP */}
+            {showWebData && (
+                <div 
+                    className="fixed inset-x-4 bottom-4 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[480px] bg-[#121215] border border-indigo-500/40 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] p-4 text-xs z-50 animate-slide-up space-y-3"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                        <div className="flex items-center gap-2">
+                            <i className="fas fa-globe text-indigo-400 text-sm"></i>
+                            <span className="font-bold text-white uppercase tracking-wider text-[11px]">
+                                Đồng Bộ Kho Với Website (5 Góc)
+                            </span>
+                        </div>
+                        <button 
+                            onClick={() => setShowWebData(false)}
+                            className="text-zinc-400 hover:text-white cursor-pointer w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5"
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div className="space-y-2 text-zinc-300">
+                        <p className="text-[11px] leading-relaxed">
+                            Hệ thống tự động đồng bộ 5 góc chụp qua API hoặc File tĩnh để nhúng trực tiếp vào Website bán hàng:
+                        </p>
+                        
+                        {/* Box URL API */}
+                        <div className="p-2.5 rounded-xl bg-black/60 border border-white/[0.08] font-mono text-[10.5px] space-y-1.5">
+                            <div className="flex items-center justify-between text-zinc-400 text-[9.5px] font-bold uppercase">
+                                <span>API Endpoint:</span>
+                                <span className="text-emerald-400">ONLINE</span>
+                            </div>
+                            <div className="text-indigo-300 truncate select-all">
+                                {('http:' + '/' + '/127.0.0.1:8000/api/layouts/') + encodeURIComponent(currentLayout.name)}
+                            </div>
+                        </div>
+
+                        {/* 5 Đường dẫn ảnh Web */}
+                        <div className="max-h-36 overflow-y-auto space-y-1 p-2 rounded-xl bg-black/40 border border-white/[0.06] text-[10px] font-mono">
+                            {angleKeys.map(k => (
+                                <div key={k} className="flex items-center justify-between gap-2 py-0.5 border-b border-white/[0.04]">
+                                    <span className="text-[#d4af37] font-bold uppercase shrink-0">{k}:</span>
+                                    <span className="text-zinc-400 truncate flex-1">{currentLayout.angles[k].relativePath}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                        <button 
+                            onClick={handleCopyAll5Links}
+                            className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+                        >
+                            <i className="fas fa-copy"></i>
+                            <span>Sao Chép JSON 5 Góc</span>
+                        </button>
+                        <a 
+                            href={'http:' + '/' + '/127.0.0.1:8000/api/layouts/export/csv'}
+                            download="export_layouts_website_sync.csv"
+                            className="py-2.5 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 font-bold text-[11px] flex items-center justify-center gap-1.5 border border-white/10 cursor-pointer"
+                        >
+                            <i className="fas fa-file-csv text-emerald-400"></i>
+                            <span>Tải CSV</span>
+                        </a>
+                    </div>
+                </div>
+            )}
+        </div>,
+        document.body
+    );
+});
+
+// Đăng ký toàn cục
+window.Layout5AngleViewerModal = Layout5AngleViewerModal;
+window.openLayout5AngleViewer = function(target) {
+    window.dispatchEvent(new CustomEvent('openLayout5Angles', { detail: target }));
+};
+</script>

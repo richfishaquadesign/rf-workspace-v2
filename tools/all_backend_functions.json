@@ -1,0 +1,2012 @@
+[
+  {
+    "name": "apprenticeBomCatalog_",
+    "file": "ApprenticeshipService.js",
+    "line": 10,
+    "params": ""
+  },
+  {
+    "name": "key",
+    "file": "ApprenticeshipService.js",
+    "line": 12,
+    "params": "v"
+  },
+  {
+    "name": "material",
+    "file": "ApprenticeshipService.js",
+    "line": 13,
+    "params": "sku, qty, unit"
+  },
+  {
+    "name": "api_apprenticeshipCatalog",
+    "file": "ApprenticeshipService.js",
+    "line": 43,
+    "params": "pin"
+  },
+  {
+    "name": "apprenticeLayoutKey_",
+    "file": "ApprenticeshipService.js",
+    "line": 48,
+    "params": "name"
+  },
+  {
+    "name": "api_apprenticeshipResolveLayout",
+    "file": "ApprenticeshipService.js",
+    "line": 51,
+    "params": "pin, layout"
+  },
+  {
+    "name": "api_apprenticeshipTemplateSave",
+    "file": "ApprenticeshipService.js",
+    "line": 61,
+    "params": "pin, layout, images, revision"
+  },
+  {
+    "name": "apprenticeAuth_",
+    "file": "ApprenticeshipService.js",
+    "line": 82,
+    "params": "pin"
+  },
+  {
+    "name": "apprenticeSheet_",
+    "file": "ApprenticeshipService.js",
+    "line": 89,
+    "params": "create"
+  },
+  {
+    "name": "apprenticeRows_",
+    "file": "ApprenticeshipService.js",
+    "line": 103,
+    "params": "sh"
+  },
+  {
+    "name": "apprenticeText_",
+    "file": "ApprenticeshipService.js",
+    "line": 109,
+    "params": "v, max"
+  },
+  {
+    "name": "apprenticeImages_",
+    "file": "ApprenticeshipService.js",
+    "line": 113,
+    "params": "images"
+  },
+  {
+    "name": "apprenticeAudit_",
+    "file": "ApprenticeshipService.js",
+    "line": 123,
+    "params": "doc, auth, action, note"
+  },
+  {
+    "name": "api_apprenticeshipList",
+    "file": "ApprenticeshipService.js",
+    "line": 126,
+    "params": "pin"
+  },
+  {
+    "name": "api_apprenticeshipMutate",
+    "file": "ApprenticeshipService.js",
+    "line": 130,
+    "params": "pin, request"
+  },
+  {
+    "name": "api_apprenticeshipPhoto",
+    "file": "ApprenticeshipService.js",
+    "line": 226,
+    "params": "pin, id, revision, imageData"
+  },
+  {
+    "name": "api_apprenticeshipPhotoRead",
+    "file": "ApprenticeshipService.js",
+    "line": 251,
+    "params": "pin, id, fileId"
+  },
+  {
+    "name": "AAA_IMPORT_ALL_DATA_FROM_EXTERNAL_SS",
+    "file": "Code.js",
+    "line": 6,
+    "params": ""
+  },
+  {
+    "name": "importAllDataFromSpreadsheet",
+    "file": "Code.js",
+    "line": 15,
+    "params": "sourceId"
+  },
+  {
+    "name": "AAA_SYNC_BOM_MATERIAL_SKUS",
+    "file": "Code.js",
+    "line": 117,
+    "params": ""
+  },
+  {
+    "name": "AAA_CLEANUP_PACKING_SLA_PENALTIES",
+    "file": "Code.js",
+    "line": 124,
+    "params": ""
+  },
+  {
+    "name": "AAA_REPAIR_KEO502_PRICE_AND_BOM",
+    "file": "Code.js",
+    "line": 131,
+    "params": ""
+  },
+  {
+    "name": "normalizeStatus",
+    "file": "Code.js",
+    "line": 177,
+    "params": "rawStatus"
+  },
+  {
+    "name": "isTerminalStatus",
+    "file": "Code.js",
+    "line": 235,
+    "params": "rawStatus"
+  },
+  {
+    "name": "isProductionDone",
+    "file": "Code.js",
+    "line": 246,
+    "params": "rawStatus"
+  },
+  {
+    "name": "doGet",
+    "file": "Code.js",
+    "line": 250,
+    "params": "e"
+  },
+  {
+    "name": "doPost",
+    "file": "Code.js",
+    "line": 281,
+    "params": "e"
+  },
+  {
+    "name": "handleApiRequest",
+    "file": "Code.js",
+    "line": 308,
+    "params": "payload"
+  },
+  {
+    "name": "api_exportFileToDrive",
+    "file": "Code.js",
+    "line": 884,
+    "params": "payload"
+  },
+  {
+    "name": "include",
+    "file": "Code.js",
+    "line": 925,
+    "params": "filename"
+  },
+  {
+    "name": "checkAndAutoForwardOrder",
+    "file": "Code.js",
+    "line": 946,
+    "params": "orderId"
+  },
+  {
+    "name": "processQCApproval",
+    "file": "Code.js",
+    "line": 1016,
+    "params": "prodId, approverName"
+  },
+  {
+    "name": "calculateDynamicPositionSalary",
+    "file": "Code.js",
+    "line": 1065,
+    "params": "monthStr, userName"
+  },
+  {
+    "name": "isWorkshopOffDay",
+    "file": "Code.js",
+    "line": 1107,
+    "params": "dateObj"
+  },
+  {
+    "name": "calculateBusinessHoursSLA",
+    "file": "Code.js",
+    "line": 1144,
+    "params": "startStr, endStr"
+  },
+  {
+    "name": "calculatePayrollForUser",
+    "file": "Code.js",
+    "line": 1189,
+    "params": "u, monthStr, options"
+  },
+  {
+    "name": "api_syncMasterPayroll",
+    "file": "Code.js",
+    "line": 1363,
+    "params": "payload"
+  },
+  {
+    "name": "api_generateMonthlySnapshot",
+    "file": "Code.js",
+    "line": 1525,
+    "params": "payload"
+  },
+  {
+    "name": "generateMonthlySnapshot",
+    "file": "Code.js",
+    "line": 1543,
+    "params": "monthStr"
+  },
+  {
+    "name": "initDB",
+    "file": "Code.js",
+    "line": 1659,
+    "params": ""
+  },
+  {
+    "name": "initDbERP",
+    "file": "Code.js",
+    "line": 1669,
+    "params": ""
+  },
+  {
+    "name": "readSheet",
+    "file": "Code.js",
+    "line": 1686,
+    "params": "name, filterFn, ss"
+  },
+  {
+    "name": "getAppData",
+    "file": "Code.js",
+    "line": 1765,
+    "params": "pin"
+  },
+  {
+    "name": "getArchivedData",
+    "file": "Code.js",
+    "line": 2166,
+    "params": "pin"
+  },
+  {
+    "name": "getArchivedOrders",
+    "file": "Code.js",
+    "line": 2274,
+    "params": "options, pin"
+  },
+  {
+    "name": "archiveReconciledOrders",
+    "file": "Code.js",
+    "line": 2408,
+    "params": "cutoffDays, pin"
+  },
+  {
+    "name": "archiveReconciledOrdersInternal_",
+    "file": "Code.js",
+    "line": 2440,
+    "params": "cutoffDays, operator"
+  },
+  {
+    "name": "api_getArchiveStats",
+    "file": "Code.js",
+    "line": 2584,
+    "params": "pin"
+  },
+  {
+    "name": "api_runAutoArchiveEngine",
+    "file": "Code.js",
+    "line": 2636,
+    "params": "cutoffDays, pin"
+  },
+  {
+    "name": "setupAutoArchiveTrigger",
+    "file": "Code.js",
+    "line": 2652,
+    "params": "pin"
+  },
+  {
+    "name": "applyDeltasToSheet",
+    "file": "Code.js",
+    "line": 2689,
+    "params": "sheetName, items, formatter, ss"
+  },
+  {
+    "name": "normalizeProdName",
+    "file": "Code.js",
+    "line": 2926,
+    "params": "s"
+  },
+  {
+    "name": "getProductInfoByName",
+    "file": "Code.js",
+    "line": 2930,
+    "params": "ss, name"
+  },
+  {
+    "name": "buildProdResult",
+    "file": "Code.js",
+    "line": 2948,
+    "params": "i"
+  },
+  {
+    "name": "deleteDeltas",
+    "file": "Code.js",
+    "line": 3000,
+    "params": "sheetName, itemIds, ss"
+  },
+  {
+    "name": "formatOrder",
+    "file": "Code.js",
+    "line": 3032,
+    "params": "o"
+  },
+  {
+    "name": "formatProd",
+    "file": "Code.js",
+    "line": 3077,
+    "params": "p"
+  },
+  {
+    "name": "formatPacking",
+    "file": "Code.js",
+    "line": 3122,
+    "params": "p"
+  },
+  {
+    "name": "formatAtt",
+    "file": "Code.js",
+    "line": 3136,
+    "params": "a"
+  },
+  {
+    "name": "formatProduct",
+    "file": "Code.js",
+    "line": 3179,
+    "params": "p"
+  },
+  {
+    "name": "formatAccount",
+    "file": "Code.js",
+    "line": 3204,
+    "params": "a"
+  },
+  {
+    "name": "formatSupplier",
+    "file": "Code.js",
+    "line": 3214,
+    "params": "s"
+  },
+  {
+    "name": "formatTransaction",
+    "file": "Code.js",
+    "line": 3224,
+    "params": "t"
+  },
+  {
+    "name": "formatImportExport",
+    "file": "Code.js",
+    "line": 3238,
+    "params": "i"
+  },
+  {
+    "name": "formatDocument",
+    "file": "Code.js",
+    "line": 3249,
+    "params": "d"
+  },
+  {
+    "name": "formatTraining",
+    "file": "Code.js",
+    "line": 3263,
+    "params": "t"
+  },
+  {
+    "name": "formatProfitReport",
+    "file": "Code.js",
+    "line": 3274,
+    "params": "r"
+  },
+  {
+    "name": "formatBonusPenalty",
+    "file": "Code.js",
+    "line": 3290,
+    "params": "b"
+  },
+  {
+    "name": "formatKPIProg",
+    "file": "Code.js",
+    "line": 3301,
+    "params": "k"
+  },
+  {
+    "name": "formatReimbursement",
+    "file": "Code.js",
+    "line": 3318,
+    "params": "r"
+  },
+  {
+    "name": "formatBOMConfig",
+    "file": "Code.js",
+    "line": 3329,
+    "params": "b"
+  },
+  {
+    "name": "formatThongKeTichLuyXu",
+    "file": "Code.js",
+    "line": 3338,
+    "params": "x"
+  },
+  {
+    "name": "formatWorkspace",
+    "file": "Code.js",
+    "line": 3350,
+    "params": "w"
+  },
+  {
+    "name": "formatCTVFinance",
+    "file": "Code.js",
+    "line": 3362,
+    "params": "t"
+  },
+  {
+    "name": "updateUserConfigSheet",
+    "file": "Code.js",
+    "line": 3375,
+    "params": "configPayload"
+  },
+  {
+    "name": "api_addEmployee",
+    "file": "Code.js",
+    "line": 3476,
+    "params": "staffPayload"
+  },
+  {
+    "name": "api_deleteEmployee",
+    "file": "Code.js",
+    "line": 3673,
+    "params": "staffNameOrId"
+  },
+  {
+    "name": "api_changeStaffPassword",
+    "file": "Code.js",
+    "line": 3757,
+    "params": "payload"
+  },
+  {
+    "name": "adjustAccountBalanceServer",
+    "file": "Code.js",
+    "line": 3891,
+    "params": "ss, accountId, change"
+  },
+  {
+    "name": "applyBatchAccountBalanceChanges",
+    "file": "Code.js",
+    "line": 3897,
+    "params": "ss, balanceChanges"
+  },
+  {
+    "name": "syncDeltas",
+    "file": "Code.js",
+    "line": 3927,
+    "params": "payload, pin"
+  },
+  {
+    "name": "queueBalanceDelta",
+    "file": "Code.js",
+    "line": 4025,
+    "params": "accId, amt"
+  },
+  {
+    "name": "invalidateUserConfigCache",
+    "file": "Code.js",
+    "line": 4819,
+    "params": ""
+  },
+  {
+    "name": "getUserConfig",
+    "file": "Code.js",
+    "line": 4848,
+    "params": ""
+  },
+  {
+    "name": "getAuthoritativeAuthConfig_",
+    "file": "Code.js",
+    "line": 5005,
+    "params": ""
+  },
+  {
+    "name": "parseNumber",
+    "file": "Code.js",
+    "line": 5095,
+    "params": "val"
+  },
+  {
+    "name": "getEmptyConfig",
+    "file": "Code.js",
+    "line": 5100,
+    "params": "debugMsg"
+  },
+  {
+    "name": "createInternalSystemAuth_",
+    "file": "Code.js",
+    "line": 5111,
+    "params": ""
+  },
+  {
+    "name": "validatePin",
+    "file": "Code.js",
+    "line": 5121,
+    "params": "pin"
+  },
+  {
+    "name": "checkServerPermission",
+    "file": "Code.js",
+    "line": 5347,
+    "params": "auth, actionCode"
+  },
+  {
+    "name": "requireServerPermission",
+    "file": "Code.js",
+    "line": 5389,
+    "params": "auth, actionCode, actionDesc"
+  },
+  {
+    "name": "validateTableWritePermission",
+    "file": "Code.js",
+    "line": 5408,
+    "params": "auth, tableName, isDelete, deltaItems"
+  },
+  {
+    "name": "uploadImage",
+    "file": "Code.js",
+    "line": 5806,
+    "params": "base64Data, fileName"
+  },
+  {
+    "name": "sendNtfyNotification",
+    "file": "Code.js",
+    "line": 5839,
+    "params": "title, message, topic"
+  },
+  {
+    "name": "api_saveNtfyConfig",
+    "file": "Code.js",
+    "line": 5867,
+    "params": "config, pin"
+  },
+  {
+    "name": "api_getNtfyConfig",
+    "file": "Code.js",
+    "line": 5907,
+    "params": ""
+  },
+  {
+    "name": "uploadDocumentToDrive",
+    "file": "Code.js",
+    "line": 5924,
+    "params": "base64Data, fileName, mimeType"
+  },
+  {
+    "name": "api_getActiveEmployees",
+    "file": "Code.js",
+    "line": 5946,
+    "params": ""
+  },
+  {
+    "name": "processOCR",
+    "file": "Code.js",
+    "line": 5964,
+    "params": "base64Data"
+  },
+  {
+    "name": "isExportChannel",
+    "file": "Code.js",
+    "line": 6008,
+    "params": "channelStr"
+  },
+  {
+    "name": "getSopAndRewardBackend",
+    "file": "Code.js",
+    "line": 6018,
+    "params": "item, phaseName, kpiConfig, channel = ''"
+  },
+  {
+    "name": "getPackingReward",
+    "file": "Code.js",
+    "line": 6099,
+    "params": "itemInput, kpiConfig, channel"
+  },
+  {
+    "name": "addNameOrSku",
+    "file": "Code.js",
+    "line": 6105,
+    "params": "val"
+  },
+  {
+    "name": "logBehavior",
+    "file": "Code.js",
+    "line": 6266,
+    "params": "action, details"
+  },
+  {
+    "name": "api_getWorkerAuditLogs",
+    "file": "Code.js",
+    "line": 6280,
+    "params": "payload"
+  },
+  {
+    "name": "scanAutoEmails",
+    "file": "Code.js",
+    "line": 6398,
+    "params": ""
+  },
+  {
+    "name": "parseTransactionFromEmail",
+    "file": "Code.js",
+    "line": 6506,
+    "params": "subject, body, emailDate"
+  },
+  {
+    "name": "processGHNEmail",
+    "file": "Code.js",
+    "line": 6566,
+    "params": "subject, plainBody, emailDate, messageId, ss, txSheet, txHeaders, accounts"
+  },
+  {
+    "name": "processSPXReturnEmail",
+    "file": "Code.js",
+    "line": 6658,
+    "params": "message, ss"
+  },
+  {
+    "name": "classifyCategory",
+    "file": "Code.js",
+    "line": 6774,
+    "params": "type, title"
+  },
+  {
+    "name": "updateAccountBalance",
+    "file": "Code.js",
+    "line": 6792,
+    "params": "ss, accountId, amount, type"
+  },
+  {
+    "name": "syncBIDVEmails",
+    "file": "Code.js",
+    "line": 6798,
+    "params": ""
+  },
+  {
+    "name": "saveGHNConfig",
+    "file": "Code.js",
+    "line": 6910,
+    "params": "token, shopId"
+  },
+  {
+    "name": "getGHNConfig",
+    "file": "Code.js",
+    "line": 6927,
+    "params": ""
+  },
+  {
+    "name": "createGHNOrderViaServer",
+    "file": "Code.js",
+    "line": 6934,
+    "params": "body"
+  },
+  {
+    "name": "syncGHNViaAPI",
+    "file": "Code.js",
+    "line": 6988,
+    "params": ""
+  },
+  {
+    "name": "scanCancelledOrdersFromEmail",
+    "file": "Code.js",
+    "line": 7280,
+    "params": ""
+  },
+  {
+    "name": "scanReturnedOrdersFromEmail",
+    "file": "Code.js",
+    "line": 7432,
+    "params": ""
+  },
+  {
+    "name": "autoScanOrdersFromEmail",
+    "file": "Code.js",
+    "line": 7593,
+    "params": ""
+  },
+  {
+    "name": "setupEmailScannerTrigger",
+    "file": "Code.js",
+    "line": 7610,
+    "params": ""
+  },
+  {
+    "name": "dailyCheckPackingsAndPenalize",
+    "file": "Code.js",
+    "line": 7625,
+    "params": ""
+  },
+  {
+    "name": "scheduleNextPenaltyCheck",
+    "file": "Code.js",
+    "line": 7708,
+    "params": ""
+  },
+  {
+    "name": "cronCheckIncompleteTasks",
+    "file": "Code.js",
+    "line": 7728,
+    "params": ""
+  },
+  {
+    "name": "scheduleNextIncompletePenaltyCheck",
+    "file": "Code.js",
+    "line": 7787,
+    "params": ""
+  },
+  {
+    "name": "uploadQCImage",
+    "file": "Code.js",
+    "line": 7805,
+    "params": "base64Data, fileName"
+  },
+  {
+    "name": "closeMonthAndArchive",
+    "file": "Code.js",
+    "line": 7836,
+    "params": "pin, monthString, snapshotData"
+  },
+  {
+    "name": "processReconciliationBatch",
+    "file": "Code.js",
+    "line": 7962,
+    "params": "matchedOrders, targetAccountId"
+  },
+  {
+    "name": "cleanUpOldReconciliationJunk",
+    "file": "Code.js",
+    "line": 8076,
+    "params": ""
+  },
+  {
+    "name": "autoCleanOrdersData",
+    "file": "Code.js",
+    "line": 8144,
+    "params": ""
+  },
+  {
+    "name": "getAppealEvidence",
+    "file": "Code.js",
+    "line": 8236,
+    "params": "shopeeOrderCode"
+  },
+  {
+    "name": "updateAppealStatus",
+    "file": "Code.js",
+    "line": 8302,
+    "params": "orderId, newStatus, videoLink"
+  },
+  {
+    "name": "hardDeleteOrderAndRelatedData",
+    "file": "Code.js",
+    "line": 8350,
+    "params": "orderId"
+  },
+  {
+    "name": "deleteRowsByMatch",
+    "file": "Code.js",
+    "line": 8391,
+    "params": "ss, sheetName, colName, matchValue"
+  },
+  {
+    "name": "deleteTransactionsByOrderId",
+    "file": "Code.js",
+    "line": 8411,
+    "params": "ss, orderId"
+  },
+  {
+    "name": "autoCalculateGlassTankBOM",
+    "file": "Code.js",
+    "line": 8435,
+    "params": ""
+  },
+  {
+    "name": "getRealSupplierDebt",
+    "file": "Code.js",
+    "line": 8442,
+    "params": "supplierName, fullIEData, fullTxData"
+  },
+  {
+    "name": "api_repairSupplierNegativeDebts",
+    "file": "Code.js",
+    "line": 8464,
+    "params": ""
+  },
+  {
+    "name": "rfPlanHandoverExport_",
+    "file": "Code.js",
+    "line": 8539,
+    "params": "ordersToHandover, ss"
+  },
+  {
+    "name": "repairKPIProgressSheetHeaders",
+    "file": "Code.js",
+    "line": 8709,
+    "params": ""
+  },
+  {
+    "name": "api_insertManualTask",
+    "file": "Code.js",
+    "line": 8750,
+    "params": "payload"
+  },
+  {
+    "name": "api_settleMonthlyDebt",
+    "file": "Code.js",
+    "line": 8800,
+    "params": "payload, pin"
+  },
+  {
+    "name": "api_completeBatchProduction",
+    "file": "Code.js",
+    "line": 8874,
+    "params": "idList"
+  },
+  {
+    "name": "processSmartGlassTankDispatch",
+    "file": "Code.js",
+    "line": 8929,
+    "params": "ss, newProdItem"
+  },
+  {
+    "name": "updateKpiProgressData",
+    "file": "Code.js",
+    "line": 8992,
+    "params": ""
+  },
+  {
+    "name": "parseDateFlex",
+    "file": "Code.js",
+    "line": 9084,
+    "params": "d, isEnd"
+  },
+  {
+    "name": "parseCleanRevGAS",
+    "file": "Code.js",
+    "line": 9127,
+    "params": "raw, ch"
+  },
+  {
+    "name": "setupKpiCronTrigger",
+    "file": "Code.js",
+    "line": 9333,
+    "params": ""
+  },
+  {
+    "name": "updateKpiProgressData_Duong",
+    "file": "Code.js",
+    "line": 9354,
+    "params": ""
+  },
+  {
+    "name": "updateKpiProgressData_Tam",
+    "file": "Code.js",
+    "line": 9521,
+    "params": ""
+  },
+  {
+    "name": "updateKpiProgressData_Trang",
+    "file": "Code.js",
+    "line": 9680,
+    "params": ""
+  },
+  {
+    "name": "processSlaAutomation",
+    "file": "Code.js",
+    "line": 9877,
+    "params": "orderId"
+  },
+  {
+    "name": "processDynamicLoadBalancing",
+    "file": "Code.js",
+    "line": 9989,
+    "params": "prodId"
+  },
+  {
+    "name": "processRcaResolver",
+    "file": "Code.js",
+    "line": 10072,
+    "params": "payload"
+  },
+  {
+    "name": "api_insertManualKPI",
+    "file": "Code.js",
+    "line": 10104,
+    "params": "payload"
+  },
+  {
+    "name": "onEdit",
+    "file": "Code.js",
+    "line": 10184,
+    "params": "e"
+  },
+  {
+    "name": "processBatchAutoForwardSLA",
+    "file": "Code.js",
+    "line": 10242,
+    "params": "orderId"
+  },
+  {
+    "name": "processCascadeCancelOrder",
+    "file": "Code.js",
+    "line": 10313,
+    "params": "orderId, isHandedOver"
+  },
+  {
+    "name": "cleanStr",
+    "file": "Code.js",
+    "line": 10472,
+    "params": "s"
+  },
+  {
+    "name": "findMaterialSkuByAlias",
+    "file": "Code.js",
+    "line": 10482,
+    "params": "rawString"
+  },
+  {
+    "name": "cl",
+    "file": "Code.js",
+    "line": 10526,
+    "params": "s"
+  },
+  {
+    "name": "getBomFromBomLayoutSheet",
+    "file": "Code.js",
+    "line": 10546,
+    "params": "ss, prodName, targetSku"
+  },
+  {
+    "name": "_processMaterialDeduction_Core",
+    "file": "Code.js",
+    "line": 10656,
+    "params": "prodId, materialUsageData, ss"
+  },
+  {
+    "name": "processMaterialDeduction",
+    "file": "Code.js",
+    "line": 11184,
+    "params": "prodId, materialUsageData"
+  },
+  {
+    "name": "repairAllBomTickets",
+    "file": "Code.js",
+    "line": 11214,
+    "params": ""
+  },
+  {
+    "name": "getProductInfo",
+    "file": "Code.js",
+    "line": 11249,
+    "params": "skuOrName, defaultCost, defaultUnit"
+  },
+  {
+    "name": "cleanupPhantomBomTickets",
+    "file": "Code.js",
+    "line": 11469,
+    "params": ""
+  },
+  {
+    "name": "repairKeo502PriceAndBom",
+    "file": "Code.js",
+    "line": 11618,
+    "params": ""
+  },
+  {
+    "name": "deductInventoryBOM",
+    "file": "Code.js",
+    "line": 11769,
+    "params": "payload, pin"
+  },
+  {
+    "name": "processAutoAllocation",
+    "file": "Code.js",
+    "line": 11787,
+    "params": "orderId"
+  },
+  {
+    "name": "calculateGlassTankSpecs",
+    "file": "Code.js",
+    "line": 11914,
+    "params": "nameOrDimensions, customThickness"
+  },
+  {
+    "name": "ensureGlassTankBOM",
+    "file": "Code.js",
+    "line": 11997,
+    "params": "tankNameOrSku, customThickness"
+  },
+  {
+    "name": "autoCalculateGlassTankBOM_Dual",
+    "file": "Code.js",
+    "line": 12061,
+    "params": ""
+  },
+  {
+    "name": "cronCheckUnpackedOrdersAt1930",
+    "file": "Code.js",
+    "line": 12225,
+    "params": ""
+  },
+  {
+    "name": "restoreFulfilledFromStock",
+    "file": "Code.js",
+    "line": 12310,
+    "params": ""
+  },
+  {
+    "name": "batchDispatchSmartGlassTanks",
+    "file": "Code.js",
+    "line": 12368,
+    "params": ""
+  },
+  {
+    "name": "autoGenerateAndSyncLayoutBOM",
+    "file": "Code.js",
+    "line": 12382,
+    "params": ""
+  },
+  {
+    "name": "getDashboardErrors",
+    "file": "Code.js",
+    "line": 12791,
+    "params": "params"
+  },
+  {
+    "name": "api_getDashboardErrors",
+    "file": "Code.js",
+    "line": 12794,
+    "params": "params"
+  },
+  {
+    "name": "autoCalculateBOMAndProductCosts",
+    "file": "Code.js",
+    "line": 12868,
+    "params": ""
+  },
+  {
+    "name": "initPushSubscriptionsSheet",
+    "file": "Code.js",
+    "line": 13155,
+    "params": ""
+  },
+  {
+    "name": "saveUserPushSubscription",
+    "file": "Code.js",
+    "line": 13182,
+    "params": "data"
+  },
+  {
+    "name": "sendPushNotificationToStaff",
+    "file": "Code.js",
+    "line": 13239,
+    "params": "targetUserName, title, message, targetUrl, extraOptions"
+  },
+  {
+    "name": "triggerDailyPackSlaAlert",
+    "file": "Code.js",
+    "line": 13334,
+    "params": ""
+  },
+  {
+    "name": "api_sendUrgentOrderPush",
+    "file": "Code.js",
+    "line": 13351,
+    "params": "orderCode, message, pin"
+  },
+  {
+    "name": "api_sendFactorySOSPush",
+    "file": "Code.js",
+    "line": 13365,
+    "params": "sosType, note, pin"
+  },
+  {
+    "name": "analyzeReworkRate",
+    "file": "Code.js",
+    "line": 13380,
+    "params": "monthStr"
+  },
+  {
+    "name": "initWorker",
+    "file": "Code.js",
+    "line": 13408,
+    "params": "userName"
+  },
+  {
+    "name": "validateInventoryBeforePacking",
+    "file": "Code.js",
+    "line": 13483,
+    "params": "orderId"
+  },
+  {
+    "name": "auditMissingCashflowAndMargin",
+    "file": "Code.js",
+    "line": 13662,
+    "params": ""
+  },
+  {
+    "name": "setupAuditTrigger",
+    "file": "Code.js",
+    "line": 13777,
+    "params": ""
+  },
+  {
+    "name": "calculateRealWorkingHours",
+    "file": "Code.js",
+    "line": 13793,
+    "params": "dateStr"
+  },
+  {
+    "name": "getHoursDiff",
+    "file": "Code.js",
+    "line": 13804,
+    "params": "start, end"
+  },
+  {
+    "name": "getDateString",
+    "file": "Code.js",
+    "line": 13811,
+    "params": "d"
+  },
+  {
+    "name": "processDamageControl",
+    "file": "Code.js",
+    "line": 13922,
+    "params": "prodId, faultReason, penaltyUser"
+  },
+  {
+    "name": "autoReconcileSupplierDebt",
+    "file": "Code.js",
+    "line": 14038,
+    "params": "txId, importIdsArray, supplierName"
+  },
+  {
+    "name": "recoverLostProduction",
+    "file": "Code.js",
+    "line": 14149,
+    "params": ""
+  },
+  {
+    "name": "api_updateLeaveStatus",
+    "file": "Code.js",
+    "line": 14246,
+    "params": "attendanceId, newStatus, penaltyAmount, note, pin"
+  },
+  {
+    "name": "api_giftXuToAllStaff",
+    "file": "Code.js",
+    "line": 14361,
+    "params": "payload, pin"
+  },
+  {
+    "name": "api_migrateXuFromBonusPenaltyToThongKeTichLuyXu",
+    "file": "Code.js",
+    "line": 14447,
+    "params": "pin"
+  },
+  {
+    "name": "api_repairAndRestoreTasksFromXuSheet",
+    "file": "Code.js",
+    "line": 14567,
+    "params": "pin"
+  },
+  {
+    "name": "api_repairAdjustmentTransactions",
+    "file": "Code.js",
+    "line": 14691,
+    "params": ""
+  },
+  {
+    "name": "onOpen",
+    "file": "Code.js",
+    "line": 14748,
+    "params": ""
+  },
+  {
+    "name": "emergencyCleanAllJuneData",
+    "file": "Code.js",
+    "line": 14759,
+    "params": ""
+  },
+  {
+    "name": "api_getAvailableStockItems",
+    "file": "Code.js",
+    "line": 14870,
+    "params": "skuOrName, type"
+  },
+  {
+    "name": "api_assignStockItemToOrder",
+    "file": "Code.js",
+    "line": 14982,
+    "params": "prodId, orderCode, serialCode"
+  },
+  {
+    "name": "api_toggleOrderUrgent",
+    "file": "Code.js",
+    "line": 15119,
+    "params": "orderId, isUrgent, pin"
+  },
+  {
+    "name": "api_applyAiQcResult",
+    "file": "Code.js",
+    "line": 15238,
+    "params": "productionId, updatePayload"
+  },
+  {
+    "name": "getOmniRouteConfig",
+    "file": "Code.js",
+    "line": 15327,
+    "params": ""
+  },
+  {
+    "name": "safeParseAIResponse",
+    "file": "Code.js",
+    "line": 15343,
+    "params": "rawText, fallbackData"
+  },
+  {
+    "name": "apiAISmartFormAutofill",
+    "file": "Code.js",
+    "line": 15391,
+    "params": "requestPayload"
+  },
+  {
+    "name": "getCompressedMaterialContext",
+    "file": "Code.js",
+    "line": 15444,
+    "params": ""
+  },
+  {
+    "name": "syncLayout5AnglesDrive",
+    "file": "Code.js",
+    "line": 15481,
+    "params": ""
+  },
+  {
+    "name": "getLayout5AnglesDriveCatalog",
+    "file": "Code.js",
+    "line": 15598,
+    "params": ""
+  },
+  {
+    "name": "rfValidateShopeeHandover_",
+    "file": "Code.js",
+    "line": 15609,
+    "params": "payload, orders"
+  },
+  {
+    "name": "rfBulkPhaseKey_",
+    "file": "Code.js",
+    "line": 15629,
+    "params": "value"
+  },
+  {
+    "name": "rfPlanBulkProductionPhase_",
+    "file": "Code.js",
+    "line": 15632,
+    "params": "command, production, orders, staff, kpiConfig, auth, now"
+  },
+  {
+    "name": "value",
+    "file": "Code.js",
+    "line": 15647,
+    "params": "key, field"
+  },
+  {
+    "name": "rfPrepareBulkProductionPhase_",
+    "file": "Code.js",
+    "line": 15689,
+    "params": "payload, ss, auth"
+  },
+  {
+    "name": "rfBulkPackingNorm_",
+    "file": "Code.js",
+    "line": 15696,
+    "params": "value"
+  },
+  {
+    "name": "rfFormatWorkerAvatarUrl_",
+    "file": "Code.js",
+    "line": 15700,
+    "params": "raw"
+  },
+  {
+    "name": "rfPlanBulkPacking_",
+    "file": "Code.js",
+    "line": 15717,
+    "params": "command, orders, packings, production, staff, kpiConfig, auth, now"
+  },
+  {
+    "name": "rfPrepareBulkPacking_",
+    "file": "Code.js",
+    "line": 15885,
+    "params": "payload, ss, auth"
+  },
+  {
+    "name": "getDeferredUiBundle",
+    "file": "DataLoading.js",
+    "line": 2,
+    "params": ""
+  },
+  {
+    "name": "getAppDataIfChanged",
+    "file": "DataLoading.js",
+    "line": 6,
+    "params": "knownVersion, pin"
+  },
+  {
+    "name": "rfHandoverId_",
+    "file": "LayoutStockPolicy.js",
+    "line": 2,
+    "params": "order"
+  },
+  {
+    "name": "safeDeductInventoryOnHandover",
+    "file": "LayoutStockPolicy.js",
+    "line": 10,
+    "params": "orders, ss"
+  },
+  {
+    "name": "rfGhnHandover_",
+    "file": "LayoutStockPolicy.js",
+    "line": 44,
+    "params": "ss, order, newStatus"
+  },
+  {
+    "name": "rfLayoutKey_",
+    "file": "LayoutStockPolicy.js",
+    "line": 55,
+    "params": "value"
+  },
+  {
+    "name": "rfLayoutMMinimum_",
+    "file": "LayoutStockPolicy.js",
+    "line": 59,
+    "params": "product"
+  },
+  {
+    "name": "rfLayoutOrderMatches_",
+    "file": "LayoutStockPolicy.js",
+    "line": 70,
+    "params": "ref, order"
+  },
+  {
+    "name": "rfLayoutStockOrder_",
+    "file": "LayoutStockPolicy.js",
+    "line": 75,
+    "params": "order"
+  },
+  {
+    "name": "rfLayoutCancelled_",
+    "file": "LayoutStockPolicy.js",
+    "line": 79,
+    "params": "status"
+  },
+  {
+    "name": "rfLayoutProductMatch_",
+    "file": "LayoutStockPolicy.js",
+    "line": 83,
+    "params": "line, product"
+  },
+  {
+    "name": "rfPlanLayoutMReplenishment_",
+    "file": "LayoutStockPolicy.js",
+    "line": 90,
+    "params": "state, candidates, now"
+  },
+  {
+    "name": "rfReadLayoutPolicyTable_",
+    "file": "LayoutStockPolicy.js",
+    "line": 138,
+    "params": "ss, name"
+  },
+  {
+    "name": "rfApplyLayoutMPolicy_",
+    "file": "LayoutStockPolicy.js",
+    "line": 151,
+    "params": "ss, payload"
+  },
+  {
+    "name": "AAA_IMPORT_REAL_STATEMENTS_TO_DB",
+    "file": "MigrationFinancialStatements.js",
+    "line": 11,
+    "params": ""
+  },
+  {
+    "name": "BBB_UPDATE_SHOPEE_WALLET_BALANCE",
+    "file": "MigrationFinancialStatements.js",
+    "line": 131,
+    "params": ""
+  },
+  {
+    "name": "CCC_SYNC_ACCOUNT_IDS_IN_DB",
+    "file": "MigrationFinancialStatements.js",
+    "line": 189,
+    "params": ""
+  },
+  {
+    "name": "api_generateMonthlyKPI_All",
+    "file": "Operations.js",
+    "line": 16,
+    "params": "allStatsMap, pin"
+  },
+  {
+    "name": "api_recordXuTransaction",
+    "file": "Operations.js",
+    "line": 265,
+    "params": "user, amountXu, type, note, orderCode"
+  },
+  {
+    "name": "api_getUserXuBalance",
+    "file": "Operations.js",
+    "line": 312,
+    "params": "userName"
+  },
+  {
+    "name": "getOperationsHealth",
+    "file": "Operations.js",
+    "line": 340,
+    "params": ""
+  },
+  {
+    "name": "api_getOperationsHealth",
+    "file": "Operations.js",
+    "line": 347,
+    "params": ""
+  },
+  {
+    "name": "TOOL_SplitGroupedProductionTasks",
+    "file": "Operations.js",
+    "line": 458,
+    "params": ""
+  },
+  {
+    "name": "api_cleanupAllPackingSlaPenalties",
+    "file": "Operations.js",
+    "line": 520,
+    "params": "pin"
+  },
+  {
+    "name": "api_saveZaloWebhookConfig",
+    "file": "Operations.js",
+    "line": 669,
+    "params": "cfg, pin"
+  },
+  {
+    "name": "api_getZaloWebhookConfig",
+    "file": "Operations.js",
+    "line": 711,
+    "params": ""
+  },
+  {
+    "name": "sendZaloNotification",
+    "file": "Operations.js",
+    "line": 729,
+    "params": "title, message, customChatId"
+  },
+  {
+    "name": "api_testZaloNotification",
+    "file": "Operations.js",
+    "line": 788,
+    "params": ""
+  },
+  {
+    "name": "api_saveTelegramConfig",
+    "file": "Operations.js",
+    "line": 796,
+    "params": "cfg, pin"
+  },
+  {
+    "name": "api_getTelegramConfig",
+    "file": "Operations.js",
+    "line": 836,
+    "params": ""
+  },
+  {
+    "name": "sendTelegramNotification",
+    "file": "Operations.js",
+    "line": 852,
+    "params": "title, message, customChatId"
+  },
+  {
+    "name": "api_testTelegramNotification",
+    "file": "Operations.js",
+    "line": 900,
+    "params": ""
+  },
+  {
+    "name": "api_saveGoogleChatConfig",
+    "file": "Operations.js",
+    "line": 908,
+    "params": "cfg, pin"
+  },
+  {
+    "name": "api_getGoogleChatConfig",
+    "file": "Operations.js",
+    "line": 947,
+    "params": ""
+  },
+  {
+    "name": "sendGoogleChatNotification",
+    "file": "Operations.js",
+    "line": 962,
+    "params": "title, message"
+  },
+  {
+    "name": "api_testGoogleChatNotification",
+    "file": "Operations.js",
+    "line": 1005,
+    "params": ""
+  },
+  {
+    "name": "api_testNtfyNotification",
+    "file": "Operations.js",
+    "line": 1015,
+    "params": "topic"
+  },
+  {
+    "name": "trigger_dailyMorningNotice",
+    "file": "Operations.js",
+    "line": 1025,
+    "params": ""
+  },
+  {
+    "name": "trigger_morningWakeUpCall",
+    "file": "Operations.js",
+    "line": 1080,
+    "params": ""
+  },
+  {
+    "name": "api_testMorningWakeUpCall",
+    "file": "Operations.js",
+    "line": 1083,
+    "params": ""
+  },
+  {
+    "name": "sendDiscordNotification",
+    "file": "Operations.js",
+    "line": 1093,
+    "params": "title, message, customUrl"
+  },
+  {
+    "name": "api_testDiscordNotification",
+    "file": "Operations.js",
+    "line": 1136,
+    "params": "webhookUrl"
+  },
+  {
+    "name": "sendSystemAlert",
+    "file": "Operations.js",
+    "line": 1143,
+    "params": "title, message"
+  },
+  {
+    "name": "api_runDataIntegrityCheck",
+    "file": "Operations.js",
+    "line": 1193,
+    "params": ""
+  },
+  {
+    "name": "setupNightlyArchiveTrigger",
+    "file": "Operations.js",
+    "line": 1389,
+    "params": ""
+  },
+  {
+    "name": "nightlyAutoArchive",
+    "file": "Operations.js",
+    "line": 1408,
+    "params": ""
+  },
+  {
+    "name": "_removeVietnameseTones",
+    "file": "Operations.js",
+    "line": 1442,
+    "params": "str"
+  },
+  {
+    "name": "_sanitizeSkuSlug",
+    "file": "Operations.js",
+    "line": 1465,
+    "params": "str"
+  },
+  {
+    "name": "_extractSkuDimensions",
+    "file": "Operations.js",
+    "line": 1477,
+    "params": "str"
+  },
+  {
+    "name": "_extractSkuVersion",
+    "file": "Operations.js",
+    "line": 1503,
+    "params": "str"
+  },
+  {
+    "name": "_extractMaterialSlug",
+    "file": "Operations.js",
+    "line": 1523,
+    "params": "name, oldSku, prefixesToRemove"
+  },
+  {
+    "name": "_extractVariantSuffix",
+    "file": "Operations.js",
+    "line": 1544,
+    "params": "str"
+  },
+  {
+    "name": "_generateStandardSKU",
+    "file": "Operations.js",
+    "line": 1608,
+    "params": "category, subCategory, name, oldSku"
+  },
+  {
+    "name": "standardizeWarehouseSKU",
+    "file": "Operations.js",
+    "line": 1704,
+    "params": "options"
+  },
+  {
+    "name": "syncBomMaterialSkusWithProducts",
+    "file": "Operations.js",
+    "line": 1971,
+    "params": "options"
+  },
+  {
+    "name": "api_createCustomKPI",
+    "file": "Operations.js",
+    "line": 2087,
+    "params": "payload, pin"
+  },
+  {
+    "name": "api_submitKpiSelfAssessment",
+    "file": "Operations.js",
+    "line": 2188,
+    "params": "kpiId, actualValue, note, proofUrl"
+  },
+  {
+    "name": "api_getReconProposals",
+    "file": "ReconciliationApi.js",
+    "line": 358,
+    "params": "pin, filter"
+  },
+  {
+    "name": "api_getReconAuditHistory",
+    "file": "ReconciliationApi.js",
+    "line": 362,
+    "params": "pin, proposalId"
+  },
+  {
+    "name": "api_approveReconProposal",
+    "file": "ReconciliationApi.js",
+    "line": 366,
+    "params": "proposalId, pin"
+  },
+  {
+    "name": "api_rejectReconProposal",
+    "file": "ReconciliationApi.js",
+    "line": 370,
+    "params": "proposalId, pin, reason"
+  },
+  {
+    "name": "api_applyReconProposal",
+    "file": "ReconciliationApi.js",
+    "line": 374,
+    "params": "proposalId, pin"
+  },
+  {
+    "name": "api_rollbackReconProposal",
+    "file": "ReconciliationApi.js",
+    "line": 378,
+    "params": "proposalId, pin"
+  },
+  {
+    "name": "api_recoverReconProposals",
+    "file": "ReconciliationApi.js",
+    "line": 382,
+    "params": "pin"
+  },
+  {
+    "name": "api_initReconDatabase",
+    "file": "ReconciliationApi.js",
+    "line": 386,
+    "params": "pin, customSpreadsheetId"
+  },
+  {
+    "name": "api_getReconSummary",
+    "file": "ReconciliationApi.js",
+    "line": 390,
+    "params": "pin"
+  },
+  {
+    "name": "api_getReconIssues",
+    "file": "ReconciliationApi.js",
+    "line": 394,
+    "params": "pin, filter"
+  },
+  {
+    "name": "api_getReconImports",
+    "file": "ReconciliationApi.js",
+    "line": 398,
+    "params": "pin"
+  },
+  {
+    "name": "api_importReconFile",
+    "file": "ReconciliationApi.js",
+    "line": 402,
+    "params": "pin, payload"
+  },
+  {
+    "name": "api_runReconMatching",
+    "file": "ReconciliationApi.js",
+    "line": 406,
+    "params": "pin, importId, options"
+  },
+  {
+    "name": "initReconciliationDatabase",
+    "file": "ReconciliationDbService.js",
+    "line": 448,
+    "params": "customSpreadsheetId"
+  },
+  {
+    "name": "rfEnterpriseHeartbeatHandler",
+    "file": "RetiredAutomation.js",
+    "line": 5,
+    "params": ""
+  },
+  {
+    "name": "rfReturnClaimGroup_",
+    "file": "ReturnClaimRules.js",
+    "line": 8,
+    "params": "file"
+  },
+  {
+    "name": "rfReturnClaimCheck_",
+    "file": "ReturnClaimRules.js",
+    "line": 11,
+    "params": "order, workflow, draft, nowMs"
+  },
+  {
+    "name": "rfReturnClaimText_",
+    "file": "ReturnClaimRules.js",
+    "line": 44,
+    "params": "order, workflow, draft"
+  },
+  {
+    "name": "rfReturnJson",
+    "file": "ReturnWorkflowService.js",
+    "line": 2,
+    "params": "value, fallback"
+  },
+  {
+    "name": "rfReturnTrue",
+    "file": "ReturnWorkflowService.js",
+    "line": 7,
+    "params": "value"
+  },
+  {
+    "name": "rfReturnCode",
+    "file": "ReturnWorkflowService.js",
+    "line": 8,
+    "params": "order"
+  },
+  {
+    "name": "rfReturnAccs",
+    "file": "ReturnWorkflowService.js",
+    "line": 9,
+    "params": "order"
+  },
+  {
+    "name": "rfReturnMatches",
+    "file": "ReturnWorkflowService.js",
+    "line": 21,
+    "params": "ticket, order"
+  },
+  {
+    "name": "rfReturnLines",
+    "file": "ReturnWorkflowService.js",
+    "line": 29,
+    "params": "order, productions"
+  },
+  {
+    "name": "rfReturnPlan",
+    "file": "ReturnWorkflowService.js",
+    "line": 49,
+    "params": "order, productions, products, tickets, command, actor, now"
+  },
+  {
+    "name": "rfReturnValidateImage_",
+    "file": "ReturnWorkflowService.js",
+    "line": 245,
+    "params": "image"
+  },
+  {
+    "name": "rfReturnValidateFile_",
+    "file": "ReturnWorkflowService.js",
+    "line": 260,
+    "params": "file"
+  },
+  {
+    "name": "processReturnCommand_",
+    "file": "ReturnWorkflowService.js",
+    "line": 275,
+    "params": "command, auth"
+  },
+  {
+    "name": "getRfBotMasterSpreadsheet_",
+    "file": "RFBotBridge.js",
+    "line": 20,
+    "params": ""
+  },
+  {
+    "name": "readSheetFlexible_",
+    "file": "RFBotBridge.js",
+    "line": 34,
+    "params": "ss, candidates"
+  },
+  {
+    "name": "fmtMoneyVoice_",
+    "file": "RFBotBridge.js",
+    "line": 58,
+    "params": "val"
+  },
+  {
+    "name": "normVN_",
+    "file": "RFBotBridge.js",
+    "line": 78,
+    "params": "str"
+  },
+  {
+    "name": "buildRfFullBrainSnapshot_",
+    "file": "RFBotBridge.js",
+    "line": 90,
+    "params": "ss, targetDate"
+  },
+  {
+    "name": "synthesizeAnswerFromBrain_",
+    "file": "RFBotBridge.js",
+    "line": 851,
+    "params": "brain, rawQuery, reqType"
+  },
+  {
+    "name": "searchSpecificOrderInBrain_",
+    "file": "RFBotBridge.js",
+    "line": 1094,
+    "params": "brain, rawQuery"
+  },
+  {
+    "name": "handleVoiceProductionAction_",
+    "file": "RFBotBridge.js",
+    "line": 1171,
+    "params": "params"
+  },
+  {
+    "name": "handleRfBotApiRequest_",
+    "file": "RFBotBridge.js",
+    "line": 1456,
+    "params": "params"
+  },
+  {
+    "name": "handleRfBotMcpRequest_",
+    "file": "RFBotBridge.js",
+    "line": 1521,
+    "params": "payload"
+  },
+  {
+    "name": "AAA_SYNC_SHOPEE_BLACK_IMAGES_TO_PRODUCTS",
+    "file": "ShopeeBlackImagesSync.js",
+    "line": 11,
+    "params": ""
+  },
+  {
+    "name": "rfWebsiteOrigin_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 2,
+    "params": ""
+  },
+  {
+    "name": "rfWebsiteValidate_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 3,
+    "params": "value"
+  },
+  {
+    "name": "text",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 6,
+    "params": "v,max"
+  },
+  {
+    "name": "image",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 7,
+    "params": "v"
+  },
+  {
+    "name": "rfWebsiteSheet_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 35,
+    "params": "create"
+  },
+  {
+    "name": "rfWebsiteRows_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 51,
+    "params": "sheet"
+  },
+  {
+    "name": "rfWebsiteHistory_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 52,
+    "params": "ss,id,revision,action,actor,content"
+  },
+  {
+    "name": "rfWebsiteGetPublicProducts_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 54,
+    "params": ""
+  },
+  {
+    "name": "rfWebsiteCatalogContent_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 110,
+    "params": ""
+  },
+  {
+    "name": "rfWebsitePublicContent_",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 119,
+    "params": ""
+  },
+  {
+    "name": "rfWebsiteManage",
+    "file": "WorkspaceWebsiteBackend.js",
+    "line": 130,
+    "params": "pin,action,args"
+  },
+  {
+    "name": "rfWebsiteSeedDocuments_",
+    "file": "WorkspaceWebsiteSeed.js",
+    "line": 2,
+    "params": ""
+  },
+  {
+    "name": "rfWebsiteSeedProducts_",
+    "file": "WorkspaceWebsiteSeed.js",
+    "line": 3,
+    "params": ""
+  },
+  {
+    "name": "zfCustomerAuthorized_",
+    "file": "ZaloFlowCustomerBridge.js",
+    "line": 5,
+    "params": "token"
+  },
+  {
+    "name": "zfCustomerPhone_",
+    "file": "ZaloFlowCustomerBridge.js",
+    "line": 10,
+    "params": "value"
+  },
+  {
+    "name": "zfCustomerInitialize_",
+    "file": "ZaloFlowCustomerBridge.js",
+    "line": 13,
+    "params": ""
+  },
+  {
+    "name": "zfCustomerHandle_",
+    "file": "ZaloFlowCustomerBridge.js",
+    "line": 29,
+    "params": "payload"
+  }
+]

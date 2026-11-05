@@ -1,0 +1,1350 @@
+<script type="text/babel">
+const RICH_FISH_LAYOUT_CATALOG = [{"n":"Đảo Bay ver.3","a":{"front":"https://lh3.googleusercontent.com/d/19vmZ9x8Jep82WTo7bKj4B5ciG1_JKCLL=w1600","distant":"https://lh3.googleusercontent.com/d/1wHER1akKVK18mboIbqf-7f_74TXxfPVn=w1600","left":"https://lh3.googleusercontent.com/d/1fd8YpEQO4xWO5Fqh1gonKKyb0Mxt6796=w1600","right":"https://lh3.googleusercontent.com/d/1APW7uo-3BNK3W9jw-p2za2TvWzkfx_s7=w1600","top":"https://lh3.googleusercontent.com/d/1yTxQkxZN3DWRgsubOK0nuZ2DEe8U4OJ0=w1600"}},{"n":"Đảo Bay ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1Zy8pZMUAuUD5hgbKmvny9SKhJnQCagMc=w1600","distant":"https://lh3.googleusercontent.com/d/1lR9P4CM3vNH5o20d_RdQwEhPPj_H-7tj=w1600","left":"https://lh3.googleusercontent.com/d/1S3u3FWX5F6HXirbTzrOo2zRXkO4BnwTu=w1600","right":"https://lh3.googleusercontent.com/d/1QMcsNeRuDjFPOBOjZc2jGpg8ybt65loy=w1600","top":"https://lh3.googleusercontent.com/d/1qfZov2aFXamXdKEq8SO7YTX5HvWquhqy=w1600"}},{"n":"Vách ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1h__xr2TrlgVFk-0q_3OXm-LX2OLNhFvX=w1600","distant":"https://lh3.googleusercontent.com/d/1BxssycQ33-DAvLX5oIdUH6js87ye2TPA=w1600","left":"https://lh3.googleusercontent.com/d/1l2Pqs1tySD_woWPPApgsGMoY9fILWaQD=w1600","right":"https://lh3.googleusercontent.com/d/1M1uQqI9Xap3P44jaax3BhpVMu98qlWnZ=w1600","top":"https://lh3.googleusercontent.com/d/1eKnvYZPgADzerk_yw-t-wZk4vvHUhYkP=w1600"}},{"n":"Tê Giác","a":{"front":"https://lh3.googleusercontent.com/d/18Nf4B1pv3ErSGuatAhC6yIUMrAYdmwoQ=w1600","distant":"https://lh3.googleusercontent.com/d/18lDRZpmtbDnj2DBCTLx6HTheQ_U_1bda=w1600","left":"https://lh3.googleusercontent.com/d/1C35k-iV_yp9cVZ_fV7Cj2kDmThgEhplZ=w1600","right":"https://lh3.googleusercontent.com/d/1M5AlhEhN8lRV5y-BCC76Kq0u3pj3UVgB=w1600","top":"https://lh3.googleusercontent.com/d/1bmtgegn76yhZBCKZiZPgLyOodnkw9kfv=w1600"}},{"n":"Đảo Bay ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1a0IrWlI1we0FAVhJOjGttOQ49S3Lx6zO=w1600","distant":"https://lh3.googleusercontent.com/d/11pWiNI7rX7pECSBOf0salDT4LpvuCtkf=w1600","left":"https://lh3.googleusercontent.com/d/1MWEJLHK0_GBraQwBpaXOHMztOgorWcWQ=w1600","right":"https://lh3.googleusercontent.com/d/1m4rV9NuAIH4t2zmr09wNk--Sm-pVQp_j=w1600","top":"https://lh3.googleusercontent.com/d/1mTiuq1bMz3wckLKlI-LyXSICy-x01sZi=w1600"}},{"n":"Vách ver.1","a":{"front":"https://lh3.googleusercontent.com/d/15hcc5c7uYkSTr7ln1WNG8xqMt9dKkMVr=w1600","distant":"https://lh3.googleusercontent.com/d/1dbuy2Ae0-ODmG8mZSbKiG2tDSK1fhbZb=w1600","left":"https://lh3.googleusercontent.com/d/1tIfKUMeYSZClzwvvktjxWojjt53HIbg2=w1600","right":"https://lh3.googleusercontent.com/d/17GHF0En7z24CiQu6D5CQKnaARC1FOs0U=w1600","top":"https://lh3.googleusercontent.com/d/1hrRz329BENnUNRNxQ8PcUyobqhhh33O-=w1600"}},{"n":"Vách ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1Ybr3KR-HUhwKc4rcOydC0FVHeSpXy5ss=w1600","distant":"https://lh3.googleusercontent.com/d/148jKNUUY_hdHfjv11Yd85ZUNaytdoHFO=w1600","left":"https://lh3.googleusercontent.com/d/1kVuP6gObbh5FPALA1u3rfUO-0tMWN1z4=w1600","right":"https://lh3.googleusercontent.com/d/1cOfgNxM4FoxOSMHe-l95xFKIZV3ycvla=w1600","top":"https://lh3.googleusercontent.com/d/1iBHmZHDwlXTioGznXv6IHSq7HHXAvDSg=w1600"}},{"n":"Đại Bàng","a":{"front":"https://lh3.googleusercontent.com/d/1k_gkFjnmTgs9R5E5ZnHbiYLf3UKRh5e7=w1600","distant":"https://lh3.googleusercontent.com/d/1PCxpNNYIfwA3scD2dkx-hdXU83iscWWM=w1600","left":"https://lh3.googleusercontent.com/d/1hgJt0_RuP3erB6J6AUhoimzfHeRzd3rB=w1600","right":"https://lh3.googleusercontent.com/d/1rN80EJncYQGQfBKAWWSinE0d3m46uIPN=w1600","top":"https://lh3.googleusercontent.com/d/1TZsfsVF30PhADUlHx3TJfYBSGoq-t4vS=w1600"}},{"n":"Trăng","a":{"front":"https://lh3.googleusercontent.com/d/1PgB1lCXx9MZfUwvOrD8ty2vQo_cukis5=w1600","distant":"https://lh3.googleusercontent.com/d/1gdYYxCT0lLxOYKail3XT4otVRNGXTN1J=w1600","left":"https://lh3.googleusercontent.com/d/1WuOJraFKBk4nE_HM-wZPIQQ8jyLWo2g1=w1600","right":"https://lh3.googleusercontent.com/d/1ci8XKIlkSOfgenmrswLuluti8VEe62QS=w1600","top":"https://lh3.googleusercontent.com/d/1jNy_2uEidTUh4rA4ShfScAdygGygAwYf=w1600"}},{"n":"Vách ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1qR0jKRzGKKR3av8oYhRcub0zp5SWkbaz=w1600","distant":"https://lh3.googleusercontent.com/d/1qQRe-Ck-wyIMqMcNSfDo3xyyY8WUkdZu=w1600","left":"https://lh3.googleusercontent.com/d/1C56A3JYsZNUjFzH0UZt5zg5qNesFbokJ=w1600","right":"https://lh3.googleusercontent.com/d/1D0aSSdojqceYpQQ1CXIVak24BDBH15zw=w1600","top":"https://lh3.googleusercontent.com/d/1TA18M1Cx6oJsvO-O7kkKuptqfY8yBICf=w1600"}},{"n":"Rừng ver.9","a":{"front":"https://lh3.googleusercontent.com/d/13tAoDd6NWaV_D-hWv19zLuiqgVKkpQ3p=w1600","distant":"https://lh3.googleusercontent.com/d/1hKTecUyLnB5UgeQuz7-SX7hnLoGdzyZA=w1600","left":"https://lh3.googleusercontent.com/d/1rQx5VFg2_2ycT_y87kjgkrlsyC-J-JwP=w1600","right":"https://lh3.googleusercontent.com/d/1KopMJujMfmXZBwMlY0TKbywkSR14-cbV=w1600","top":"https://lh3.googleusercontent.com/d/1ze_8czSmo2COlbgmu8a2IqvMX58OoyHg=w1600"}},{"n":"Rừng ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1imUFyhc44qF250gMCN0vqgWjCumHWwGe=w1600","distant":"https://lh3.googleusercontent.com/d/18aeSbSovaLcHLXJCafBL8K4KpXg8xNxW=w1600","left":"https://lh3.googleusercontent.com/d/1dTY2nXfJ7cudgMyyXL9cJi8KNJt62X2t=w1600","right":"https://lh3.googleusercontent.com/d/17_4zw7MJvWOGaTD3gpG7cH_WL7C0VP2y=w1600","top":"https://lh3.googleusercontent.com/d/146dI0LCmmRxq0ZpgJd3q54utW5UVGiXx=w1600"}},{"n":"Rừng ver.8","a":{"front":"https://lh3.googleusercontent.com/d/1yMR1KaeRq4X_u7z97Vqp3gXqUDats8l-=w1600","distant":"https://lh3.googleusercontent.com/d/1y5RPPoAGYlnHqTwCWEE6fjZYPwfdNe8J=w1600","left":"https://lh3.googleusercontent.com/d/1f-k5W7i9QV0FwoXvtxhy4rADqkQASDay=w1600","right":"https://lh3.googleusercontent.com/d/123d4Zb6RcCH2zxGMjZFt55i093TpZfAc=w1600","top":"https://lh3.googleusercontent.com/d/1XptVAdkHcA8MGW48kjJXu3SaRPTE92ii=w1600"}},{"n":"Rừng ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1Vd2ReDvfj4v2kfz-DjgXMb6QYInUqseS=w1600","distant":"https://lh3.googleusercontent.com/d/13ZFvlvaAUBH-md6f1uAkf_ckiRSP7KjO=w1600","left":"https://lh3.googleusercontent.com/d/17Il1x3PYpo1l8lVK-72S7VivrwicdAmY=w1600","right":"https://lh3.googleusercontent.com/d/1pTes21Skh4hFatdYWRLQiPyKQ4ha_tkl=w1600","top":"https://lh3.googleusercontent.com/d/1a56RAtujhBSDt_ZkWGTGqZiwS2cVY8Hb=w1600"}},{"n":"Rừng ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1lPTTXLqJCq7S7wRjv8OqNr6bSPDuWUTL=w1600","distant":"https://lh3.googleusercontent.com/d/12z8xUgFOZ_kAGfY_RGa00rmmpOXDvY4i=w1600","left":"https://lh3.googleusercontent.com/d/1GWTtIvcQULls-zTZuv-GCDzvLhx-rJ8n=w1600","right":"https://lh3.googleusercontent.com/d/1sTRLxznU6D6xEVMpLzxl1cMRnG_WgJ5s=w1600","top":"https://lh3.googleusercontent.com/d/1n4UTEv0KqqO5KzmqVGOB72ygT4dnAiDM=w1600"}},{"n":"Rừng ver.23","a":{"front":"https://lh3.googleusercontent.com/d/13nZEWkD2yEpdWL1WFnhFkWBvJB2ztgGM=w1600","distant":"https://lh3.googleusercontent.com/d/1SrA4_ytiVoXQ78rBFpWdCHp6IwJeX6Sx=w1600","left":"https://lh3.googleusercontent.com/d/1VwgQT12JkM9TTx1du_vg3IqHE9p3A8Bm=w1600","right":"https://lh3.googleusercontent.com/d/1qrltHUbmMd9lwZBRf-awrG4-SBuiaPpU=w1600","top":"https://lh3.googleusercontent.com/d/1yYpUL1G4uzn1S_51-WMeTQLuyKwMY-Ql=w1600"}},{"n":"Rừng ver.22","a":{"front":"https://lh3.googleusercontent.com/d/1nikTSQPRYnJaaAJiREx3WmYpm93DToS8=w1600","distant":"https://lh3.googleusercontent.com/d/1nPFi0krA6Njfs_Q4fztZLLbkadGsP3zZ=w1600","left":"https://lh3.googleusercontent.com/d/1_Sfjb20uxEYt9CtyzWCmBv-Ynn3uQ5a3=w1600","right":"https://lh3.googleusercontent.com/d/1kSDn-sBCYKx_yVgZHAmoLlShRdtvBpBT=w1600","top":"https://lh3.googleusercontent.com/d/10Ls0YidoBdDfQhZ4arsinFy6XQoPMavn=w1600"}},{"n":"Rừng ver.21","a":{"front":"https://lh3.googleusercontent.com/d/1zUbAeDwZNOv049_HYLgr9gKWQjlR0dkL=w1600","distant":"https://lh3.googleusercontent.com/d/1pFQ8M8jvzzGwGz1ZR6BZDhac_Z2qFRoB=w1600","left":"https://lh3.googleusercontent.com/d/1Y7zxUyMfFjNRlF6bn1Z3JiEEbkVS8f09=w1600","right":"https://lh3.googleusercontent.com/d/1Be2D315FSv4sgAdWzBxQ6BasfOTULXjR=w1600","top":"https://lh3.googleusercontent.com/d/1hosXM9TbCTOjPtkRohnMhXNRDZpzndy6=w1600"}},{"n":"Rừng ver.20","a":{"front":"https://lh3.googleusercontent.com/d/1B5FeLKtDrhaYzdPlSVy7Wh3P_vojN1YS=w1600","distant":"https://lh3.googleusercontent.com/d/1zY-MUPckW-iiMxHZso3KD4nbtnVN8kc1=w1600","left":"https://lh3.googleusercontent.com/d/1_IsWqU_liKi1WsoaYWqvrziyFib42i-R=w1600","right":"https://lh3.googleusercontent.com/d/148kbSeRteeLdCOyX2q3Wt75-uwcgIEKt=w1600","top":"https://lh3.googleusercontent.com/d/1LPZdUGAi6I6fVPR8AJWFczprni1eJabN=w1600"}},{"n":"Rừng ver.2","a":{"front":"https://lh3.googleusercontent.com/d/19P0YgiD4O-DcRjklQQBhot6xgxS7bK0l=w1600","distant":"https://lh3.googleusercontent.com/d/1AitV0Kn7Aci1cqe4rbqR7jSSanXHO5zi=w1600","left":"https://lh3.googleusercontent.com/d/1vumXcrz9gLFp6fd5lZ64MrawDkE2DAma=w1600","right":"https://lh3.googleusercontent.com/d/1fGPj_dgt-59VOQ6d_wmhaka8lSZ5l1pE=w1600","top":"https://lh3.googleusercontent.com/d/1d8KK0hsX1yTBqbH8u9hX5mZ4dY_EQzUa=w1600"}},{"n":"Rừng ver.19","a":{"front":"https://lh3.googleusercontent.com/d/1XAi-s_TXiYYACYUQ47xJYW6lvh2moPSK=w1600","distant":"https://lh3.googleusercontent.com/d/19kbRSRF_lKJtr28djv5-NqA0hlSU879T=w1600","left":"https://lh3.googleusercontent.com/d/1MZ81_SEzXHbavLsZ2GtWlKWZSlfkkD6u=w1600","right":"https://lh3.googleusercontent.com/d/1vXcyEb6UAYH0zFILJTSxheJb1nyjh2wL=w1600","top":"https://lh3.googleusercontent.com/d/1rV73ivxFehn2x12js9XfiBWddRG-zLwn=w1600"}},{"n":"Rừng ver.17","a":{"front":"https://lh3.googleusercontent.com/d/1tpYbyMCc1r4WffTc9X9I4DO6dgDq5QSo=w1600","distant":"https://lh3.googleusercontent.com/d/1CcW7FNqWbY-j5_eAxP-GC_njnU1_CREi=w1600","left":"https://lh3.googleusercontent.com/d/1XZpG_idvgEuU7-2i_YUQsZGBe5ANIGSf=w1600","right":"https://lh3.googleusercontent.com/d/1a42qrwR-hHyGGAogtSOjssVqZJ3sX_3Q=w1600","top":"https://lh3.googleusercontent.com/d/1AnRoglDS5qhElHhKF1NOE1vMoZZs3ull=w1600"}},{"n":"Rừng ver.16","a":{"front":"https://lh3.googleusercontent.com/d/1-sHW2Op0UbPX1DPB53Zn93kfbW16-Zf9=w1600","distant":"https://lh3.googleusercontent.com/d/1SiME7YJ7X7VHTU3JUYGIbxsr1XseIf1-=w1600","left":"https://lh3.googleusercontent.com/d/1O0qtZHy72UaGGqz3SN-BgUeHcpOAmGIu=w1600","right":"https://lh3.googleusercontent.com/d/1TwW9ccM0theu82ZCQts33oY0QCy1Aqvz=w1600","top":"https://lh3.googleusercontent.com/d/1zOXl1ZHWpOdH0-QifW5FbpJ0So-cOdJV=w1600"}},{"n":"Rừng ver.18","a":{"front":"","distant":"","left":"","right":"","top":""}},{"n":"Rừng ver.13","a":{"front":"https://lh3.googleusercontent.com/d/1MDvJ59gFjw_TMopvPl_Px9IXj1aADcXW=w1600","distant":"https://lh3.googleusercontent.com/d/1RaIRGIdyE2VO-HOhSYyYWWC_dEu0PFBJ=w1600","left":"https://lh3.googleusercontent.com/d/1_BhaFYrEEW7R1exRkrhIH2_36aagfk5z=w1600","right":"https://lh3.googleusercontent.com/d/19UGf_osUlVUC0fiaiJxkAootJ4mU61gJ=w1600","top":"https://lh3.googleusercontent.com/d/1kJM_ucCPWt3W5KcYSzjqbXdQYd9zqyw0=w1600"}},{"n":"Rừng ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1taKKYZoxRGAyQjU_OPdF_rtxF9p1bMpz=w1600","distant":"https://lh3.googleusercontent.com/d/1yuP9RDOo_PXfO3qSJApXUl1ch1F7_WNu=w1600","left":"https://lh3.googleusercontent.com/d/1OyoAmKbw-GojPl1ZMiMQvQ7Q_nTaCZRs=w1600","right":"https://lh3.googleusercontent.com/d/1xSxWe6NrLEPYV9dEF5OqCLR1bL9gAOSW=w1600","top":"https://lh3.googleusercontent.com/d/1QMRZivSnlvCmfkPmD00LSkaiGl3gt_TZ=w1600"}},{"n":"Rừng ver.14","a":{"front":"https://lh3.googleusercontent.com/d/1Ten1ZN_4A1B1MvElPkxx0ckddGrvujEd=w1600","distant":"https://lh3.googleusercontent.com/d/1mZxN8miLFx33HisraMIT2TSZapFnvHdt=w1600","left":"https://lh3.googleusercontent.com/d/1O2Fei6y7pIn5jvNm1wJWYcEdoqA0PyHq=w1600","right":"https://lh3.googleusercontent.com/d/1JW5WEpP4MRdvkmr2pkVlJqEVNTuO23ZP=w1600","top":"https://lh3.googleusercontent.com/d/1QZsKCZIYD0YvPfwocJGRGz1dOyDw_Qrh=w1600"}},{"n":"Rừng ver.15","a":{"front":"https://lh3.googleusercontent.com/d/1IrkSuwxT_cCympS0kzYzFPjmqexETVoe=w1600","distant":"https://lh3.googleusercontent.com/d/1lxZ4ybn45rupexd1MO3Am7kQ7JSASkx7=w1600","left":"https://lh3.googleusercontent.com/d/13pSjwC2PI3w2KwCdN3foA3ijryKGl4cZ=w1600","right":"https://lh3.googleusercontent.com/d/1tTDEdBKABUhXVaFnpEm95gTADqa8197U=w1600","top":"https://lh3.googleusercontent.com/d/1FozXydbaIRuoMp4A624tCWnJ2NKS9CDk=w1600"}},{"n":"Rừng ver.12 (Rỗng)","a":{"front":"","distant":"","left":"","right":"","top":""}},{"n":"Rừng ver.11","a":{"front":"https://lh3.googleusercontent.com/d/158aQ2RulTfBKO3WmNpezlFCDpml3i2zJ=w1600","distant":"https://lh3.googleusercontent.com/d/1C82B29B_VEXgCOquIeATh6ih_S9L7dW8=w1600","left":"https://lh3.googleusercontent.com/d/1XIctuNfSD5TeTcFQXVh5Nejx3w_uIOuG=w1600","right":"https://lh3.googleusercontent.com/d/1q2vTchpjG-yeQZPT7sNUMCugt3Qqtnv3=w1600","top":"https://lh3.googleusercontent.com/d/1odd5AubxTOCjgZGmJsFmAgHXFLqIpe_q=w1600"}},{"n":"Rừng ver.10","a":{"front":"https://lh3.googleusercontent.com/d/16GYlFHz8vK56xGQMkifTA732NzU-XaVV=w1600","distant":"https://lh3.googleusercontent.com/d/1amkkukQ-GMG1U6bGpzeNDqq-VKSlaLOp=w1600","left":"https://lh3.googleusercontent.com/d/1mWs42BY1HbM2CsirmnJpQKKzK7V7aXwB=w1600","right":"https://lh3.googleusercontent.com/d/1sRMyV8iOppD__pA7SGdAFeHm16Whl7LF=w1600","top":"https://lh3.googleusercontent.com/d/1gjaQpZrjTDkg0wIp0AoWaAK184Ga8KQ_=w1600"}},{"n":"Rồng Châu Âu ver.2","a":{"front":"https://lh3.googleusercontent.com/d/14v_x3n-DFqTWrFPvfhyDwjQk1vVkHwAD=w1600","distant":"https://lh3.googleusercontent.com/d/1rZS5B7fGC1M0ATDMDxqCqC96ApDcbGYb=w1600","left":"https://lh3.googleusercontent.com/d/1qqMXpsrGpUci4REtKQ-7A6I4ub3h70ly=w1600","right":"https://lh3.googleusercontent.com/d/1L38j6uRjCjQwE0kCy7q9PmIBcrt3EkO1=w1600","top":"https://lh3.googleusercontent.com/d/1Dk6t6O--hgmlysZ-xF2pV7mpqyxs7e2f=w1600"}},{"n":"Rồng Châu Á ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1UJMrCnnJzo_VNw9UzZwz6wgwqMBcgixw=w1600","distant":"https://lh3.googleusercontent.com/d/139mvT_T9L6qvtagSNe34QcUEALm11CNt=w1600","left":"https://lh3.googleusercontent.com/d/1OB09MGolKHxdalOE6s0RsBOTRDPL9fTR=w1600","right":"https://lh3.googleusercontent.com/d/1RRSRHLoD71yJp1H-zJ-Wjj_CClTk3tPw=w1600","top":"https://lh3.googleusercontent.com/d/14xDpF3SvB9W2yxB0hX2pj6qmzUBb4GlP=w1600"}},{"n":"Rồng Châu Á ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1DmBBpXJx4wDG_Rgjk-OEZ2ApmPHg8Evl=w1600","distant":"https://lh3.googleusercontent.com/d/13YsvZ06E4okTS6mMVbjSERKwjAaAGVJv=w1600","left":"https://lh3.googleusercontent.com/d/1QM-LZLfpgdUGVat136qxTFiocbjMVjGW=w1600","right":"https://lh3.googleusercontent.com/d/1vRUX-5uHuXZU_WophbVPo-NASqaJhkwh=w1600","top":"https://lh3.googleusercontent.com/d/1VVdYeFXYWItfNbjpXqxd33aTAHZxeJ0w=w1600"}},{"n":"Phượng Hoàng","a":{"front":"https://lh3.googleusercontent.com/d/1I9fiirKw9HdjQe8f1N5HiwG75MFcv-v7=w1600","distant":"https://lh3.googleusercontent.com/d/15Pphyi4oQwlt1mQm68IQlk2NXhSaYq6W=w1600","left":"https://lh3.googleusercontent.com/d/12f_g9jV3psn-MRdC7tEZU_DIohmNMlRF=w1600","right":"https://lh3.googleusercontent.com/d/1lv2s20dMVBvG8hbuFJwpitD1W19kaUvz=w1600","top":"https://lh3.googleusercontent.com/d/12BWK27qdOWZbw-Zs39c0TBGqx-9kL1SI=w1600"}},{"n":"Nhất Trụ ver.2","a":{"front":"https://lh3.googleusercontent.com/d/17w4sy8YUwTtrmSe6TeCi5aqTPFPwiLfL=w1600","distant":"https://lh3.googleusercontent.com/d/1OrFyj2XeQ8HoOnBjkIWSfHeF3BwBKc2S=w1600","left":"https://lh3.googleusercontent.com/d/124UO-W-u5uxv1CC4yuuPvWSL1SGkCI4l=w1600","right":"https://lh3.googleusercontent.com/d/1EA1_oicpu70rhr8Hk5C901W-zCXxOWnB=w1600","top":"https://lh3.googleusercontent.com/d/1s21X3knqWaiI82T4qSoqwM6ycKNXVgbO=w1600"}},{"n":"Nhất Trụ ver.1","a":{"front":"https://lh3.googleusercontent.com/d/10fykij20pCXXDmyrVKBQzlPSdqpJ9pcc=w1600","distant":"https://lh3.googleusercontent.com/d/18-YIXrqFbnr_O-PTkwugoALQNvxW6jZp=w1600","left":"https://lh3.googleusercontent.com/d/1JFI1zZTa6GQf7nf4JvJznP5TPI3slfFT=w1600","right":"https://lh3.googleusercontent.com/d/1mFTnPW0rds14z6S4aVp7qnvf8UqYtZap=w1600","top":"https://lh3.googleusercontent.com/d/1dC8nmBpIOY1hMo2h5z6xV9oIKDzE8qQS=w1600"}},{"n":"Nhất Trụ ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1bgtLzf5qmQAdJoeKNy7ELy3M7f-CegNs=w1600","distant":"https://lh3.googleusercontent.com/d/1dHE8xGeSgZhP8HNbuv1rCkmVT1XVBwhm=w1600","left":"https://lh3.googleusercontent.com/d/17rzm42EVgqwjCp5smkJ5sNjhPtdhlXcm=w1600","right":"https://lh3.googleusercontent.com/d/1pNkpRqsgN4NE5yzKNbQXMGtpFeJGm0Jn=w1600","top":"https://lh3.googleusercontent.com/d/1CleuFUo27j-UJau0AH-CkyMhcnna8BW8=w1600"}},{"n":"Nhất Trụ ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1ysAUHUskFq_MsA1ZtJFAj8YKml4FrQf3=w1600","distant":"https://lh3.googleusercontent.com/d/1IX7YV3PUWP0GhCiQeiS0hxtmAoz1QKiE=w1600","left":"https://lh3.googleusercontent.com/d/1fdoq3-HV99Bjdk1LLFzx0nxL7FOKxHxa=w1600","right":"https://lh3.googleusercontent.com/d/1vVhpP198qjzpnG71pNtBMFz6S5slmkS2=w1600","top":"https://lh3.googleusercontent.com/d/1cUH60kEgETdtFk2eo6LDqJ6Bp2c9pKZh=w1600"}},{"n":"Nature ver.8","a":{"front":"https://lh3.googleusercontent.com/d/1ClreenkKwKf_71A7Za_rTJMSijOTS0aa=w1600","distant":"https://lh3.googleusercontent.com/d/10OdpPAZKnX-0KBS4kkqbli5hW6CZB6LB=w1600","left":"https://lh3.googleusercontent.com/d/1RYm9bqPIjcqu7OzufU7elrzM0Ll9ZJY3=w1600","right":"https://lh3.googleusercontent.com/d/1RAU2nBIx58rHaoMLnI5e60zKhVg8xC2A=w1600","top":"https://lh3.googleusercontent.com/d/1ZDed5xhHPbmOQFav7mpeYTQHUWdTKGKU=w1600"}},{"n":"Nature ver.9","a":{"front":"https://lh3.googleusercontent.com/d/1bRsxsWnzTDdjGPkf541P2nplcg6j6U-C=w1600","distant":"https://lh3.googleusercontent.com/d/1kR9WEq6H19nahbMJJpo4Cf0LddagfsVR=w1600","left":"https://lh3.googleusercontent.com/d/1F0gYWwhhSDm0_qefSPcke6tx4O2XEpE6=w1600","right":"https://lh3.googleusercontent.com/d/1GkvejPR_J6VVnjSwgc1FmZXZU3h18sm5=w1600","top":"https://lh3.googleusercontent.com/d/1tpjWj3vMer6cmEhv-efbuROH5-SFgVxn=w1600"}},{"n":"Nature ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1fPyxZrUNdbXb3kPjdZUGM0k8n1OyOi-g=w1600","distant":"https://lh3.googleusercontent.com/d/1VaHnErg988mqVwAmNhzyt8Ym7O0oWhMC=w1600","left":"https://lh3.googleusercontent.com/d/196sHIaBEr0xqXkBSsTa34XXbhNgzYYQ1=w1600","right":"https://lh3.googleusercontent.com/d/1FPcEsTCRiq0CvY5fDrvv2ZkN0nc6IP1u=w1600","top":"https://lh3.googleusercontent.com/d/1mQOHwjzN7f5tPFD8edBEWCxeJr2beOjz=w1600"}},{"n":"Nature ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1YS0wYqcq_JGMH5blwaxuKSCusPTP_j6W=w1600","distant":"https://lh3.googleusercontent.com/d/1WsgXzys0d7fIqvbHjIboWG1JhJvK7xrE=w1600","left":"https://lh3.googleusercontent.com/d/1KTvwVih1XQVdnkPGD435bxB2DgcDB056=w1600","right":"https://lh3.googleusercontent.com/d/1sAaFpRmEJG2-synFw1cvFKzs8enGBuiZ=w1600","top":"https://lh3.googleusercontent.com/d/1-vxdY2UhUs6YDdOAE1w5sql1YmdiiqsG=w1600"}},{"n":"Nature ver.12","a":{"front":"https://lh3.googleusercontent.com/d/1HtFlqgAs-Vw3pnR0ej_mRnHUsZQMHxj-=w1600","distant":"https://lh3.googleusercontent.com/d/1NBAazRzFk3ie04hNXs6ZkBjwNQqwnrtc=w1600","left":"https://lh3.googleusercontent.com/d/1LKzJzX9nYOb7W8woeZywOKKuaM1tsGaV=w1600","right":"https://lh3.googleusercontent.com/d/1potm46tOyfFQWMPJdAfxRqsusQ5_9rqs=w1600","top":"https://lh3.googleusercontent.com/d/1x7lQm60HKW0OnHzKzZI0wpzkMslI2K_u=w1600"}},{"n":"Nature ver.7","a":{"front":"https://lh3.googleusercontent.com/d/1LxwLSY5GdNZN-qD8To_AW7xvm86ko1_C=w1600","distant":"https://lh3.googleusercontent.com/d/1Yyer7cE2zsH4nmZ9zjt0DQr8kuLOaxQQ=w1600","left":"https://lh3.googleusercontent.com/d/10Tt2hzcT7FBnU38rLH_DnmSjXBgu97AW=w1600","right":"https://lh3.googleusercontent.com/d/1yeRHBvY29pI4oIxzeOpNOP0OdiEh-IQO=w1600","top":"https://lh3.googleusercontent.com/d/1pTrshRAJSnPAlzOtyFYHZcE9FAR057yu=w1600"}},{"n":"Nature ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1PymIiNHPikRxHIcIDFqoYP8qC62_Mrng=w1600","distant":"https://lh3.googleusercontent.com/d/1sSr_SSKJc8AbkkzVzOIw46wDPAE3QLEK=w1600","left":"https://lh3.googleusercontent.com/d/1FodZiYiJTQrbRiUXBYvfKg1N4hYAKkmO=w1600","right":"https://lh3.googleusercontent.com/d/15SaTWvZv4ViS4MBQj1IwasRk3970Hq03=w1600","top":"https://lh3.googleusercontent.com/d/12ur5zBRN-8s5CZKWPfaf7lZNHG12xAJK=w1600"}},{"n":"Nature ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1n5TRlAjzqAZDvc7gFjCpRDQvApDfMYaY=w1600","distant":"https://lh3.googleusercontent.com/d/1MOt7wJY04yYR-6tw-yei5aHdHnitUN35=w1600","left":"https://lh3.googleusercontent.com/d/1Ex97n56la7FdPswHtkWGtXrUsBXvhXkU=w1600","right":"https://lh3.googleusercontent.com/d/1rG6IsSUtszthEPmZFbwxAZbImULhUc6y=w1600","top":"https://lh3.googleusercontent.com/d/1nZfV9Mlmr2XNGMfxOtQ6ipc4PB5GcOhf=w1600"}},{"n":"Nature ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1P5zmrXVtv8n227p41Ew5Ouy_5gCUIV1j=w1600","distant":"https://lh3.googleusercontent.com/d/10k3UprnJHeb2jzvc9XAXX7Uui6yrhoYZ=w1600","left":"https://lh3.googleusercontent.com/d/1Gqp7LRGDQPdMg5QIihpuxMLwcgSjHFc_=w1600","right":"https://lh3.googleusercontent.com/d/1bqPx7-ivqrw6sKVlYA2Casdq8pSNiHg3=w1600","top":"https://lh3.googleusercontent.com/d/1OK0leVLAh79TMYHDAzO5yODAZsUqZEli=w1600"}},{"n":"Nature ver.13","a":{"front":"https://lh3.googleusercontent.com/d/17zoou-gsIrnTsge7khXsBQh4Xwzqz7Ed=w1600","distant":"https://lh3.googleusercontent.com/d/1O5JvNSedAvGlQJPcLA9axheGFMLMR_sD=w1600","left":"https://lh3.googleusercontent.com/d/1ao9yQesI_EcwHoPYaQU1BTGnn9wgy6um=w1600","right":"https://lh3.googleusercontent.com/d/1yXLX4UIYH3npPXKc5VRF8WlUjwiI1P-0=w1600","top":"https://lh3.googleusercontent.com/d/1O4YFcMDgEUzXe29b_uPe1lOwodCE0Mhn=w1600"}},{"n":"Nature ver.10","a":{"front":"https://lh3.googleusercontent.com/d/1xc8kBFPpoFfQtMUro-qN174e4iabE54R=w1600","distant":"https://lh3.googleusercontent.com/d/1W07wRZTonoDEu0V6IE_pdvknKVLRiwPO=w1600","left":"https://lh3.googleusercontent.com/d/1lmuQXfzVxPa_3q61vDzfTTutgCJpk16Q=w1600","right":"https://lh3.googleusercontent.com/d/19HxNHBQ6v52JKIKc5txEowBokb8FRSjm=w1600","top":"https://lh3.googleusercontent.com/d/1xc8kBFPpoFfQtMUro-qN174e4iabE54R=w1600"}},{"n":"Nature ver.11","a":{"front":"https://lh3.googleusercontent.com/d/186a4WD6hl_t5kAG1WcxFJu2wvn2jt1Fy=w1600","distant":"https://lh3.googleusercontent.com/d/1yPgmMAE7VQD0KU5WwYG5svP1m9UwJgrQ=w1600","left":"https://lh3.googleusercontent.com/d/1aCUrg8_9q7vlotr7Ja-eT-qEA1lRTLPV=w1600","right":"https://lh3.googleusercontent.com/d/1j1rPgIwZ9orzxa8mn8xh3VD8JkATIEJr=w1600","top":"https://lh3.googleusercontent.com/d/1k_Lv56iU-MfUhyI4mA-oIP2AdZD9gvrf=w1600"}},{"n":"Nature ver.1","a":{"front":"https://lh3.googleusercontent.com/d/13clLvBRnyrDv8BTuNurstT4LJyKLsd1i=w1600","distant":"https://lh3.googleusercontent.com/d/1dNAja1r_DDf_EpWKfMk7_Zke3YmuOlpu=w1600","left":"https://lh3.googleusercontent.com/d/1Dv-KvEvC3eDxwxcC7gNj12636ao_HVOr=w1600","right":"https://lh3.googleusercontent.com/d/1ZviWofRRB-WGbTGjX_-UpLV3MkoUOhUc=w1600","top":"https://lh3.googleusercontent.com/d/13FgkvqSpz7yl0UEx38ljBKN1_8HgxLzz=w1600"}},{"n":"Hẻm Núi ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1kHyit0rwgxpLbvtX3ER6MEVuTV1I3w_a=w1600","distant":"https://lh3.googleusercontent.com/d/1GeEN_Dokq8uC9QBkyk5cnmWvfJs3INJf=w1600","left":"https://lh3.googleusercontent.com/d/1xb5LM0mAoQNSssfOdsSOOXWpXYs_EHsc=w1600","right":"https://lh3.googleusercontent.com/d/1y-KcCQnjajMU4yWNq9JEbtEH5PZlWVal=w1600","top":"https://lh3.googleusercontent.com/d/1bYmTpJyPoqc7eN0JiaOC88OJin9uKoUC=w1600"}},{"n":"Hẻm Núi ver.7","a":{"front":"https://lh3.googleusercontent.com/d/1uB68BcI8S6Zkl6HkAf-7_zfQDwL9IOlE=w1600","distant":"https://lh3.googleusercontent.com/d/19P2hOENMnWuZch1GVDozUujiHLBlAMIT=w1600","left":"https://lh3.googleusercontent.com/d/1b5VU6KbDdiAS_iLqW9F7KjTG1Ya0p2fS=w1600","right":"https://lh3.googleusercontent.com/d/1kEMlZDY1yH1D6jgK9tqDk9v0sx69a_Kd=w1600","top":"https://lh3.googleusercontent.com/d/1e_NSJQf1glNct2GMWN0qhICJQGDXadAA=w1600"}},{"n":"Hẻm Núi ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1ZEXKeZ3NCvpWaMUGkU1xMAFovmNZNXIX=w1600","distant":"https://lh3.googleusercontent.com/d/1aqwQQ4ZmegCO7DJizu65ADkgoyt4eo0F=w1600","left":"https://lh3.googleusercontent.com/d/1y35AgAfsDwxdJlyZmZFJP9v_vEgOM2XS=w1600","right":"https://lh3.googleusercontent.com/d/1y60QQ6YPLdpLkhksY3lo7KKarFKFTT6E=w1600","top":"https://lh3.googleusercontent.com/d/1ppIrOi0mrl3wYs8nZ6desPOzL5_Q0JR0=w1600"}},{"n":"Hẻm Núi ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1czk5o9zfN_nqYlI6VU6JN5UN1tzRxetd=w1600","distant":"https://lh3.googleusercontent.com/d/1czk5o9zfN_nqYlI6VU6JN5UN1tzRxetd=w1600","left":"https://lh3.googleusercontent.com/d/1jyWUtOryASN3jEe-m13Ifrye_07v_xrX=w1600","right":"https://lh3.googleusercontent.com/d/1yH_kehaP54OuHnfFWHiPpXVmACI5iAm0=w1600","top":"https://lh3.googleusercontent.com/d/1MCp_Y3QTnejHrHJlSZGv7fx45FCu_RPd=w1600"}},{"n":"Hẻm Núi ver.4","a":{"front":"https://lh3.googleusercontent.com/d/191TcEEHqsA-CczBvwcO2InTwb-vAQe0l=w1600","distant":"https://lh3.googleusercontent.com/d/1sVGqjbYgLzPwHjBeESRb-KoKGQ-SyhEC=w1600","left":"https://lh3.googleusercontent.com/d/1frIndZPeUzP78mKw4TcOUUt0nf3G36jT=w1600","right":"https://lh3.googleusercontent.com/d/1A_7sx4fx4X5M5NpafmYRNwjSYwpduWW-=w1600","top":"https://lh3.googleusercontent.com/d/14eRVxjgT-LPvRynpY2hVQ12hmwmW_GlD=w1600"}},{"n":"Hẻm Núi ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1EukwTHAQhoRi3G3MCa1WIls_HcIgfMQp=w1600","distant":"https://lh3.googleusercontent.com/d/1sLCwWVC1sIvTx4aODTHaeVmUnKkBYzWg=w1600","left":"https://lh3.googleusercontent.com/d/10SRXMdb06oM6_eixR34uXoQBeOJfvAwE=w1600","right":"https://lh3.googleusercontent.com/d/1eBri2DgJrJVWaywhC0IsQnbO_SFX-gOE=w1600","top":"https://lh3.googleusercontent.com/d/1_qvKuOyDRSkap6RURR3oh5wpwELn08lz=w1600"}},{"n":"Hẻm Núi ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1rr0jNcNQzqknTvA_A9i-mCM7nGGd0cjF=w1600","distant":"https://lh3.googleusercontent.com/d/1DjJDIzocZ4mlbcZn9bFqMEkaXIiIxPga=w1600","left":"https://lh3.googleusercontent.com/d/1721VIaUiVIAII77r0egKwQNAvff1nGCR=w1600","right":"https://lh3.googleusercontent.com/d/1ZQrp43bR9zrNEJfnQ6ZDa7gPPWMOKL8d=w1600","top":"https://lh3.googleusercontent.com/d/1rr0jNcNQzqknTvA_A9i-mCM7nGGd0cjF=w1600"}},{"n":"Hang Động ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1Egj1_HjUsebp5Xi-10QJCYvpKDOFrFgM=w1600","distant":"https://lh3.googleusercontent.com/d/19FC68rE7EmImllYSTw0EZIFs1ONFl3_m=w1600","left":"https://lh3.googleusercontent.com/d/1YGkHgAw0S66T8IKzUvgBfV8aRcTzQ3fj=w1600","right":"https://lh3.googleusercontent.com/d/1ZAXHdqtHz4F7qbFz1_rfG_X57QGTbYH3=w1600","top":"https://lh3.googleusercontent.com/d/1HK5Oux2ebCCR65DVIhiqUGPNeX5FB_96=w1600"}},{"n":"Hang Động ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1DkaXun6DPKypbKUYPwGdvrQiRafPrybZ=w1600","distant":"https://lh3.googleusercontent.com/d/1O8hSwFmCTW4In0LJnplGtwj-vhSjPH0b=w1600","left":"https://lh3.googleusercontent.com/d/1oQGGGD2490Ntfjid7GPt-00uYJz3P5N-=w1600","right":"https://lh3.googleusercontent.com/d/1cn4VUyUs1aZnhlgtbumm3CN1_nL7LROm=w1600","top":"https://lh3.googleusercontent.com/d/13KFutho0FJnMfBqCyvsz-3Vvth1tWVrc=w1600"}},{"n":"Hang ��ộng ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1vAVH0fjCpmPts46uJcKGAbIqpEQhe7FY=w1600","distant":"https://lh3.googleusercontent.com/d/11xyOjR-zCJX3pv6iAVi7IbjTr_vdhtIe=w1600","left":"https://lh3.googleusercontent.com/d/1Fn4gvfOxyFFxJxiVwPHJ7pKSqCmjqlFX=w1600","right":"https://lh3.googleusercontent.com/d/1b7-dng54Hr8qu1SI4VWT3V9SxR1M2w9z=w1600","top":"https://lh3.googleusercontent.com/d/1hW3RswTTgJVo_kOogr3w42m7w-OeIGhz=w1600"}},{"n":"Hang Động ver.3","a":{"front":"https://lh3.googleusercontent.com/d/12SX7--qw3z_1hhAAEzPsgdsMZkTAgkee=w1600","distant":"https://lh3.googleusercontent.com/d/1UyCPzei4pjnodw6n5BO8MkGJRFC4xtgB=w1600","left":"https://lh3.googleusercontent.com/d/1VHwg9XYQbPWtY3euRr10tYVmeyKmyBZ8=w1600","right":"https://lh3.googleusercontent.com/d/1UuyVUHVA8oOPlfiGEojX9JOzia5XE9VB=w1600","top":"https://lh3.googleusercontent.com/d/1bS7gQueq254o6T6WWnAjm_LLfhasxkZP=w1600"}},{"n":"Cổng Vòm ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1ki75qJVD75051rITz0hz4zKVfhI_REaa=w1600","distant":"https://lh3.googleusercontent.com/d/1lwufEhqWz3mQCYhJf8aPJ2J8Ow-F3zG9=w1600","left":"https://lh3.googleusercontent.com/d/1ki75qJVD75051rITz0hz4zKVfhI_REaa=w1600","right":"https://lh3.googleusercontent.com/d/1DN6TT90pweudKVApMJ44A04-J9UieaiY=w1600","top":"https://lh3.googleusercontent.com/d/1ki75qJVD75051rITz0hz4zKVfhI_REaa=w1600"}},{"n":"Hang Động ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1dtoDgRIKQXv3bIdMSBSzckD0-bBGPbOF=w1600","distant":"https://lh3.googleusercontent.com/d/1CmTOR1H-K1Db-0RQ9tHKxdpl9k4TuFU4=w1600","left":"https://lh3.googleusercontent.com/d/16nU3pcPA8Dqrikjx7We2tA1Uxek0bowP=w1600","right":"https://lh3.googleusercontent.com/d/12OWZ-SZuVTy4W8VyLgzjBI4M1GQTHYVj=w1600","top":"https://lh3.googleusercontent.com/d/1VY7evbqPdGNfQBb_9BIBasSDC9Oz-XOa=w1600"}},{"n":"Dragon ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1tg16I81lqnaRCsB4rJH_VfcMcgj0EAoo=w1600","distant":"https://lh3.googleusercontent.com/d/1rvc5rfmV0lXc5sXCf626P0gcW0J9iI6j=w1600","left":"https://lh3.googleusercontent.com/d/1crtqJF713q5Zx-Td0aq2lcouCBLrg--z=w1600","right":"https://lh3.googleusercontent.com/d/1hSOgIOmJzNKoPUy3uPHpe2Ks0483q40U=w1600","top":"https://lh3.googleusercontent.com/d/11D6Tl_u3RGQGK23LqM-xpT2589_Ts97W=w1600"}},{"n":"Cổng Vòm ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1m1FuHLhVrNZ64UnJfE0uqKn7xIFTC2TU=w1600","distant":"https://lh3.googleusercontent.com/d/1m1FuHLhVrNZ64UnJfE0uqKn7xIFTC2TU=w1600","left":"https://lh3.googleusercontent.com/d/1yk-B3Fexxod3tmsnAwQT8oixLJwcS8VJ=w1600","right":"https://lh3.googleusercontent.com/d/1wfuxQVllzUXTxyzMiTZSa7MfzprKW638=w1600","top":"https://lh3.googleusercontent.com/d/1D0WHSroBmC2etEpjeGfRIkAYLijHwlOD=w1600"}},{"n":"Cổng Vòm ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1O7u2wZehJAbVD1dVbA_KvtSaKgrLNtKk=w1600","distant":"https://lh3.googleusercontent.com/d/1BpCYHYouOJYqEXmQRTGwHtvR7UohSeNh=w1600","left":"https://lh3.googleusercontent.com/d/1p_BwXgt8qj_B4atJoslvRh0SSY-i-Uo3=w1600","right":"https://lh3.googleusercontent.com/d/1sVNSFDQnpGNhfLvvaC2x5uKUhhCykMHf=w1600","top":"https://lh3.googleusercontent.com/d/11r7-iPEK79w_IIMv-HZ1Y0EWe8jWF_ah=w1600"}},{"n":"Hang Động ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1Mykayy7U0jj_RQZhqaWDGBg_GOV0ExDj=w1600","distant":"https://lh3.googleusercontent.com/d/1WbeTFLxhd-bA-Q3mAnLQxmlA3liF-9BJ=w1600","left":"https://lh3.googleusercontent.com/d/1_Qirazpb9ipbj0G7gtGpitlLqYEMue_s=w1600","right":"https://lh3.googleusercontent.com/d/1X03wlnwk4FuMzYV5OIHuQY6ZscpXChqQ=w1600","top":"https://lh3.googleusercontent.com/d/17GQDbPc2PCFCjKqE_1Rl0RIUcE_-XcFc=w1600"}},{"n":"Dragon ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1C_9V3HU4oj-InJ3NDX6Y0f1nkK9hDYGz=w1600","distant":"https://lh3.googleusercontent.com/d/1MFiChwe8QZZ_ctAbgwaOaxHM8rkO6G_3=w1600","left":"https://lh3.googleusercontent.com/d/1yZIi5kIAo9wBEwsdUscG9JhboFoAny62=w1600","right":"https://lh3.googleusercontent.com/d/1ZbZhVCxCbjQWlrpqlYsEQdxO2OpDtp1k=w1600","top":"https://lh3.googleusercontent.com/d/1-IBffEj4pDniqej7Ee-P0-eIZxl-UNsa=w1600"}},{"n":"Cầu Vồng ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1L9u0BC0dR_zOlJGHdQb_Wf7jLbolStto=w1600","distant":"https://lh3.googleusercontent.com/d/1hRZVpfKiqXjuwRegNNe4Yr128zKVFHa4=w1600","left":"https://lh3.googleusercontent.com/d/1ViTVCkUChTfVSkp7f1QIV3XqWiroqgOM=w1600","right":"https://lh3.googleusercontent.com/d/1bIV5W-WM68J-hisPnc_ZOLElfljr2oGp=w1600","top":"https://lh3.googleusercontent.com/d/1Ls8r2kDkAmyRxMjYtcpGnp6xuOFBq_gL=w1600"}},{"n":"Cổng Vòm ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1wm9C2TInOFbhJwb0EXInZaB93UhH7PZM=w1600","distant":"https://lh3.googleusercontent.com/d/1q_u82eb1CsRGHsku7zeNjft84TVfFn1a=w1600","left":"https://lh3.googleusercontent.com/d/10iUXyIezTa2WIMnbjpd3yqsOBCcBjtCl=w1600","right":"https://lh3.googleusercontent.com/d/11Zott5tdCKErjDSEU2cjfyDYfbNmtLOR=w1600","top":"https://lh3.googleusercontent.com/d/1WyPyQr36FwmSiBA04wI9LRzYzHsCNNhH=w1600"}},{"n":"Cổng Vòm ver.3","a":{"front":"https://lh3.googleusercontent.com/d/12sp09PnsCEsN1BRWaTFwebzDvsSl99Uo=w1600","distant":"https://lh3.googleusercontent.com/d/10gA0H8rA0sTeOBNBS2xZVUo8SNnR6uYC=w1600","left":"https://lh3.googleusercontent.com/d/1p4qrc4reQVDdMXMKf6C0SslvndOW1ZsN=w1600","right":"https://lh3.googleusercontent.com/d/1C7HzCj852x4rbkTSrlyZTn9e7dmr-B8E=w1600","top":"https://lh3.googleusercontent.com/d/18ca9EN99ZPjXK7KCwhnTL6X-ZeNex4aQ=w1600"}},{"n":"Cầu Vồng ver.4","a":{"front":"https://lh3.googleusercontent.com/d/178z_Uk9aIhrfFHXQhy-nvufaqRQ_mU-s=w1600","distant":"https://lh3.googleusercontent.com/d/1Qjg5hJIzkNYpXnU4cPfRnzUbykS1zcpp=w1600","left":"https://lh3.googleusercontent.com/d/10YMSeIBcRE6iZE8NT8sE-fpthkksM20_=w1600","right":"https://lh3.googleusercontent.com/d/1rUE-pNEr3k6qjMI0izRAtsduadekov7m=w1600","top":"https://lh3.googleusercontent.com/d/1jaWI5fAykWGH7SAlHGvUsv3mD6lXBzNs=w1600"}},{"n":"Cổng Vòm ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1ZuOMhCPK7Rp9gsBxbT3S7ZOSOqKnQWED=w1600","distant":"https://lh3.googleusercontent.com/d/18bHFvURUuLPf1Lt2S8NIY4sNcT0osCiD=w1600","left":"https://lh3.googleusercontent.com/d/1jbj9jZLOX7zPHazWpPBnYSYAaCm4F6lf=w1600","right":"https://lh3.googleusercontent.com/d/1hfLTRuh_cWl4XlawmEGTJpmNwXixCmXf=w1600","top":"https://lh3.googleusercontent.com/d/1HAQ08dnVzHi10azsxzgv4IW4BminNWec=w1600"}},{"n":"Cầu Vồng ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1oT6QzDhuZxg0U5Dk0YcTbR916fq9dQX6=w1600","distant":"https://lh3.googleusercontent.com/d/1J5GWAjVdH6l-sqHdHfRmYckLjHsLGn7n=w1600","left":"https://lh3.googleusercontent.com/d/1aEfv6POiv9Xbm3w1EOwUW0spBlLJwyEy=w1600","right":"https://lh3.googleusercontent.com/d/1jwrw_X9XU6teUh6s5Y_spQkhHzk1y9sN=w1600","top":"https://lh3.googleusercontent.com/d/1AjPSst3ef5T9WlPtHpkpOdB8oA0GpTHH=w1600"}},{"n":"Bonsai ver.9","a":{"front":"https://lh3.googleusercontent.com/d/1hyo1K3sHh7rp9EkjXRUkNLQYYSnQnwrR=w1600","distant":"https://lh3.googleusercontent.com/d/1nhg4ldsZmdvoNX2aIhN7vWha_B-8Gm0q=w1600","left":"https://lh3.googleusercontent.com/d/1G_U_nx5tJMYHKu0fir0CMC6j1fHOvtvo=w1600","right":"https://lh3.googleusercontent.com/d/131t_b11XBfP9xhsknRGxJiMmu_aQxksU=w1600","top":"https://lh3.googleusercontent.com/d/1Esi6fuHC6PpaD07Yk3pq_30E6c1ycrmy=w1600"}},{"n":"Cầu Vồng ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1pC1swlmcsGNXD9CIaSkdqXOXBDqD65NI=w1600","distant":"https://lh3.googleusercontent.com/d/1TUoUp0pDRHRUKOfEzMkrpSzYtkPlA-vQ=w1600","left":"https://lh3.googleusercontent.com/d/1TXmDtE8BdwBdx5V9y30db432tEdtcxP1=w1600","right":"https://lh3.googleusercontent.com/d/1pC1swlmcsGNXD9CIaSkdqXOXBDqD65NI=w1600","top":"https://lh3.googleusercontent.com/d/1pC1swlmcsGNXD9CIaSkdqXOXBDqD65NI=w1600"}},{"n":"Cá Heo","a":{"front":"https://lh3.googleusercontent.com/d/1xg9VTf1Eve4XIm3JauRlse--I7jlVSrj=w1600","distant":"https://lh3.googleusercontent.com/d/1kyWP67AHrlqBbfjGC9TnLHTZlqvMTnN_=w1600","left":"https://lh3.googleusercontent.com/d/1we7pmqMIHZiASNJhm0My8vCFaRlH8QKO=w1600","right":"https://lh3.googleusercontent.com/d/19wy7asXjaxmfqCyD9UIRKTg2AViLQvQX=w1600","top":"https://lh3.googleusercontent.com/d/1LGc7uP4h6nKsUMJwNUK7-rkag6eNidDL=w1600"}},{"n":"Cầu Vồng ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1PR9tcvog43LiZrOxdo_R62Slo8IQVgml=w1600","distant":"https://lh3.googleusercontent.com/d/1n12ctpRORAs0G2_XxLRZCnvgyJC1zwMY=w1600","left":"https://lh3.googleusercontent.com/d/1rV6AzXny7QDQa5NLS13qsFSrOZndpoAX=w1600","right":"https://lh3.googleusercontent.com/d/1-Y6tU1pRVmdyFsY7c8XhVPH2WvEb8WB-=w1600","top":"https://lh3.googleusercontent.com/d/1zxSHV28PcHK6WBYybF7kUfoVM5F-IbwW=w1600"}},{"n":"Cuội ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1sv_gYB23oOZnajfr4gh_n-fh8yL36ec4=w1600","distant":"https://lh3.googleusercontent.com/d/16_ixaDjfg48CZofk0-fBS5lmuVvlZ-dO=w1600","left":"https://lh3.googleusercontent.com/d/1gtNYBzO9hYzf4QBfFDklcg-Fb16l0Nu_=w1600","right":"https://lh3.googleusercontent.com/d/1-RqJfd0RfAg2oyvUO4IeXD3IoMj99ms0=w1600","top":"https://lh3.googleusercontent.com/d/1Eo2jteBQOxdSAfxHy2u23FhdGnqAwIzR=w1600"}},{"n":"Cuội ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1H3uFYEXZIMd9kgcLZil-Csk6gqWQPBec=w1600","distant":"https://lh3.googleusercontent.com/d/14p2NRXdE5nFgXtiucG0NOdxBMyn4-53U=w1600","left":"https://lh3.googleusercontent.com/d/1S6jlNaJaSjv8CmeHyscMstByS1gi-Tdy=w1600","right":"https://lh3.googleusercontent.com/d/1y-gNCQifTBTQhCwl3eB5XaQclGs5caI0=w1600","top":"https://lh3.googleusercontent.com/d/1zkfl_ig_wj0tDNuUuJOZBmKVT10Mgyv8=w1600"}},{"n":"Cuội ver.1","a":{"front":"https://lh3.googleusercontent.com/d/1qyMxaLJc36wk1yiaDg5zuqkt1mBB2Kpe=w1600","distant":"https://lh3.googleusercontent.com/d/1iZIJA_cfGFqLbgFFnvhULauFX0VFah8w=w1600","left":"https://lh3.googleusercontent.com/d/1fF_2LdXN-xWPEyAfQ2xfdT2USEuXMs9C=w1600","right":"https://lh3.googleusercontent.com/d/1wZOgVeO8ESEEB8URbfmS83T0NtnjDUde=w1600","top":"https://lh3.googleusercontent.com/d/1dEzYLRwYqSJfUKK9mC03XR6FfYGBT5Nj=w1600"}},{"n":"Bonsai ver.4","a":{"front":"https://lh3.googleusercontent.com/d/1mZQS0df-oNtLB6cqheckv0kkOrIVlEoH=w1600","distant":"https://lh3.googleusercontent.com/d/1RVJfIyVcGkwNmLA60YWLzdJgw-fbGcSn=w1600","left":"https://lh3.googleusercontent.com/d/1SJh-5D3kR8k7d27QvXd_34y8DwI2N20D=w1600","right":"https://lh3.googleusercontent.com/d/1M9mAmXcMhMIkmOmvdPKDYcz2LwUT0yKE=w1600","top":"https://lh3.googleusercontent.com/d/1vJ3ssI-nykOGwRbhezKAoIyKDf17X6Vm=w1600"}},{"n":"Bonsai ver.5","a":{"front":"https://lh3.googleusercontent.com/d/1aJVRecBIN8dRUSJ_08upXcRx-8mQmjxd=w1600","distant":"https://lh3.googleusercontent.com/d/1tdvkadmHKHWf2vAZb11Uh3ynZ2_3AWr_=w1600","left":"https://lh3.googleusercontent.com/d/1wAmSNPGrN4mdCzW-cUSxShfrmeF5Nub1=w1600","right":"https://lh3.googleusercontent.com/d/1y7-H77BSimoZt6JdzGFtoNW9DsSZuqYw=w1600","top":"https://lh3.googleusercontent.com/d/1idoV9zpTqkuR6YD1EoMwg9bfq9q39vxo=w1600"}},{"n":"Bonsai ver.6","a":{"front":"https://lh3.googleusercontent.com/d/1jYLAJsdVx0FeHmieewvSG3V6Bd7gqxRf=w1600","distant":"https://lh3.googleusercontent.com/d/1QalzmJdhsTTURe8m-KQ0yESM7D-oPXFo=w1600","left":"https://lh3.googleusercontent.com/d/1NtlvURDI22bXvZdiJ_YPe52FLnYRcPYl=w1600","right":"https://lh3.googleusercontent.com/d/1wtLWaY55nhkHVIJm7ku67d97aX5crMAm=w1600","top":"https://lh3.googleusercontent.com/d/1rYSms2I7IqVNblkZ3sYcRUSYr5Jx22ud=w1600"}},{"n":"Bonsai ver.7","a":{"front":"https://lh3.googleusercontent.com/d/1jJLgbtppZ80HebZdoMaRDBeaMnPG5O5X=w1600","distant":"https://lh3.googleusercontent.com/d/1Ay3Cazny09Yfn7SnuS0WRHLlWdieNTzT=w1600","left":"https://lh3.googleusercontent.com/d/1v06c5asCWfKGWbLUzgOI4kRxSfhK0jsX=w1600","right":"https://lh3.googleusercontent.com/d/1txF1RxunEI6Y3EWY8yQAIBqit-x4txgK=w1600","top":"https://lh3.googleusercontent.com/d/15jvOvQdt0FWh92o7dSYZcEqA2fRQiQ2M=w1600"}},{"n":"Bonsai ver.2","a":{"front":"https://lh3.googleusercontent.com/d/1Ab5UhX5cIM6wurxQRUL0hfyTLzL_xwpF=w1600","distant":"https://lh3.googleusercontent.com/d/16rp7oyLkH2kJRBKbAmySwmv5mwzWi2E1=w1600","left":"https://lh3.googleusercontent.com/d/11GoAjZniagWwxP-GzAzgJZa6e-N8bFON=w1600","right":"https://lh3.googleusercontent.com/d/1L6I9ImZZNbmZuHuYdn7IHOxHzt76qdkq=w1600","top":"https://lh3.googleusercontent.com/d/161MvhDKGB0b7Y87Fe6MLbC6ML4aeh2SQ=w1600"}},{"n":"Bonsai ver.3","a":{"front":"https://lh3.googleusercontent.com/d/1gnjYU-ttlkXiRDn4P3_2HtA8o9BS9zLZ=w1600","distant":"https://lh3.googleusercontent.com/d/1J1sBLl6Z5iRRshdyqEtMUeThQMSZXxQ1=w1600","left":"https://lh3.googleusercontent.com/d/1O1_klip6HSefx-3EsEc9joLVwSnpEkuT=w1600","right":"https://lh3.googleusercontent.com/d/1dcUwbSYnMqxYx8Jw2t4BPCdRl0Eeits9=w1600","top":"https://lh3.googleusercontent.com/d/1Wfazhuxk2t7HxagKhPbwG6nq_6GEqron=w1600"}},{"n":"Bonsai ver.8","a":{"front":"https://lh3.googleusercontent.com/d/1A5qBZv5zDo2-UdPN-WG_2m8AEKQ-TOIv=w1600","distant":"https://lh3.googleusercontent.com/d/17dgcJRh6rlN3uuYvEom-aF-43Ig370EV=w1600","left":"https://lh3.googleusercontent.com/d/1sFpYegTS-WI6tM8kPFUklVwg7wnVgZFA=w1600","right":"https://lh3.googleusercontent.com/d/11UHsVleAdqaTUjOV99Po6AUFxhQnpBby=w1600","top":"https://lh3.googleusercontent.com/d/1rjaEu9rqJFVkSoirtBaLMlSmLVZDP1pn=w1600"}},{"n":"Bonsai ver.1","a":{"front":"https://lh3.googleusercontent.com/d/19y4KrfUuddU8DRz_JBvBJhQB9TxyK1-l=w1600","distant":"https://lh3.googleusercontent.com/d/18Nw-p-_c_CA8A_IY9yHCjGupqHoV_S-k=w1600","left":"https://lh3.googleusercontent.com/d/1YzAk1dgkRUrhITv_WmNQwvUXmLPVFvTz=w1600","right":"https://lh3.googleusercontent.com/d/19y4KrfUuddU8DRz_JBvBJhQB9TxyK1-l=w1600","top":"https://lh3.googleusercontent.com/d/16n5DY76ex_O81pP5o2Yw-siPnxzpylal=w1600"}}];
+function RFVisualTrainingEngine({
+  order,
+  activeImageIndex,
+  setActiveImageIndex,
+  onSaveAnnotations,
+  currentUser,
+  canEdit = true,
+  erpProducts = [],
+  onDeleteOrder,
+  onOpenLayoutPicker
+}) {
+  const currentImage = order?.images?.[activeImageIndex] || order?.images?.[0];
+  const [annotations, setAnnotations] = React.useState(currentImage?.annotations || []);
+  const [activeTool, setActiveTool] = React.useState('select'); // select, freehand, arrow, dimension, material_pin, step_marker, text_note, rework_box
+  const [activeLayer, setActiveLayer] = React.useState({
+    dimensions: true,
+    materials: true,
+    guides: true,
+    rework: true,
+    notes: true
+  });
+  const [history, setHistory] = React.useState([currentImage?.annotations || []]);
+  const [historyIndex, setHistoryIndex] = React.useState(0);
+
+  // Trạng thái vẽ hiện tại
+  const [isDrawing, setIsDrawing] = React.useState(false);
+  const [drawingPoints, setDrawingPoints] = React.useState([]);
+  const [startPoint, setStartPoint] = React.useState(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = React.useState(null);
+
+  // Modal ghim vật tư & ghi chú
+  const [pinModalData, setPinModalData] = React.useState(null);
+  const [dimModalData, setDimModalData] = React.useState(null);
+  const [textModalData, setTextModalData] = React.useState(null);
+
+  // Zoom & Pan
+  const [zoomScale, setZoomScale] = React.useState(1.0);
+  const [panOffset, setPanOffset] = React.useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = React.useState(false);
+  const [panStart, setPanStart] = React.useState({ x: 0, y: 0 });
+
+  const containerRef = React.useRef(null);
+  const imgRef = React.useRef(null);
+
+  // Cập nhật annotations khi đổi ảnh
+  React.useEffect(() => {
+    const list = currentImage?.annotations || [];
+    setAnnotations(list);
+    setHistory([list]);
+    setHistoryIndex(0);
+    setSelectedAnnotationId(null);
+    setZoomScale(1.0);
+    setPanOffset({ x: 0, y: 0 });
+  }, [currentImage?.id]);
+
+  // Push history
+  const pushHistory = (newAnnotations) => {
+    const sliced = history.slice(0, historyIndex + 1);
+    setHistory([...sliced, newAnnotations]);
+    setHistoryIndex(sliced.length);
+    setAnnotations(newAnnotations);
+    if (onSaveAnnotations && currentImage) {
+      onSaveAnnotations(currentImage.id, newAnnotations);
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prev = history[historyIndex - 1];
+      setHistoryIndex(historyIndex - 1);
+      setAnnotations(prev);
+      if (onSaveAnnotations && currentImage) onSaveAnnotations(currentImage.id, prev);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const next = history[historyIndex + 1];
+      setHistoryIndex(historyIndex + 1);
+      setAnnotations(next);
+      if (onSaveAnnotations && currentImage) onSaveAnnotations(currentImage.id, next);
+    }
+  };
+
+  // Quy đổi tọa độ chuột/cảm ứng sang hệ tọa độ tương đối Normalized (0 - 1000)
+  const getNormalizedCoords = (e) => {
+    if (!imgRef.current) return { x: 500, y: 500 };
+    const rect = imgRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const relX = (clientX - rect.left) / rect.width;
+    const relY = (clientY - rect.top) / rect.height;
+    return {
+      x: Math.max(0, Math.min(1000, Math.round(relX * 1000))),
+      y: Math.max(0, Math.min(1000, Math.round(relY * 1000)))
+    };
+  };
+
+  // Xử lý sự kiện bắt đầu tương tác chuột / cảm ứng
+  const handlePointerDown = (e) => {
+    if (activeTool === 'pan') {
+      setIsPanning(true);
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      setPanStart({ x: clientX - panOffset.x, y: clientY - panOffset.y });
+      return;
+    }
+
+    if (!canEdit) return;
+    const pt = getNormalizedCoords(e);
+
+    if (activeTool === 'select') {
+      // Tìm xem có click trúng annotation nào không
+      return;
+    }
+
+    if (activeTool === 'freehand') {
+      setIsDrawing(true);
+      setDrawingPoints([pt]);
+    } else if (activeTool === 'arrow' || activeTool === 'dimension' || activeTool === 'rework_box') {
+      setIsDrawing(true);
+      setStartPoint(pt);
+      setDrawingPoints([pt]);
+    } else if (activeTool === 'material_pin') {
+      setPinModalData({ x: pt.x, y: pt.y });
+    } else if (activeTool === 'step_marker') {
+      // Đếm số step hiện có
+      const currentSteps = annotations.filter(a => a.type === 'step_marker').length;
+      const newStep = {
+        id: 'ann_step_' + Date.now(),
+        imageId: currentImage?.id,
+        type: 'step_marker',
+        layer: 'guides',
+        geometry: { x: pt.x, y: pt.y },
+        metadata: { stepNumber: currentSteps + 1, stepTitle: `Khâu ${currentSteps + 1}` },
+        createdBy: currentUser || 'Admin',
+        createdAt: new Date().toISOString()
+      };
+      pushHistory([...annotations, newStep]);
+    } else if (activeTool === 'text_note') {
+      setTextModalData({ x: pt.x, y: pt.y });
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (isPanning) {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      setPanOffset({ x: clientX - panStart.x, y: clientY - panStart.y });
+      return;
+    }
+
+    if (!isDrawing) return;
+    const pt = getNormalizedCoords(e);
+    if (activeTool === 'freehand') {
+      setDrawingPoints(prev => [...prev, pt]);
+    } else if (activeTool === 'arrow' || activeTool === 'dimension' || activeTool === 'rework_box') {
+      setDrawingPoints([startPoint, pt]);
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
+    if (!isDrawing) return;
+    setIsDrawing(false);
+
+    if (activeTool === 'freehand' && drawingPoints.length > 2) {
+      const newAnn = {
+        id: 'ann_fh_' + Date.now(),
+        imageId: currentImage?.id,
+        type: 'freehand',
+        layer: 'guides',
+        geometry: { points: drawingPoints },
+        metadata: { color: '#f59e0b', strokeWidth: 3 },
+        createdBy: currentUser || 'Admin',
+        createdAt: new Date().toISOString()
+      };
+      pushHistory([...annotations, newAnn]);
+    } else if (activeTool === 'arrow' && startPoint && drawingPoints.length > 1) {
+      const endPt = drawingPoints[1];
+      const newAnn = {
+        id: 'ann_arr_' + Date.now(),
+        imageId: currentImage?.id,
+        type: 'arrow',
+        layer: 'guides',
+        geometry: { x1: startPoint.x, y1: startPoint.y, x2: endPt.x, y2: endPt.y },
+        metadata: { text: 'Hướng liên kết / gia cố', color: '#10b981' },
+        createdBy: currentUser || 'Admin',
+        createdAt: new Date().toISOString()
+      };
+      pushHistory([...annotations, newAnn]);
+    } else if (activeTool === 'dimension' && startPoint && drawingPoints.length > 1) {
+      const endPt = drawingPoints[1];
+      // Mở modal nhập kích thước
+      setDimModalData({ x1: startPoint.x, y1: startPoint.y, x2: endPt.x, y2: endPt.y });
+    } else if (activeTool === 'rework_box' && startPoint && drawingPoints.length > 1) {
+      const endPt = drawingPoints[1];
+      const newAnn = {
+        id: 'ann_rw_' + Date.now(),
+        imageId: currentImage?.id,
+        type: 'rework_box',
+        layer: 'rework',
+        geometry: {
+          x: Math.min(startPoint.x, endPt.x),
+          y: Math.min(startPoint.y, endPt.y),
+          width: Math.abs(endPt.x - startPoint.x),
+          height: Math.abs(endPt.y - startPoint.y)
+        },
+        metadata: { text: 'Khu vực cần sửa lỗi / kiểm tra lại', severity: 'HIGH', resolved: false },
+        createdBy: currentUser || 'Admin',
+        createdAt: new Date().toISOString()
+      };
+      pushHistory([...annotations, newAnn]);
+    }
+
+    setDrawingPoints([]);
+    setStartPoint(null);
+  };
+
+  const handleDeleteAnnotation = (id) => {
+    pushHistory(annotations.filter(a => a.id !== id));
+    setSelectedAnnotationId(null);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-[#0B0B0B] text-zinc-100 rounded-xl border border-zinc-800 overflow-hidden select-none">
+      {/* 1. THANH ĐIỀU HƯỚNG GÓC CHỤP & THAO TÁC TRÊN */}
+      <div className="flex flex-wrap items-center justify-between px-3 py-2 bg-[#141414] border-b border-zinc-800 gap-2 text-xs">
+        {/* Nút chọn góc ảnh */}
+        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+          <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px] mr-1 hidden sm:inline">Góc ảnh:</span>
+          {(order?.images || []).map((img, idx) => {
+            const isAct = idx === activeImageIndex;
+            const annCount = img.annotations?.length || 0;
+            return (
+              <button
+                key={img.id || idx}
+                type="button"
+                onClick={() => setActiveImageIndex(idx)}
+                className={`px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                  isAct
+                    ? 'bg-zinc-100 text-zinc-900 shadow-md font-black'
+                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                }`}
+              >
+                <i className={`fas ${
+                  img.angle === 'front' ? 'fa-square' :
+                  img.angle === 'overview' ? 'fa-cubes' :
+                  img.angle === 'left' ? 'fa-arrow-left' :
+                  img.angle === 'right' ? 'fa-arrow-right' : 'fa-arrow-up'
+                } text-[10px]`}></i>
+                <span>{img.label}</span>
+                {annCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                    isAct ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-800 text-zinc-300'
+                  }`}>
+                    {annCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Nút Zoom & Layer Visibility */}
+        <div className="flex items-center gap-1.5">
+          {/* NÚT CHỌN/ĐỔI LAYOUT MẪU VÀ XÓA LỆNH */}
+          {onOpenLayoutPicker && canEdit && (
+            <button
+              type="button"
+              onClick={onOpenLayoutPicker}
+              className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/40 transition-all cursor-pointer shadow-sm active:scale-95 whitespace-nowrap"
+              title="Chọn ảnh layout khác từ kho 91 layout chuẩn xưởng"
+            >
+              <i className="fas fa-images"></i>
+              <span>Đổi Layout Mẫu</span>
+            </button>
+          )}
+
+          {onDeleteOrder && canEdit && (
+            <button
+              type="button"
+              onClick={onDeleteOrder}
+              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs flex items-center gap-1 border border-rose-500/30 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Xóa lệnh học việc này"
+            >
+              <i className="fas fa-trash-alt"></i>
+              <span>Xóa Lệnh</span>
+            </button>
+          )}
+
+          {/* Zoom controls */}
+          <div className="flex items-center bg-zinc-900 rounded-lg border border-zinc-800 p-0.5">
+            <button
+              type="button"
+              onClick={() => setZoomScale(z => Math.max(0.6, Number((z - 0.2).toFixed(1))))}
+              className="w-6 h-6 flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 rounded"
+              title="Thu nhỏ"
+            >
+              <i className="fas fa-minus text-[10px]"></i>
+            </button>
+            <span className="px-2 text-[10px] font-mono font-bold text-zinc-300">
+              {Math.round(zoomScale * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoomScale(z => Math.min(2.5, Number((z + 0.2).toFixed(1))))}
+              className="w-6 h-6 flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 rounded"
+              title="Phóng to"
+            >
+              <i className="fas fa-plus text-[10px]"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setZoomScale(1.0); setPanOffset({ x: 0, y: 0 }); }}
+              className="w-6 h-6 flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 rounded ml-0.5"
+              title="Khôi phục 100%"
+            >
+              <i className="fas fa-expand text-[10px]"></i>
+            </button>
+          </div>
+
+          {/* Undo / Redo */}
+          {canEdit && (
+            <div className="flex items-center bg-zinc-900 rounded-lg border border-zinc-800 p-0.5">
+              <button
+                type="button"
+                disabled={historyIndex <= 0}
+                onClick={handleUndo}
+                className="w-6 h-6 flex items-center justify-center hover:bg-zinc-800 disabled:opacity-30 disabled:hover:bg-transparent text-zinc-300 rounded"
+                title="Hoàn tác (Undo)"
+              >
+                <i className="fas fa-undo text-[10px]"></i>
+              </button>
+              <button
+                type="button"
+                disabled={historyIndex >= history.length - 1}
+                onClick={handleRedo}
+                className="w-6 h-6 flex items-center justify-center hover:bg-zinc-800 disabled:opacity-30 disabled:hover:bg-transparent text-zinc-300 rounded"
+                title="Làm lại (Redo)"
+              >
+                <i className="fas fa-redo text-[10px]"></i>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 2. KHÔNG GIAN BÀN VẼ CHÍNH: TOOLBAR TRÁI + CANVAS TRUNG TÂM + SIDEBAR THÔNG TIN PHẢI */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* TOOLBAR TRÁI (12 CÔNG CỤ CHUYÊN SÂU) */}
+        {canEdit && (
+          <div className="flex md:flex-col items-center justify-start gap-1 p-2 bg-[#101010] border-b md:border-b-0 md:border-r border-zinc-800 overflow-x-auto md:overflow-y-auto custom-scrollbar z-10 shrink-0">
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold hidden md:block mb-1">Công cụ</span>
+
+            {[
+              { id: 'select', label: 'Chọn', icon: 'fa-mouse-pointer', title: 'Chọn & Xem chi tiết đối tượng' },
+              { id: 'pan', label: 'Kéo ảnh', icon: 'fa-hand', title: 'Kéo di chuyển góc nhìn' },
+              { id: 'dimension', label: 'Kích thước', icon: 'fa-ruler-combined', title: 'Đo khoảng cách Dài x Rộng x Cao' },
+              { id: 'material_pin', label: 'Ghim vật tư', icon: 'fa-map-pin', title: 'Ghim vị trí SKU vật tư thực tế' },
+              { id: 'step_marker', label: 'Đánh số khâu', icon: 'fa-list-ol', title: 'Đánh số thứ tự các bước thi công' },
+              { id: 'arrow', label: 'Mũi tên', icon: 'fa-location-arrow', title: 'Mũi tên chỉ hướng lắp ghép / viễn cảnh' },
+              { id: 'freehand', label: 'Vẽ tự do', icon: 'fa-pencil-alt', title: 'Vẽ phát thảo đường cong, gân đá' },
+              { id: 'rework_box', label: 'Lỗi KCS', icon: 'fa-exclamation-triangle', title: 'Khoanh vùng lỗi cần sửa lại' },
+              { id: 'text_note', label: 'Ghi chú', icon: 'fa-comment-alt', title: 'Thêm chú thích kỹ thuật' }
+            ].map(tool => {
+              const isActive = activeTool === tool.id;
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  title={tool.title}
+                  onClick={() => setActiveTool(tool.id)}
+                  className={`w-9 h-9 md:w-10 md:h-10 rounded-xl flex flex-col items-center justify-center transition-all shrink-0 ${
+                    isActive
+                      ? 'bg-zinc-100 text-zinc-900 font-black shadow-lg scale-105'
+                      : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                  }`}
+                >
+                  <i className={`fas ${tool.icon} text-xs md:text-sm`}></i>
+                  <span className="text-[8px] font-bold mt-0.5 hidden md:block">{tool.label}</span>
+                </button>
+              );
+            })}
+
+            <div className="w-full h-[1px] bg-zinc-800 my-1 hidden md:block"></div>
+
+            {/* Bật tắt Layer */}
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold hidden md:block mb-1">Lớp</span>
+            <button
+              type="button"
+              onClick={() => setActiveLayer(l => ({ ...l, dimensions: !l.dimensions }))}
+              title="Bật/Tắt Lớp Đo Kích Thước"
+              className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${
+                activeLayer.dimensions ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-zinc-900 text-zinc-600'
+              }`}
+            >
+              <i className="fas fa-ruler"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveLayer(l => ({ ...l, materials: !l.materials }))}
+              title="Bật/Tắt Lớp Ghim Vật Tư"
+              className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${
+                activeLayer.materials ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-900 text-zinc-600'
+              }`}
+            >
+              <i className="fas fa-boxes"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveLayer(l => ({ ...l, rework: !l.rework }))}
+              title="Bật/Tắt Lớp Lỗi KCS"
+              className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${
+                activeLayer.rework ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-zinc-900 text-zinc-600'
+              }`}
+            >
+              <i className="fas fa-bug"></i>
+            </button>
+          </div>
+        )}
+
+        {/* CANVAS & SVG OVERLAY KHUNG NHÌN KỸ THUẬT */}
+        <div
+          ref={containerRef}
+          className="flex-1 bg-[#09090b] overflow-hidden flex items-center justify-center p-2 relative touch-none select-none"
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerUp}
+        >
+          {/* Vùng ảnh và SVG có thể zoom / pan */}
+          <div
+            className="relative inline-block transition-transform duration-75 origin-center max-w-full max-h-full shadow-2xl rounded-lg overflow-hidden border border-zinc-800"
+            style={{
+              transform: `scale(${zoomScale}) translate(${panOffset.x / zoomScale}px, ${panOffset.y / zoomScale}px)`,
+              cursor: activeTool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : activeTool === 'select' ? 'default' : 'crosshair'
+            }}
+          >
+            {/* Ảnh gốc kỹ thuật */}
+            <img
+              ref={imgRef}
+              src={currentImage?.url}
+              alt={currentImage?.label || 'Ảnh kỹ thuật'}
+              className="block max-w-[85vw] max-h-[68vh] md:max-h-[75vh] object-contain pointer-events-none"
+              crossOrigin="anonymous"
+              draggable="false"
+            />
+
+            {/* SVG OVERLAY PHỦ TRÊN ẢNH: viewBox 0 0 1000 1000 để chuẩn hóa tọa độ tương đối */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                {/* Đầu mũi tên */}
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+                </marker>
+                <marker id="arrowhead-dim" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" />
+                </marker>
+              </defs>
+
+              {/* 1. LỚP ĐO KÍCH THƯỚC (DIMENSIONS) */}
+              {activeLayer.dimensions && annotations.filter(a => a.type === 'dimension').map(ann => {
+                const g = ann.geometry;
+                const isSel = selectedAnnotationId === ann.id;
+                const midX = (g.x1 + g.x2) / 2;
+                const midY = (g.y1 + g.y2) / 2;
+                return (
+                  <g key={ann.id} className="pointer-events-auto cursor-pointer" onClick={() => setSelectedAnnotationId(ann.id)}>
+                    {/* Đường gióng phụ */}
+                    <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} stroke="#f59e0b" strokeWidth={isSel ? "4" : "2.5"} strokeDasharray="6,3" />
+                    {/* 2 đầu mút */}
+                    <circle cx={g.x1} cy={g.y1} r="5" fill="#f59e0b" />
+                    <circle cx={g.x2} cy={g.y2} r="5" fill="#f59e0b" />
+                    {/* Nhãn số đo */}
+                    <rect x={midX - 45} y={midY - 14} width="90" height="24" rx="5" fill="#18181b" stroke="#f59e0b" strokeWidth="1.5" />
+                    <text x={midX} y={midY + 3} textAnchor="middle" fill="#fbbf24" fontSize="13" fontWeight="900" fontFamily="monospace">
+                      {ann.metadata?.dimensionValue} {ann.metadata?.dimensionUnit || 'cm'}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* 2. LỚP VẼ MŨI TÊN (ARROWS) */}
+              {activeLayer.guides && annotations.filter(a => a.type === 'arrow').map(ann => {
+                const g = ann.geometry;
+                const isSel = selectedAnnotationId === ann.id;
+                return (
+                  <g key={ann.id} className="pointer-events-auto cursor-pointer" onClick={() => setSelectedAnnotationId(ann.id)}>
+                    <line x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} stroke="#10b981" strokeWidth={isSel ? "5" : "3"} markerEnd="url(#arrowhead)" />
+                    {ann.metadata?.text && (
+                      <text x={(g.x1 + g.x2) / 2} y={(g.y1 + g.y2) / 2 - 8} textAnchor="middle" fill="#34d399" fontSize="12" fontWeight="bold" stroke="#000" strokeWidth="3" paintOrder="stroke">
+                        {ann.metadata.text}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* 3. LỚP VẼ TỰ DO (FREEHAND) */}
+              {activeLayer.guides && annotations.filter(a => a.type === 'freehand').map(ann => {
+                const pts = ann.geometry?.points || [];
+                if (pts.length < 2) return null;
+                const dStr = pts.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+                return (
+                  <path
+                    key={ann.id}
+                    d={dStr}
+                    fill="none"
+                    stroke={ann.metadata?.color || "#f59e0b"}
+                    strokeWidth={ann.metadata?.strokeWidth || 3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="pointer-events-auto cursor-pointer"
+                    onClick={() => setSelectedAnnotationId(ann.id)}
+                  />
+                );
+              })}
+
+              {/* 4. LỚP KHOANH VÙNG LỖI KCS (REWORK BOX) */}
+              {activeLayer.rework && annotations.filter(a => a.type === 'rework_box').map(ann => {
+                const g = ann.geometry;
+                const isSel = selectedAnnotationId === ann.id;
+                return (
+                  <g key={ann.id} className="pointer-events-auto cursor-pointer" onClick={() => setSelectedAnnotationId(ann.id)}>
+                    <rect
+                      x={g.x}
+                      y={g.y}
+                      width={g.width}
+                      height={g.height}
+                      fill="rgba(244, 63, 94, 0.15)"
+                      stroke="#f43f5e"
+                      strokeWidth={isSel ? "4" : "2.5"}
+                      strokeDasharray="8,4"
+                      rx="6"
+                    />
+                    <rect x={g.x} y={g.y - 18} width="80" height="18" rx="4" fill="#f43f5e" />
+                    <text x={g.x + 6} y={g.y - 5} fill="#ffffff" fontSize="10" fontWeight="900">
+                      LỖI KCS
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* ĐƯỜNG VẼ TRỰC TIẾP KHI ĐANG KÉO CHUỘT */}
+              {isDrawing && drawingPoints.length > 1 && (
+                activeTool === 'freehand' ? (
+                  <path
+                    d={drawingPoints.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '')}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                ) : activeTool === 'arrow' || activeTool === 'dimension' ? (
+                  <line
+                    x1={drawingPoints[0].x}
+                    y1={drawingPoints[0].y}
+                    x2={drawingPoints[1].x}
+                    y2={drawingPoints[1].y}
+                    stroke={activeTool === 'arrow' ? "#10b981" : "#f59e0b"}
+                    strokeWidth="3"
+                    strokeDasharray={activeTool === 'dimension' ? "6,3" : "none"}
+                  />
+                ) : activeTool === 'rework_box' ? (
+                  <rect
+                    x={Math.min(drawingPoints[0].x, drawingPoints[1].x)}
+                    y={Math.min(drawingPoints[0].y, drawingPoints[1].y)}
+                    width={Math.abs(drawingPoints[1].x - drawingPoints[0].x)}
+                    height={Math.abs(drawingPoints[1].y - drawingPoints[0].y)}
+                    fill="rgba(244, 63, 94, 0.2)"
+                    stroke="#f43f5e"
+                    strokeWidth="2"
+                    strokeDasharray="6,3"
+                  />
+                ) : null
+              )}
+            </svg>
+
+            {/* 5. CÁC ĐỐI TƯỢNG DOM GHIM NẰM TRÊN ẢNH (MATERIAL PIN & STEP MARKER) */}
+            {activeLayer.materials && annotations.filter(a => a.type === 'material_pin').map(ann => {
+              const g = ann.geometry;
+              const isSel = selectedAnnotationId === ann.id;
+              return (
+                <div
+                  key={ann.id}
+                  onClick={(e) => { e.stopPropagation(); setSelectedAnnotationId(ann.id); }}
+                  className="absolute -translate-x-1/2 -translate-y-full cursor-pointer z-20 group"
+                  style={{ left: `${g.x / 10}%`, top: `${g.y / 10}%` }}
+                >
+                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold shadow-xl transition-transform ${
+                    isSel ? 'bg-emerald-400 text-zinc-950 border-white scale-110' : 'bg-zinc-900/90 text-emerald-300 border-emerald-500/60 hover:scale-105'
+                  }`}>
+                    <i className="fas fa-boxes text-[9px]"></i>
+                    <span className="whitespace-nowrap">{ann.metadata?.materialSku || ann.metadata?.materialName}</span>
+                    <span className="bg-emerald-950/80 text-emerald-200 px-1 rounded text-[9px] font-mono">
+                      {ann.metadata?.materialQty}{ann.metadata?.materialUnit}
+                    </span>
+                  </div>
+                  {/* Chóp ghim nhọn */}
+                  <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-emerald-500 mx-auto"></div>
+                </div>
+              );
+            })}
+
+            {/* ĐÁNH SỐ THỨ TỰ (STEP MARKER) */}
+            {activeLayer.guides && annotations.filter(a => a.type === 'step_marker').map(ann => {
+              const g = ann.geometry;
+              const isSel = selectedAnnotationId === ann.id;
+              return (
+                <div
+                  key={ann.id}
+                  onClick={(e) => { e.stopPropagation(); setSelectedAnnotationId(ann.id); }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20"
+                  style={{ left: `${g.x / 10}%`, top: `${g.y / 10}%` }}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shadow-lg transition-transform ${
+                    isSel ? 'bg-amber-400 text-zinc-950 ring-2 ring-white scale-125' : 'bg-amber-500 text-zinc-950 hover:scale-110'
+                  }`}>
+                    {ann.metadata?.stepNumber || 1}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* GHI CHÚ KỸ THUẬT (TEXT NOTE) */}
+            {activeLayer.notes && annotations.filter(a => a.type === 'text_note').map(ann => {
+              const g = ann.geometry;
+              const isSel = selectedAnnotationId === ann.id;
+              return (
+                <div
+                  key={ann.id}
+                  onClick={(e) => { e.stopPropagation(); setSelectedAnnotationId(ann.id); }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 max-w-[180px]"
+                  style={{ left: `${g.x / 10}%`, top: `${g.y / 10}%` }}
+                >
+                  <div className={`p-1.5 rounded-lg border text-[10px] leading-tight shadow-xl backdrop-blur-md ${
+                    isSel ? 'bg-zinc-100 text-zinc-900 border-white' : 'bg-zinc-900/90 text-zinc-200 border-zinc-700'
+                  }`}>
+                    <i className="fas fa-sticky-note text-amber-400 mr-1"></i>
+                    <span>{ann.metadata?.text}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* BẢNG THÔNG TIN CHI TIẾT ĐỐI TƯỢNG ĐƯỢC CHỌN (SIDEBAR PHẢI) */}
+        {selectedAnnotationId && (() => {
+          const item = annotations.find(a => a.id === selectedAnnotationId);
+          if (!item) return null;
+          return (
+            <div className="w-full md:w-64 bg-[#141414] border-t md:border-t-0 md:border-l border-zinc-800 p-3 shrink-0 flex flex-col justify-between text-xs z-10">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
+                  <div className="font-black text-zinc-100 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <i className="fas fa-info-circle text-amber-400"></i>
+                    <span>Chi tiết đối tượng</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAnnotationId(null)}
+                    className="w-5 h-5 flex items-center justify-center text-zinc-400 hover:text-white"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 font-bold block">Loại đối tượng:</span>
+                    <span className="font-bold text-zinc-200 capitalize">
+                      {item.type === 'dimension' ? 'Đo kích thước' :
+                       item.type === 'material_pin' ? 'Ghim vật tư' :
+                       item.type === 'step_marker' ? 'Đánh số khâu' :
+                       item.type === 'rework_box' ? 'Khoanh lỗi KCS' :
+                       item.type === 'arrow' ? 'Mũi tên chỉ dẫn' : 'Ghi chú kỹ thuật'}
+                    </span>
+                  </div>
+
+                  {item.type === 'dimension' && (
+                    <div className="bg-zinc-900 p-2 rounded-lg border border-zinc-800 space-y-1">
+                      <div className="text-amber-400 font-mono font-black text-base">
+                        {item.metadata?.dimensionValue} {item.metadata?.dimensionUnit}
+                      </div>
+                      <div className="text-zinc-400 text-[10px]">Trục: {item.metadata?.dimensionAxis || 'Kích thước'}</div>
+                    </div>
+                  )}
+
+                  {item.type === 'material_pin' && (
+                    <div className="bg-zinc-900 p-2 rounded-lg border border-zinc-800 space-y-1">
+                      <div className="font-black text-emerald-400">{item.metadata?.materialName}</div>
+                      <div className="text-zinc-400 text-[10px]">Mã SKU: <span className="font-mono text-zinc-200">{item.metadata?.materialSku}</span></div>
+                      <div className="text-zinc-400 text-[10px]">Định mức khâu: <span className="font-bold text-zinc-200">{item.metadata?.materialQty} {item.metadata?.materialUnit}</span></div>
+                    </div>
+                  )}
+
+                  {item.type === 'rework_box' && (
+                    <div className="bg-rose-950/30 p-2 rounded-lg border border-rose-500/40 space-y-1 text-rose-200">
+                      <div className="font-black text-rose-400 flex items-center gap-1">
+                        <i className="fas fa-exclamation-triangle"></i>
+                        <span>{item.metadata?.severity || 'HIGH'} SEVERITY</span>
+                      </div>
+                      <div className="text-[11px]">{item.metadata?.text}</div>
+                    </div>
+                  )}
+
+                  <div className="text-[10px] text-zinc-500 pt-2 border-t border-zinc-800/80">
+                    <div>Tạo bởi: <span className="text-zinc-400">{item.createdBy}</span></div>
+                    <div>Thời điểm: <span className="text-zinc-400">{item.createdAt?.substring(0, 16)}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAnnotation(item.id)}
+                  className="w-full mt-3 py-1.5 px-3 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-200 border border-rose-800/60 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <i className="fas fa-trash-alt text-[10px]"></i>
+                  <span>Xóa đối tượng</span>
+                </button>
+              )}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* 3. MODAL NHẬP KÍCH THƯỚC (DIMENSION MODAL) */}
+      {dimModalData && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#18181b] border border-zinc-700 rounded-xl max-w-sm w-full p-4 space-y-3 shadow-2xl animate-fade-in">
+            <div className="font-black text-amber-400 text-sm flex items-center gap-2">
+              <i className="fas fa-ruler-combined"></i>
+              <span>Nhập số đo kỹ thuật</span>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const val = Number(e.target.dimVal.value);
+              const unit = e.target.dimUnit.value;
+              const axis = e.target.dimAxis.value;
+              if (val > 0) {
+                const newAnn = {
+                  id: 'ann_dim_' + Date.now(),
+                  imageId: currentImage?.id,
+                  type: 'dimension',
+                  layer: 'dimensions',
+                  geometry: { x1: dimModalData.x1, y1: dimModalData.y1, x2: dimModalData.x2, y2: dimModalData.y2 },
+                  metadata: { dimensionValue: val, dimensionUnit: unit, dimensionAxis: axis, text: `${val}${unit}` },
+                  createdBy: currentUser || 'Admin',
+                  createdAt: new Date().toISOString()
+                };
+                pushHistory([...annotations, newAnn]);
+              }
+              setDimModalData(null);
+            }}>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Số đo thực tế:</label>
+                  <input
+                    name="dimVal"
+                    type="number"
+                    step="0.1"
+                    autoFocus
+                    required
+                    placeholder="Ví dụ: 60"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white font-mono font-bold text-sm focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-zinc-400 mb-1">Đơn vị đo:</label>
+                    <select name="dimUnit" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-zinc-200">
+                      <option value="cm">cm (Centimet)</option>
+                      <option value="mm">mm (Milimet)</option>
+                      <option value="m">m (Met)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-zinc-400 mb-1">Trục đo:</label>
+                    <select name="dimAxis" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-zinc-200">
+                      <option value="length">Chiều dài (L)</option>
+                      <option value="width">Chiều rộng (W)</option>
+                      <option value="height">Chiều cao (H)</option>
+                      <option value="diagonal">Đường chéo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setDimModalData(null)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 font-bold hover:bg-zinc-700"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black shadow-lg"
+                >
+                  Lưu số đo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. MODAL GHIM VẬT TƯ (MATERIAL PIN MODAL) */}
+      {pinModalData && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#18181b] border border-zinc-700 rounded-xl max-w-md w-full p-4 space-y-3 shadow-2xl animate-fade-in">
+            <div className="font-black text-emerald-400 text-sm flex items-center gap-2">
+              <i className="fas fa-boxes"></i>
+              <span>Ghim vật tư vào vị trí kỹ thuật</span>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const selSku = e.target.matSku.value;
+              const prod = (erpProducts || []).find(p => p.sku === selSku);
+              const customName = e.target.matCustomName.value;
+              const qty = Number(e.target.matQty.value) || 1;
+              const unit = e.target.matUnit.value || 'kg';
+              const stageId = e.target.matStage.value || 'stg_1';
+
+              const newAnn = {
+                id: 'ann_pin_' + Date.now(),
+                imageId: currentImage?.id,
+                type: 'material_pin',
+                layer: 'materials',
+                geometry: { x: pinModalData.x, y: pinModalData.y },
+                metadata: {
+                  materialSku: selSku || 'SKU-CUSTOM',
+                  materialName: prod?.name || customName || 'Vật tư thi công',
+                  materialUnit: unit,
+                  materialQty: qty,
+                  stageId: stageId
+                },
+                createdBy: currentUser || 'Admin',
+                createdAt: new Date().toISOString()
+              };
+              pushHistory([...annotations, newAnn]);
+              setPinModalData(null);
+            }}>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Chọn vật tư từ Catalog hiện có:</label>
+                  <select
+                    name="matSku"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 font-mono"
+                    onChange={(e) => {
+                      const found = (erpProducts || []).find(p => p.sku === e.target.value);
+                      const unitInp = document.getElementById('mat-unit-input');
+                      if (found && unitInp) unitInp.value = found.unit || 'kg';
+                    }}
+                  >
+                    <option value="">-- Chọn SKU trong kho hàng --</option>
+                    {(erpProducts || []).slice(0, 40).map(p => (
+                      <option key={p.id || p.sku} value={p.sku}>
+                        {p.sku} — {p.name} ({p.unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Hoặc tên vật tư mẫu:</label>
+                  <input
+                    name="matCustomName"
+                    type="text"
+                    placeholder="Ví dụ: Đá Đen Gia Lai Tảng Chân"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-zinc-400 mb-1">Định mức sử dụng:</label>
+                    <input
+                      name="matQty"
+                      type="number"
+                      step="0.1"
+                      required
+                      defaultValue="1.0"
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200 font-bold font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-400 mb-1">Đơn vị tính:</label>
+                    <input
+                      id="mat-unit-input"
+                      name="matUnit"
+                      type="text"
+                      defaultValue="kg"
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Công đoạn áp dụng:</label>
+                  <select name="matStage" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200">
+                    {(order?.stages || []).map(stg => (
+                      <option key={stg.id} value={stg.id}>{stg.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setPinModalData(null)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 font-bold hover:bg-zinc-700"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black shadow-lg"
+                >
+                  Ghim vật tư
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL NHẬP GHI CHÚ KỸ THUẬT */}
+      {textModalData && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#18181b] border border-zinc-700 rounded-xl max-w-sm w-full p-4 space-y-3 shadow-2xl animate-fade-in">
+            <div className="font-black text-zinc-100 text-sm flex items-center gap-2">
+              <i className="fas fa-sticky-note text-amber-400"></i>
+              <span>Thêm ghi chú kỹ thuật</span>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const txt = e.target.noteText.value.trim();
+              if (txt) {
+                const newAnn = {
+                  id: 'ann_txt_' + Date.now(),
+                  imageId: currentImage?.id,
+                  type: 'text_note',
+                  layer: 'notes',
+                  geometry: { x: textModalData.x, y: textModalData.y },
+                  metadata: { text: txt },
+                  createdBy: currentUser || 'Admin',
+                  createdAt: new Date().toISOString()
+                };
+                pushHistory([...annotations, newAnn]);
+              }
+              setTextModalData(null);
+            }}>
+              <textarea
+                name="noteText"
+                rows={3}
+                required
+                autoFocus
+                placeholder="Ví dụ: Đắp dăm che kín vết keo dán này..."
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-zinc-100 text-xs focus:outline-none focus:border-amber-500"
+              ></textarea>
+              <div className="flex items-center justify-end gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setTextModalData(null)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 font-bold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-950 font-black"
+                >
+                  Lưu ghi chú
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================================================================
+// 📋 LÕI 2: TAB CHÍNH APPRENTICESHIP (6 MÀN HÌNH TÍCH HỢP)
+// =========================================================================
+
+function ApprenticeEvidence({orderId, photo}) {
+  const [src, setSrc] = React.useState('');
+  const [error, setError] = React.useState('');
+  React.useEffect(() => { let active = true; window.runGAS('api_apprenticeshipPhotoRead', localStorage.getItem('rf_pin') || '', orderId, photo.id).then(x => { if (active && typeof x === 'string') setSrc(x); }).catch(() => { if (active) setError('Không tải được ảnh'); }); return () => { active = false; }; }, [orderId, photo.id]);
+  return src ? <a href={src} target="_blank" rel="noopener"><img src={src} alt="Ảnh thực hành" style={{width:120, maxHeight:120, objectFit:'contain'}} /></a> : <span>{error || 'Đang tải ảnh…'}</span>;
+}
+function ApprenticeshipTab({erpData = {}, erpProducts = [], userConfigs = {}}) {
+  const [state, setState] = React.useState({orders:[], studio:false, user:''});
+  const [selected, select] = React.useState('');
+  const [lessonOpen, setLessonOpen] = React.useState(false);
+  const lessonHeading = React.useRef(null);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [loaded, setLoaded] = React.useState(false);
+  const [draft, setDraft] = React.useState(null);
+  const [annotations, setAnnotations] = React.useState(null);
+  const [imageIndex, setImageIndex] = React.useState(0);
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [review, setReview] = React.useState('');
+  const [returnStep, setReturnStep] = React.useState(0);
+  const [incident, setIncident] = React.useState('');
+  const [legacy, setLegacy] = React.useState([]);
+  const [queueFilter,setQueueFilter] = React.useState('all');
+  const steps = ['Chuẩn bị công cụ/nguyên liệu', 'Xử lý nguyên liệu', 'Dựng bố cục', 'Gia cố layout', 'Báo cáo chờ nghiệm thu'];
+  const defaults = [
+    'Kiểm tra công cụ, dụng cụ và bảo hộ\nLấy đủ nguyên liệu, vật tư theo định mức BOM\nKiểm tra chất lượng phôi trước khi làm',
+    'Làm sạch và xử lý nguyên liệu theo kích thước\nKiểm tra chất lượng phôi sau xử lý',
+    'Đối chiếu bố cục với layout mẫu\nĐo kích thước và kiểm tra tỷ lệ',
+    'Gia cố các điểm liên kết\nKiểm tra độ vững chắc và cân bằng',
+    'Báo cáo số đo thực tế so với bản vẽ\nBáo cáo vật tư đã dùng và phần thu hồi\nẢnh kết quả 5 góc và ảnh chi tiết điểm nối\nNêu sai lệch so với mẫu và cách xử lý\nVệ sinh khu vực thực hành'
+  ];
+  const stageSpecs = [
+    { n: '01', t: 'Chuẩn bị công cụ & vật tư', hint: 'Dụng cụ, bảo hộ, nguyên liệu và vật tư phải lấy đủ theo định mức' },
+    { n: '02', t: 'Xử lý nguyên liệu', hint: 'Cách làm sạch, cắt gọt và kiểm tra phôi sau xử lý' },
+    { n: '03', t: 'Dựng bố cục', hint: 'Đối chiếu layout mẫu, kích thước và tỷ lệ' },
+    { n: '04', t: 'Gia cố layout', hint: 'Điểm liên kết, vật liệu gia cố và kiểm tra độ vững' },
+    { n: '05', t: 'Báo cáo & nghiệm thu', hint: 'Quy định rõ phải báo cáo gì: số đo, vật tư, ảnh, sai lệch' }
+  ];
+  const [form, setForm] = React.useState({title:'', assignee:'', layout:'', norms:'', urls:'', checklists:defaults, productKey:''});
+  const [layoutQuery, setLayoutQuery] = React.useState('');
+  const [templateImages,setTemplateImages]=React.useState([]);
+  const [templateIndex,setTemplateIndex]=React.useState(0);
+  const [templateRevision,setTemplateRevision]=React.useState(0);
+  const [templateNotice,setTemplateNotice]=React.useState('');
+  const [resolvedBom,setResolvedBom]=React.useState({options:[],selected:null,message:''});
+  const [resolvingBom,setResolvingBom]=React.useState(false);
+  const selectionSequence=React.useRef(0);
+  const selectTemplate=async name=>{const layout=RICH_FISH_LAYOUT_CATALOG.find(x=>x.n===name);if(!layout)return;const seq=++selectionSequence.current;const images=['front','distant','left','right','top'].map((k,i)=>({id:'view_'+i,url:layout.a[k],label:['Mặt trước','Toàn cảnh','Mặt trái','Mặt phải','Mặt trên'][i],annotations:[]}));setTemplateImages(images);setTemplateIndex(0);setTemplateRevision(0);setTemplateNotice('');setForm(f=>({...f,layout:name,productKey:'',urls:images.map(im=>im.url).join('\n')}));setResolvedBom({options:[],selected:null,message:''});setResolvingBom(true);try{const r=await rpc('api_apprenticeshipResolveLayout',name);if(seq!==selectionSequence.current)return;setResolvedBom(r);if(r.template){setTemplateImages(r.template.images);setTemplateRevision(r.template.revision);setTemplateNotice('Đã tải hướng dẫn đã lưu từ máy chủ');}setForm(f=>({...f,productKey:r.selected?.key || ''}));}catch(e){if(seq===selectionSequence.current)setError(e.message);}finally{if(seq===selectionSequence.current)setResolvingBom(false);}};
+  const rpc = (name, ...args) => window.runGAS(name, localStorage.getItem('rf_pin') || '', ...args).then(r => { if (!r || r.success === false) throw new Error(r?.message || 'Không kết nối được máy chủ'); return r; });
+  // Cache hiển thị tức thì: lần vào tab sau dùng dữ liệu đã lưu, đồng bộ lại ở chế độ nền.
+  const appCacheKey = 'RF_APPRENTICESHIP_CACHE_V1';
+  const appCacheId = () => [localStorage.getItem('rf_user') || '', localStorage.getItem('rf_role') || ''].join('|');
+  const readAppCache = () => {
+    try {
+      const c = JSON.parse(localStorage.getItem(appCacheKey) || 'null');
+      if (c && c.id === appCacheId() && c.state && Array.isArray(c.state.orders)) return c.state;
+    } catch(e) {}
+    return null;
+  };
+  const writeAppCache = v => { try { localStorage.setItem(appCacheKey, JSON.stringify({ id: appCacheId(), at: Date.now(), state: v })); } catch(e) {} };
+  const load = async (instant) => { if (!instant) setBusy(true); setError(''); try { const r = await rpc('api_apprenticeshipList'); setState(r); setLoaded(true); } catch(e) { if (!instant) setError(e.message); } finally { if (!instant) setBusy(false); } };
+  React.useEffect(() => {
+    const cached = readAppCache();
+    if (cached) { setState(cached); setLoaded(true); }
+    load(!!cached);
+    try { const old = JSON.parse(localStorage.getItem('RF_APPRENTICESHIP_DATA_V3') || '[]'); if (Array.isArray(old)) setLegacy(old); } catch(e) {}
+  }, []);
+  React.useEffect(() => { if (loaded) writeAppCache(state); }, [state, loaded]);
+  // Nội dung 5 công đoạn bắt buộc khi giao bài (mỗi dòng = 1 mục checklist)
+  const checklistBlocks = form.checklists.map(v => String(v || '').split('\n').map(x => x.trim()).filter(Boolean));
+  const checklistIssues = [];
+  checklistBlocks.forEach((items, i) => {
+    const label = 'Công đoạn ' + stageSpecs[i].n;
+    if (!items.length) checklistIssues.push(label + ' chưa có nội dung');
+    else if (items.length > 20) checklistIssues.push(label + ' vượt quá 20 mục');
+    if (items.some(t => t.length > 300)) checklistIssues.push(label + ' có mục dài quá 300 ký tự');
+  });
+  const canAssign = !busy && !resolvingBom && !!form.assignee && !!form.layout && !!form.productKey && checklistIssues.length === 0;
+  const renderStageEditor = () => (
+    <section className="section-block" style={{marginTop:'var(--space-6)'}}>
+      <div className="panel-title"><h3>Nội dung 5 công đoạn (bắt buộc)</h3><span className="muted">Mỗi dòng là một mục checklist</span></div>
+      <p className="muted">Học viên chỉ chuyển bước khi tick đủ mục, ghi số đo, vật tư và báo cáo. Công đoạn 05 quy định rõ phải báo cáo những gì.</p>
+      {stageSpecs.map((s, i) => (
+        <label key={s.n} style={{marginTop:'var(--space-4)'}}>
+          <span className="eyebrow">{s.n} / {s.t}</span>
+          <textarea rows={3} disabled={busy} value={form.checklists[i] || ''} placeholder={s.hint}
+            onChange={e => setForm(f => ({ ...f, checklists: f.checklists.map((v, j) => j === i ? e.target.value : v) }))} />
+          <span style={{display:'flex', justifyContent:'space-between', gap:'var(--space-3)'}}>
+            <span>{s.hint}</span>
+            <span className="mono" style={{whiteSpace:'nowrap', color: checklistBlocks[i].length ? 'var(--color-quiet)' : '#d98b6a'}}>
+              {checklistBlocks[i].length ? checklistBlocks[i].length + ' mục' : 'Bắt buộc'}
+            </span>
+          </span>
+        </label>
+      ))}
+      {checklistIssues.length > 0 && <div className="notice" role="alert"><span>!</span><p>{checklistIssues.join(' · ')}</p></div>}
+    </section>
+  );
+  const visibleOrders = state.orders.filter(o=>queueFilter!=='review' || o.status==='AWAITING_REVIEW');
+  const order = visibleOrders.find(o => o.id === selected);
+  const openLesson = id => { select(id); setLessonOpen(true); };
+  React.useEffect(() => { if (lessonOpen && !formOpen && order) { lessonHeading.current?.scrollIntoView({block:"start"}); lessonHeading.current?.focus({preventScroll:true}); } }, [lessonOpen, formOpen, order?.id, order?.step, order?.status]);
+  React.useEffect(() => { setDraft(order ? JSON.parse(JSON.stringify(order.steps[order.step])) : null); setAnnotations(null); setImageIndex(0); }, [order?.id, order?.revision]);
+  const acceptOrder = d => { setState(s => ({...s, orders: s.orders.some(o => o.id === d.id) ? s.orders.map(o => o.id === d.id ? d : o) : [d, ...s.orders]})); select(d.id); setLessonOpen(true); };
+  const mutate = async (action, data, target = order) => {
+    setBusy(true); setError('');
+    try { if(action==='incident' && target?.assignee===state.user && target.status==='IN_PROGRESS' && draft){ const saved=await rpc('api_apprenticeshipMutate',{action:'save',id:target.id,revision:target.revision,data:{...draft,checked:draft.checklist.map((_,i)=>!!draft.checked[i]),step:target.step}}); target=saved.order; acceptOrder(target); } const r = await rpc('api_apprenticeshipMutate', {action, id:target?.id, revision:target?.revision, data}); acceptOrder(r.order); return true; }
+    catch(e) { setError(e.message + (String(e.message).includes('CONFLICT') ? ' — Tải lại để lấy tiến độ mới; bản nhập vẫn đang trên màn hình.' : '')); return false; }
+    finally { setBusy(false); }
+  };
+  const people = [...new Set((erpData.Config_NhanSu || userConfigs.raw || []).map(u => u['Tên Nhân Sự'] || u.name).filter(Boolean))];
+  const imagesFrom = urls => urls.split('\n').map(s => s.trim()).filter(Boolean).map((url,i) => ({url, label:['Mặt trước','Toàn cảnh','Mặt trái','Mặt phải','Mặt trên'][i]}));
+  const upload = async e => {
+    const file = e.target.files[0]; e.target.value = ''; if (!file || !order || busy) return;
+    setBusy(true); setError('');
+    try {
+      if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 15000000) throw new Error('Chọn ảnh JPG/PNG/WebP dưới 15 MB');
+      const src = await new Promise((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+      const img = await new Promise((resolve,reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = src; });
+      const canvas = document.createElement('canvas'), scale = Math.min(1, 1200 / Math.max(img.width,img.height)); canvas.width = img.width * scale; canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      // Save typed progress before upload so server's response cannot discard it.
+      const saved = await rpc('api_apprenticeshipMutate', {action:'save',id:order.id,revision:order.revision,data:{...draft,checked:draft.checklist.map((_,i)=>!!draft.checked[i]),step:order.step}}); acceptOrder(saved.order);
+      const r = await rpc('api_apprenticeshipPhoto', order.id, saved.order.revision, canvas.toDataURL('image/jpeg',0.7)); acceptOrder(r.order);
+    } catch(e) { setError(e.message || 'Không tải được ảnh'); } finally { setBusy(false); }
+  };
+  const exportLegacy = () => { const blob = new Blob([JSON.stringify(legacy,null,2)],{type:'application/json'}), url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='rf-hoc-viec-local-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000); };
+  const statusLabel = o => o.status === 'ACCEPTED' ? 'Đã nghiệm thu' : o.status === 'AWAITING_REVIEW' ? 'Chờ nghiệm thu' : 'Bước ' + (o.step + 1) + ' / 5';
+  const phaseNames = ['Chuẩn bị', 'Xử lý', 'Bố cục', 'Gia cố', 'Báo cáo'];
+  const workingCount = state.orders.filter(o=>o.status==='IN_PROGRESS').length;
+  const reviewCount = state.orders.filter(o=>o.status==='AWAITING_REVIEW').length;
+  const acceptedCount = state.orders.filter(o=>o.status==='ACCEPTED').length;
+  const openComposer = () => { setFormOpen(true); if(!form.layout) selectTemplate(RICH_FISH_LAYOUT_CATALOG[0].n); };
+  const saveTemplate = async () => { setBusy(true); setError(''); try { const r=await rpc('api_apprenticeshipTemplateSave',form.layout,templateImages,templateRevision); setTemplateRevision(r.template.revision); setTemplateNotice('Đã lưu hướng dẫn mẫu trên máy chủ'); } catch(e) { setError(e.message); } finally { setBusy(false); } };
+  const historyLabel = {CREATE:'Giao bài thực hành',SAVE_PROGRESS:'Lưu tiến độ',COMPLETE_STEP:'Hoàn thành công đoạn',INCIDENT:'Báo sự cố',PHOTO:'Thêm ảnh bằng chứng',ACCEPT:'Nghiệm thu đạt',RETURN:'Trả về công đoạn',ANNOTATIONS:'Cập nhật hướng dẫn ảnh',SETUP:'Thiết lập bài mẫu'};
+  const evidenceReady = !!(order && draft && draft.checklist.every((_,i)=>draft.checked[i]) && draft.measurements.trim() && draft.materials.trim() && draft.report.trim() && draft.photos.length);
+  const bomRows = order?.bom?.materials || [];
+  return <section className="rf-apprentice" aria-busy={busy || resolvingBom}>
+    <style>{`/* RF Apprenticeship · scoped tokens; embedded into the Apps Script module at build time. */
+.rf-apprentice {
+  --color-canvas: #0c0d0e;
+  --color-panel: #131516;
+  --color-raised: #1b1d1f;
+  --color-ink: #f0efea;
+  --color-muted: #a5a6a3;
+  --color-quiet: #747774;
+  --color-rule: #2d3031;
+  --color-accent: #e8e6de;
+  --color-on-accent: #161718;
+  --color-focus: #e8e6de;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+  --radius-small: 6px; --radius-panel: 12px;
+  --text-xs: 11px; --text-sm: 12px; --text-base: 14px;
+  --text-title: clamp(24px, 2.2vw, 36px);
+  --dur-ui: 160ms; --ease-ui: ease-out;
+}
+
+/* Hallmark · macrostructure: training control room / visual workbench · tone: precise atelier · anchor hue: RF monochrome */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
+.rf-apprentice{width:100%;min-width:0;max-width:1440px;margin:auto;background:var(--color-canvas);color:var(--color-ink);font:var(--text-base)/1.6 var(--font-body);padding:var(--space-6);overflow-x:clip}
+.rf-apprentice *{box-sizing:border-box;min-width:0}
+.rf-apprentice h1,.rf-apprentice h2,.rf-apprentice h3,.rf-apprentice p,.rf-apprentice figure{margin:0}
+.rf-apprentice h1,.rf-apprentice h2,.rf-apprentice h3{font-family:var(--font-display);font-style:normal;overflow-wrap:anywhere}
+.rf-apprentice h1{font-size:var(--text-title);line-height:1.2;letter-spacing:-.04em;font-weight:600}
+.rf-apprentice h2{font-size:20px;line-height:1.35;letter-spacing:-.025em;font-weight:600}
+.rf-apprentice h3{font-size:16px;line-height:1.45;letter-spacing:-.015em;font-weight:600}
+.rf-apprentice button,.rf-apprentice input,.rf-apprentice textarea,.rf-apprentice select{font:inherit;max-width:100%}
+.rf-apprentice button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:44px;padding:var(--space-2) var(--space-4);border:1px solid var(--color-rule);border-radius:var(--radius-small);background:transparent;color:var(--color-ink);cursor:pointer;white-space:nowrap;transition:background var(--dur-ui) var(--ease-ui),border-color var(--dur-ui) var(--ease-ui)}
+.rf-apprentice button:hover{background:var(--color-raised);border-color:var(--color-muted)}
+.rf-apprentice button:active{background:var(--color-panel)}
+.rf-apprentice button:focus-visible,.rf-apprentice input:focus-visible,.rf-apprentice textarea:focus-visible,.rf-apprentice select:focus-visible,.rf-apprentice summary:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}
+.rf-apprentice button:disabled{opacity:.36;cursor:not-allowed}
+.rf-apprentice button.primary{background:var(--color-accent)!important;border-color:var(--color-accent)!important;color:var(--color-on-accent)!important;font-weight:700}
+.rf-apprentice button.primary:hover{background:var(--color-ink)}
+.rf-apprentice .quiet-button{border-color:transparent;color:var(--color-muted)}
+.rf-apprentice input,.rf-apprentice textarea,.rf-apprentice select{width:100%;min-height:44px;padding:var(--space-3);border:1px solid var(--color-rule);border-radius:var(--radius-small);background:var(--color-canvas);color:var(--color-ink);color-scheme:dark}
+.rf-apprentice textarea{resize:vertical;min-height:104px;line-height:1.65}
+.rf-apprentice label{display:grid;gap:var(--space-2);font-size:var(--text-sm);color:var(--color-muted)}
+.rf-apprentice .eyebrow{display:block;font-size:var(--text-xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--color-muted)}
+.rf-apprentice .muted{color:var(--color-muted);font-size:var(--text-sm)}
+.rf-apprentice .mono{font-family:var(--font-mono);font-size:var(--text-xs);font-variant-numeric:tabular-nums}
+.rf-apprentice .titlebar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-6);padding:var(--space-2) 0 var(--space-6)}
+.rf-apprentice .titlebar .eyebrow{margin-bottom:var(--space-3)}
+.rf-apprentice .titlebar p{margin-top:var(--space-3);max-width:65ch;color:var(--color-muted)}
+.rf-apprentice .actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.rf-apprentice .compose-footer{justify-content:flex-end;margin-top:var(--space-6);padding-top:var(--space-5);border-top:1px solid var(--color-rule)}
+.rf-apprentice .navline{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--color-rule);border-bottom:1px solid var(--color-rule);margin-bottom:var(--space-6);gap:var(--space-4)}
+.rf-apprentice .view-tabs{display:flex;gap:var(--space-5)}
+.rf-apprentice .view-tabs button{min-height:52px;border:0!important;border-radius:0!important;background:transparent!important;padding:var(--space-3) 0;color:var(--color-muted)!important;border-bottom:2px solid transparent!important;font-weight:500}
+.rf-apprentice .view-tabs button[aria-selected=true]{color:var(--color-ink)!important;border-bottom-color:var(--color-ink)!important}
+.rf-apprentice .role-label{font-size:var(--text-xs);color:var(--color-muted);white-space:nowrap}
+.rf-apprentice .data-strip{display:flex;gap:var(--space-8);padding:0 0 var(--space-6)}
+.rf-apprentice .data-strip>div{display:flex;align-items:baseline;gap:var(--space-3)}
+.rf-apprentice .data-strip strong{font-family:var(--font-mono);font-size:24px;font-weight:500;line-height:1}
+.rf-apprentice .data-strip span{color:var(--color-muted);font-size:var(--text-sm)}
+.rf-apprentice .notice{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4);margin-bottom:var(--space-5);border:1px solid var(--color-rule);border-radius:var(--radius-small);font-size:var(--text-sm);line-height:1.65;background:var(--color-panel)}
+.rf-apprentice [role=alert]{border-color:var(--color-muted)}
+.rf-apprentice .workspace{display:grid;grid-template-columns:260px minmax(0,1fr);border:1px solid var(--color-rule);border-radius:var(--radius-panel);overflow:clip;min-height:520px}
+.rf-apprentice .assignment-rail{background:var(--color-panel);border-right:1px solid var(--color-rule);padding:var(--space-5)}
+.rf-apprentice .rail-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-5)}
+.rf-apprentice .rail-heading .eyebrow{letter-spacing:.08em}
+.rf-apprentice .order-list{display:grid;gap:var(--space-2)}
+.rf-apprentice .order-card{display:block;text-align:left;white-space:normal;padding:var(--space-3);min-height:96px;width:100%;border-color:transparent;border-radius:var(--radius-small)}
+.rf-apprentice .order-card[aria-pressed=true]{background:var(--color-raised);border-color:var(--color-rule)}
+.rf-apprentice .order-top{display:flex;gap:var(--space-3);align-items:center}
+.rf-apprentice .order-top img{width:48px;height:52px;object-fit:cover;border-radius:var(--radius-small);background:var(--color-canvas)}
+.rf-apprentice .order-top strong{display:block;font-size:var(--text-sm);font-weight:600;line-height:1.6}
+.rf-apprentice .order-top small{display:block;font-size:var(--text-xs);color:var(--color-muted)}
+.rf-apprentice .progress-bars{display:flex;gap:var(--space-1);margin:var(--space-3) 0 var(--space-2)}
+.rf-apprentice .progress-bars span{height:3px;background:var(--color-rule);flex:1}
+.rf-apprentice .progress-bars span.done{background:var(--color-ink)}
+.rf-apprentice .progress-bars span.current{background:var(--color-muted)}
+.rf-apprentice .order-status{font-size:var(--text-xs);color:var(--color-muted)}
+.rf-apprentice .detail-panel{padding:var(--space-6)}
+.rf-apprentice .detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);padding-bottom:var(--space-5)}
+.rf-apprentice .detail-head .eyebrow{margin-bottom:var(--space-2)}
+.rf-apprentice .status-pill{display:inline-flex;align-items:center;gap:var(--space-2);border:1px solid var(--color-rule);border-radius:var(--radius-small);padding:var(--space-1) var(--space-2);font-size:var(--text-xs);white-space:nowrap;color:var(--color-muted)}
+.rf-apprentice .status-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.rf-apprentice .stage-rail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:var(--space-6);gap:var(--space-2)}
+.rf-apprentice .stage-rail>div{padding-top:var(--space-3);border-top:2px solid var(--color-rule);color:var(--color-quiet);font-size:var(--text-xs);line-height:1.6}
+.rf-apprentice .stage-rail .complete{color:var(--color-muted);border-color:var(--color-muted)}
+.rf-apprentice .stage-rail .active{color:var(--color-ink);border-color:var(--color-ink)}
+.rf-apprentice .stage-rail span{display:block;font-family:var(--font-mono);margin-bottom:var(--space-1)}
+.rf-apprentice .workbench-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--space-6);align-items:start}
+.rf-apprentice .engine{min-width:0;isolation:isolate}
+.rf-apprentice .engine>div{border-color:var(--color-rule);border-radius:var(--radius-small)}
+.rf-apprentice .engine button{padding:var(--space-2);font-size:var(--text-xs);min-height:40px}
+.rf-apprentice .engine .touch-none{min-height:300px}
+.rf-apprentice .engine img{max-width:100%!important;max-height:64dvh!important;object-fit:contain}
+.rf-apprentice .engine form input,.rf-apprentice .engine form select,.rf-apprentice .engine form textarea{font-size:14px}
+.rf-apprentice .engine button[class*=amber],.rf-apprentice .engine button[class*=emerald]{color:var(--color-ink)!important;background:var(--color-raised)!important;border-color:var(--color-rule)!important}
+.rf-apprentice .panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);gap:var(--space-3)}
+.rf-apprentice .section-block{padding:var(--space-5) 0;border-top:1px solid var(--color-rule)}
+.rf-apprentice .section-block:first-child{border-top:0;padding-top:0}
+.rf-apprentice .bom-table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+.rf-apprentice .bom-table td{padding:var(--space-3) 0;border-bottom:1px solid var(--color-rule);vertical-align:top}
+.rf-apprentice .bom-table td:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--color-ink);font-family:var(--font-mono);font-size:var(--text-xs);padding-left:var(--space-2)}
+.rf-apprentice .bom-table td:first-child{color:var(--color-muted)}
+.rf-apprentice .bom-table tr:last-child td{border-bottom:0}
+.rf-apprentice .step-intro{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5)}
+.rf-apprentice .step-number{font-family:var(--font-mono);font-size:36px;line-height:1;color:var(--color-muted);font-weight:400}
+.rf-apprentice .checklist{display:grid;gap:var(--space-2);margin-bottom:var(--space-5)}
+.rf-apprentice .checklist label{display:flex;align-items:center;gap:var(--space-3);min-height:48px;padding:var(--space-2) 0;font-size:var(--text-base);color:var(--color-ink);border-bottom:1px solid var(--color-rule);cursor:pointer}
+.rf-apprentice input[type=checkbox]{appearance:auto;accent-color:var(--color-accent);width:18px;height:18px;min-height:18px;flex:none;padding:0}
+.rf-apprentice .input-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4);margin:var(--space-4) 0}
+.rf-apprentice .evidence-upload{display:grid;place-items:center;gap:var(--space-2);padding:var(--space-6);border:1px dashed var(--color-quiet);border-radius:var(--radius-small);cursor:pointer;text-align:center;margin:var(--space-5) 0}
+.rf-apprentice .evidence-upload input{border:0;background:transparent;padding:var(--space-2);font-size:var(--text-sm)}
+.rf-apprentice .evidence-grid{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-3)}
+.rf-apprentice .evidence-grid img{border-radius:var(--radius-small);border:1px solid var(--color-rule)}
+.rf-apprentice .task-actions{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding-top:var(--space-5);border-top:1px solid var(--color-rule);flex-wrap:wrap}
+.rf-apprentice .compose-layout{display:grid;grid-template-columns:300px minmax(0,1fr);border:1px solid var(--color-rule);border-radius:var(--radius-panel);overflow:clip}
+.rf-apprentice .compose-settings{padding:var(--space-6);background:var(--color-panel);border-right:1px solid var(--color-rule)}
+.rf-apprentice .compose-settings label{margin-top:var(--space-4)}
+.rf-apprentice .compose-settings .eyebrow{margin-bottom:var(--space-2)}
+.rf-apprentice .compose-main{padding:var(--space-6)}
+.rf-apprentice .compose-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);flex-wrap:wrap}
+.rf-apprentice .layout-picker{padding-bottom:var(--space-6)}
+.rf-apprentice .layout-picker input{margin:var(--space-4) 0 var(--space-3)}
+.rf-apprentice .layout-thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-2);margin-bottom:var(--space-5)}
+.rf-apprentice .layout-thumbs button{display:block;padding:0;border:1px solid var(--color-rule);border-radius:var(--radius-small);overflow:clip;white-space:normal}
+.rf-apprentice .layout-thumbs button[aria-pressed=true]{border-color:var(--color-accent)}
+.rf-apprentice .layout-thumbs img{width:100%;aspect-ratio:1.25;object-fit:cover;background:var(--color-canvas);display:block}
+.rf-apprentice figcaption{font-size:var(--text-xs);color:var(--color-muted);padding:var(--space-2) var(--space-1);text-align:center;white-space:nowrap}
+.rf-apprentice .canvas-empty{min-height:400px;display:grid;place-content:center;text-align:center;padding:var(--space-10);background:var(--color-panel);border:1px solid var(--color-rule);border-radius:var(--radius-small)}
+.rf-apprentice .canvas-empty span{font-size:48px;font-weight:300;color:var(--color-quiet);margin-bottom:var(--space-4)}
+.rf-apprentice .canvas-empty p{max-width:48ch;margin:var(--space-3) auto 0;color:var(--color-muted)}
+.rf-apprentice .empty-state{padding:var(--space-12) var(--space-6);text-align:center;min-height:300px;display:grid;place-content:center}
+.rf-apprentice .empty-state p{margin-top:var(--space-3);color:var(--color-muted);max-width:55ch}
+.rf-apprentice .empty-state button{margin:var(--space-6) auto 0}
+.rf-apprentice details{border-top:1px solid var(--color-rule);padding:var(--space-4) 0}
+.rf-apprentice summary{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);cursor:pointer;list-style:none;min-height:44px;font-size:var(--text-sm);font-weight:600}
+.rf-apprentice summary::after{content:'+';font-family:var(--font-mono);color:var(--color-muted)}
+.rf-apprentice details[open]>summary::after{content:'−'}
+.rf-apprentice details p,.rf-apprentice details textarea{margin-top:var(--space-3)}
+.rf-apprentice .timeline{padding-top:var(--space-4)}
+.rf-apprentice .timeline-entry{padding:0 0 var(--space-5) var(--space-4);border-left:1px solid var(--color-rule);font-size:var(--text-sm)}
+.rf-apprentice .timeline-entry time{display:block;color:var(--color-quiet);font-family:var(--font-mono);font-size:var(--text-xs);margin-bottom:var(--space-1)}
+.rf-apprentice .timeline-entry p{margin-top:var(--space-1);color:var(--color-muted)}
+.rf-apprentice .review-panel{padding:var(--space-5);background:var(--color-panel);margin-top:var(--space-6);border:1px solid var(--color-rule);border-radius:var(--radius-small)}
+.rf-apprentice .review-panel label{margin:var(--space-4) 0}
+.rf-apprentice fieldset{border:0;padding:0;margin:0}
+.rf-apprentice .legacy-panel{margin-top:var(--space-6);color:var(--color-muted)}
+.rf-apprentice .legacy-panel button{margin:var(--space-3) var(--space-2) 0 0}
+@media(max-width:1100px){.rf-apprentice .workbench-layout{grid-template-columns:minmax(0,1fr)}.rf-apprentice .reference-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-6)}.rf-apprentice .reference-panel .section-block{border-top:0;padding-top:0}}
+@media(max-width:900px){.rf-apprentice{padding:var(--space-4)}.rf-apprentice .workspace{grid-template-columns:minmax(0,1fr)}.rf-apprentice .assignment-rail{border-right:0;border-bottom:1px solid var(--color-rule)}.rf-apprentice .order-list{grid-template-columns:repeat(2,minmax(0,1fr))}.rf-apprentice .compose-layout{grid-template-columns:260px minmax(0,1fr)}.rf-apprentice .compose-main,.rf-apprentice .compose-settings,.rf-apprentice .detail-panel{padding:var(--space-4)}}
+@media(max-width:600px){.rf-apprentice{padding:var(--space-3)}.rf-apprentice .titlebar{align-items:flex-start;flex-direction:column;gap:var(--space-4)}.rf-apprentice .titlebar>.actions{width:100%;justify-content:space-between}.rf-apprentice .titlebar p{font-size:var(--text-sm)}.rf-apprentice .navline{gap:0}.rf-apprentice .role-label{display:none}.rf-apprentice .view-tabs{gap:var(--space-4);width:100%;justify-content:space-between}.rf-apprentice .view-tabs button{font-size:var(--text-xs)}.rf-apprentice .data-strip{gap:var(--space-5);justify-content:space-between}.rf-apprentice .data-strip>div{display:block}.rf-apprentice .data-strip span{display:block;margin-top:var(--space-2);font-size:var(--text-xs)}.rf-apprentice .data-strip strong{font-size:22px}.rf-apprentice .compose-layout{display:flex;flex-direction:column}.rf-apprentice .compose-settings{border-right:0;border-bottom:1px solid var(--color-rule)}.rf-apprentice .compose-main{padding:var(--space-3)}.rf-apprentice .compose-settings .section-block{padding:var(--space-4) 0}.rf-apprentice .compose-toolbar{align-items:flex-start}.rf-apprentice .compose-toolbar .actions{width:100%;justify-content:space-between}.rf-apprentice .order-list{grid-template-columns:minmax(0,1fr)}.rf-apprentice .assignment-rail{padding:var(--space-3)}.rf-apprentice .order-card{min-height:80px}.rf-apprentice .detail-head{flex-direction:column}.rf-apprentice .stage-rail>div{font-size:10px}.rf-apprentice .stage-rail{gap:var(--space-1)}.rf-apprentice .stage-rail span{font-size:var(--text-xs)}.rf-apprentice .stage-long{display:none}.rf-apprentice .reference-panel,.rf-apprentice .input-grid{display:grid;grid-template-columns:minmax(0,1fr)}.rf-apprentice .task-actions{position:sticky;bottom:0;background:var(--color-canvas);padding:var(--space-3) 0;z-index:5}.rf-apprentice .task-actions button{flex:1;padding:var(--space-2);font-size:var(--text-sm)}.rf-apprentice .engine .touch-none{min-height:240px}.rf-apprentice .engine button{min-height:44px;min-width:40px}.rf-apprentice .layout-thumbs{gap:var(--space-1)}.rf-apprentice figcaption{font-size:9px;padding:var(--space-2) 0}.rf-apprentice .canvas-empty{min-height:280px;padding:var(--space-6)}.rf-apprentice input,.rf-apprentice select,.rf-apprentice textarea{font-size:16px}.rf-apprentice .engine form input,.rf-apprentice .engine form select{font-size:16px}}
+.rf-apprentice .workspace.lesson-flow{display:block;min-height:0}
+.rf-apprentice .lesson-flow>.assignment-rail{border:0}
+.rf-apprentice .lesson-flow .order-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--space-4)}
+.rf-apprentice .lesson-back{margin-bottom:var(--space-5)}
+.rf-apprentice .detail-head{scroll-margin-top:90px}
+@media(prefers-reduced-motion:reduce){.rf-apprentice *{transition:none!important;animation:none!important}}
+`}</style>
+    <header className="titlebar">
+      <div><span className="eyebrow">RF / TRAINING ATELIER</span><h1>{state.studio ? 'Xưởng đào tạo' : 'Bàn thực hành của bạn'}</h1><p>{state.studio ? 'Chuẩn hóa bài mẫu. Dẫn dắt thực hành. Nghiệm thu tay nghề.' : 'Đọc mẫu chuẩn, thực hiện từng công đoạn và ghi lại kết quả.'}</p></div>
+      <div className="actions"><button className="quiet-button" disabled={busy} onClick={() => load(false)} aria-label="Tải lại">↻ <span>Làm mới</span></button>{state.studio && <button className="primary" aria-label="Tạo / giao bài" disabled={busy || !loaded} onClick={openComposer}>+ Giao bài mới</button>}</div>
+    </header>
+    <div className="navline"><nav className="view-tabs" aria-label="Không gian đào tạo">
+      <button role="tab" aria-selected={!formOpen && queueFilter==='all'} onClick={()=>{setFormOpen(false);setLessonOpen(false);setQueueFilter('all');}}>{state.studio?'Lệnh thực hành':'Việc được giao'}</button>
+      {state.studio && <button role="tab" aria-selected={formOpen} onClick={openComposer}>Soạn bài mẫu</button>}
+      {state.studio && <button role="tab" aria-selected={!formOpen && queueFilter==='review'} onClick={()=>{setFormOpen(false);setLessonOpen(false);setQueueFilter('review');}}>Nghiệm thu {reviewCount>0 && <span className="mono">{reviewCount}</span>}</button>}
+    </nav><span className="role-label">{loaded ? (state.studio?'Admin Studio':'Worker Mode')+' · '+state.user : 'Đang xác thực'}</span></div>
+    {!loaded && <div className="notice" role="status">Đang xác thực và tải bài thực hành từ máy chủ…</div>}
+    {error && <div className="notice" role="alert"><span>!</span><p>{error}</p></div>}
+    {loaded && !formOpen && <div className="data-strip" aria-label="Tình hình thực hành"><div><strong>{workingCount.toString().padStart(2,'0')}</strong><span>Đang thực hành</span></div><div><strong>{reviewCount.toString().padStart(2,'0')}</strong><span>Chờ nghiệm thu</span></div><div><strong>{acceptedCount.toString().padStart(2,'0')}</strong><span>Đã hoàn tất</span></div></div>}
+
+    {state.studio && formOpen && <div className="compose-layout">
+      <aside className="compose-settings"><form id="rf-assignment-form" onSubmit={async e=>{e.preventDefault();if(!canAssign)return;if(await mutate('create',{assignee:form.assignee,layout:form.layout,productKey:form.productKey,images:templateImages,checklists:checklistBlocks},null)){setFormOpen(false);setQueueFilter('all');}}}>
+        <div className="layout-picker"><span className="eyebrow">01 / BÀI MẪU</span><h2>Chọn mẫu thực hành</h2><p className="muted">{RICH_FISH_LAYOUT_CATALOG.length} mẫu · 5 góc ảnh mỗi mẫu</p><input aria-label="Tìm layout mẫu" placeholder="Tìm Rừng, Đảo Bay, Bonsai…" value={layoutQuery} onChange={e=>setLayoutQuery(e.target.value)}/><label>Layout mẫu<select required disabled={busy} value={form.layout} onChange={e=>selectTemplate(e.target.value)}><option value="">Chọn layout mẫu</option>{RICH_FISH_LAYOUT_CATALOG.filter(x=>x.n.toLocaleLowerCase('vi').includes(layoutQuery.toLocaleLowerCase('vi')) || x.n===form.layout).map(x=><option key={x.n}>{x.n}</option>)}</select></label></div>
+        <div className="section-block"><span className="eyebrow">02 / NGƯỜI THỰC HIỆN</span><label>Giao cho<select required disabled={busy} value={form.assignee} onChange={e=>setForm({...form,assignee:e.target.value})}><option value="">Chọn nhân viên</option>{people.map(p=><option key={p}>{p}</option>)}</select></label><p className="muted" style={{marginTop:'var(--space-3)'}}>Nhân viên tự hoàn thành 5 bước. Admin nghiệm thu sau báo cáo cuối.</p></div>
+        <div className="section-block"><span className="eyebrow">03 / ĐỊNH MỨC TỰ ĐỘNG</span>{resolvingBom ? <p className="muted" role="status">Đang lấy BOM của mẫu…</p> : resolvedBom.selected ? <React.Fragment><h3>{resolvedBom.selected.name}</h3><table className="bom-table"><tbody>{resolvedBom.selected.materials.map((m,i)=><tr key={i}><td>{m.name}</td><td>{m.qty} {m.unit}</td></tr>)}</tbody></table><p className="muted">Định mức từ {resolvedBom.selected.source}. Không trừ kho khi giao bài.</p></React.Fragment> : <p className="muted">{form.layout?'Mẫu này chưa có định mức hợp lệ.':'BOM sẽ tự xuất hiện khi chọn mẫu.'}</p>}</div>
+      </form><button className="quiet-button" onClick={()=>setFormOpen(false)}>← Về danh sách</button></aside>
+      <div className="compose-main"><div className="compose-toolbar"><div><span className="eyebrow">BÀN SOẠN HƯỚNG DẪN</span><h2>{form.layout || 'Bài mẫu mới'}</h2></div></div>
+        {resolvedBom.message && <div className="notice" role="status"><span>!</span><p>{resolvedBom.message}</p></div>}
+        {templateNotice && <p className="muted" role="status" style={{marginBottom:'var(--space-4)'}}>{templateNotice}</p>}
+        {templateImages.length ? <React.Fragment><div className="layout-thumbs">{templateImages.map((im,i)=><button key={im.id} type="button" aria-pressed={templateIndex===i} onClick={()=>setTemplateIndex(i)}><figure><img src={im.url} alt={im.label}/><figcaption>{im.label}</figcaption></figure></button>)}</div><section className="engine"><div className="panel-title"><h3>Soạn hướng dẫn trên ảnh mẫu</h3><span className="muted">Đo · Đánh dấu · Ghi chú</span></div><RFVisualTrainingEngine key={form.layout} order={{id:'template',images:templateImages}} activeImageIndex={templateIndex} setActiveImageIndex={setTemplateIndex} currentUser={state.user} canEdit={!busy && !resolvingBom} erpProducts={erpProducts} onSaveAnnotations={(id,marks)=>setTemplateImages(prev=>prev.map(im=>im.id===id?{...im,annotations:marks}:im))}/></section></React.Fragment> : <div className="canvas-empty"><span>↖</span><h2>Bắt đầu từ một mẫu chuẩn</h2><p>Chọn layout để mở ảnh 5 góc, tự nạp định mức và soạn hướng dẫn trực tiếp trên ảnh.</p></div>}
+        {renderStageEditor()}
+        <footer className="compose-footer actions"><button aria-label="Lưu hướng dẫn mẫu" disabled={busy || resolvingBom || !templateImages.length} onClick={saveTemplate}>Lưu hướng dẫn</button><button form="rf-assignment-form" type="submit" className="primary" disabled={!canAssign} title={checklistIssues.length ? 'Giao bài cần đủ nội dung 5 công đoạn' : ''}>Giao bài</button></footer>
+      </div>
+    </div>}
+
+    {!formOpen && <div className="workspace lesson-flow">{(!lessonOpen || !order) && <aside className="assignment-rail"><div className="rail-heading"><span className="eyebrow">{queueFilter==='review'?'CHỜ NGHIỆM THU':'BÀI THỰC HÀNH'}</span><span className="mono">{visibleOrders.length.toString().padStart(2,'0')}</span></div><nav className="order-list" aria-label="Danh sách bài thực hành">{visibleOrders.map(o=><button className="order-card" key={o.id} disabled={busy} aria-pressed={order?.id===o.id} onClick={()=>openLesson(o.id)}><div className="order-top">{o.images[0]?.url && <img src={o.images[0].url} alt=""/>}<div><strong>{o.layout || o.title}</strong><small>{o.assignee}</small></div></div><div className="progress-bars" aria-hidden="true">{o.steps.map((s,i)=><span key={i} className={s.completed?'done':i===o.step?'current':''}/>)}</div><span className="order-status">{statusLabel(o)} · {o.status==='IN_PROGRESS'?'Mở bài '+(o.step+1):'Xem hồ sơ'} →</span></button>)}</nav>{!visibleOrders.length && <p className="muted">{queueFilter==='review'?'Không có bài chờ duyệt.':'Chưa có bài được giao.'}</p>}</aside>}
+      {(lessonOpen && order || !visibleOrders.length) && <main className="detail-panel">
+        {!order && <div className="empty-state"><span className="eyebrow">RF APPRENTICESHIP</span><h2>{queueFilter==='review'?'Chưa có bài chờ nghiệm thu':'Một tay nghề tốt bắt đầu từ bài mẫu rõ ràng'}</h2><p>{state.studio?'Chọn layout chuẩn, soạn hướng dẫn trên ảnh và giao cho người thực hiện. Tiến độ và bằng chứng sẽ tập trung tại đây.':'Khi được giao bài, bạn sẽ thấy mẫu, hướng dẫn và công đoạn cần thực hiện tại đây.'}</p>{state.studio && <button className="primary" onClick={openComposer}>Soạn bài đầu tiên</button>}</div>}
+        {order && <React.Fragment><button disabled={busy} className="quiet-button lesson-back" onClick={()=>setLessonOpen(false)}>← Danh sách bài học</button><div className="detail-head" ref={lessonHeading} tabIndex={-1}><div><span className="eyebrow">BÀI THỰC HÀNH / {order.id.slice(0,8)}</span><h2>{order.layout || order.title}</h2><p className="muted" style={{marginTop:'var(--space-2)'}}>{order.assignee} <span aria-hidden="true">·</span> {order.status==='IN_PROGRESS'?steps[order.step]:order.status==='AWAITING_REVIEW'?'Đã báo cáo, chờ quyết định cuối':'Hồ sơ đã được nghiệm thu'}</p></div><span className="status-pill">{statusLabel(order)}</span></div>
+          {order.status==='IN_PROGRESS' && <div className="step-intro" aria-label="Bài học hiện tại"><span className="step-number">{String(order.step+1).padStart(2,'0')}</span><div><span className="eyebrow">CÔNG ĐOẠN HIỆN TẠI · {order.step+1}/5</span><h2>Bài {order.step+1}: {phaseNames[order.step]}</h2><p className="muted">{steps[order.step]}</p></div></div>}
+          <div className="workbench-layout"><div><div className="panel-title"><h3>Mẫu chuẩn & hướng dẫn</h3><span className="muted">{order.images.length} góc ảnh</span></div>{order.images.length>0 && <div className="engine"><RFVisualTrainingEngine key={order.id+':'+order.revision} order={order} activeImageIndex={imageIndex} setActiveImageIndex={setImageIndex} currentUser={state.user} erpProducts={erpProducts} canEdit={state.studio && !busy && order.status!=='ACCEPTED'} onSaveAnnotations={(imageId,items)=>setAnnotations(prev=>({...prev,[imageId]:items}))}/></div>}{state.studio && annotations && <button style={{marginTop:'var(--space-4)'}} disabled={busy} onClick={()=>mutate('annotations',{updates:Object.keys(annotations).map(imageId=>({imageId,annotations:annotations[imageId]}))})}>Lưu đánh dấu / số đo ảnh</button>}</div>
+            <aside className="reference-panel"><section className="section-block"><div className="panel-title"><h3>Vật tư & định mức</h3><span className="eyebrow">BOM</span></div>{bomRows.length ? <table className="bom-table"><tbody>{bomRows.map((m,i)=><tr key={i}><td>{m.name}</td><td>{m.qty} {m.unit}</td></tr>)}</tbody></table> : <p className="muted" style={{whiteSpace:'pre-wrap'}}>{order.norms}</p>}<p className="muted" style={{marginTop:'var(--space-3)'}}>Đối chiếu định mức với lượng thực tế trong báo cáo từng bước.</p></section><section className="section-block"><span className="eyebrow">NGUYÊN TẮC THỰC HÀNH</span><h3 style={{marginTop:'var(--space-2)'}}>Tự kiểm tra trước khi báo cáo</h3><p className="muted" style={{marginTop:'var(--space-3)'}}>Hoàn thành checklist, ghi số đo và vật tư thực dùng, chụp ảnh rõ kết quả. Chỉ chuyển bước khi bằng chứng đã đầy đủ.</p><p className="muted" style={{marginTop:'var(--space-3)'}}>Admin nghiệm thu một lần sau công đoạn báo cáo cuối.</p></section></aside>
+          </div>
+          {order.status==='IN_PROGRESS' && draft && order.assignee===state.user && <section className="section-block" style={{marginTop:'var(--space-6)'}}><h3 style={{marginBottom:'var(--space-4)'}}>Thực hiện & báo cáo bài {order.step+1}</h3><fieldset disabled={busy}><div className="checklist">{draft.checklist.map((text,i)=><label key={i}><input type="checkbox" checked={!!draft.checked[i]} onChange={e=>setDraft({...draft,checked:draft.checklist.map((_,j)=>j===i?e.target.checked:!!draft.checked[j])})}/><span>{text}</span></label>)}</div><div className="input-grid"><label>Số đo thực tế và đơn vị<textarea placeholder="Ghi kích thước đo được, kèm mm hoặc cm…" value={draft.measurements} onChange={e=>setDraft({...draft,measurements:e.target.value})}/></label><label>Nguyên liệu thực tế, lượng dùng và đơn vị<textarea placeholder="Tên vật tư, lượng đã dùng và phần thu hồi…" value={draft.materials} onChange={e=>setDraft({...draft,materials:e.target.value})}/></label></div><label>Ghi chép / báo cáo<textarea placeholder="Kết quả đã đạt, sai lệch so với mẫu và điều cần lưu ý…" value={draft.report} onChange={e=>setDraft({...draft,report:e.target.value})}/></label><label className="evidence-upload"><strong>+ Thêm ảnh kết quả thực hành</strong><span className="muted">Tối đa 5 ảnh mỗi công đoạn · Chụp rõ điểm cần kiểm tra</span><input aria-label="Ảnh thực hành" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload}/></label><div className="evidence-grid">{draft.photos.map(p=><ApprenticeEvidence key={p.id} orderId={order.id} photo={p}/>)}</div><p className="muted" style={{margin:'var(--space-4) 0'}}>{evidenceReady?'Đã đủ thông tin để chuyển công đoạn.':'Cần checklist, số đo, vật tư, báo cáo và ít nhất một ảnh để hoàn thành bước.'}</p><div className="task-actions"><button onClick={()=>mutate('save',{...draft,checked:draft.checklist.map((_,i)=>!!draft.checked[i]),step:order.step})}>Lưu tiến độ</button><button className="primary" disabled={!evidenceReady} onClick={()=>mutate('advance',{...draft,checked:draft.checklist.map((_,i)=>!!draft.checked[i]),step:order.step})}>{order.step===4?'Gửi chờ nghiệm thu':'Hoàn thành bài '+(order.step+1)+' → Mở bài '+(order.step+2)}</button></div></fieldset></section>}
+          {order.status==='AWAITING_REVIEW' && <section className="review-panel"><span className="eyebrow">NGHIỆM THU CUỐI</span><h2 style={{marginTop:'var(--space-2)'}}>Chờ Admin nghiệm thu cuối</h2><p className="muted" style={{marginTop:'var(--space-3)'}}>5 công đoạn đã được báo cáo. Đối chiếu ảnh, số đo và vật tư trước khi xác nhận tay nghề.</p>{state.studio && <React.Fragment><label>Nhận xét nghiệm thu<textarea placeholder="Ghi rõ điểm đạt hoặc điều cần sửa…" value={review} onChange={e=>setReview(e.target.value)}/></label><label>Trả về công đoạn<select value={returnStep} onChange={e=>setReturnStep(Number(e.target.value))}>{steps.map((s,i)=><option key={s} value={i}>{i+1}. {s}</option>)}</select></label><div className="actions"><button disabled={busy || !review.trim()} onClick={()=>mutate('review',{accept:false,returnStep,note:review})}>Trả về công đoạn</button><button className="primary" disabled={busy || !review.trim()} onClick={()=>mutate('review',{accept:true,note:review})}>Nghiệm thu đạt</button></div></React.Fragment>}</section>}
+          {order.status==='ACCEPTED' && <div className="notice" style={{marginTop:'var(--space-6)'}}>✓ Đã nghiệm thu hoàn tất. Bằng chứng và lịch sử được lưu trong hồ sơ.</div>}
+          {order.status!=='ACCEPTED' && <details><summary>Báo sự cố hoặc cần hỗ trợ</summary><label>Nội dung sự cố<textarea placeholder="Nêu công đoạn, vấn đề gặp phải và phần hỗ trợ cần thiết…" value={incident} onChange={e=>setIncident(e.target.value)}/></label><button style={{marginTop:'var(--space-3)'}} disabled={busy || !incident.trim()} onClick={async()=>{if(await mutate('incident',{note:incident}))setIncident('');}}>Gửi sự cố</button></details>}
+          <details open={queueFilter==='review'}><summary>Hồ sơ thực hành & ảnh bằng chứng</summary>{order.steps.map((s,i)=> (s.completed || queueFilter==='review') && <section className="section-block" key={i}><div className="panel-title"><h3>{String(i+1).padStart(2,'0')} / {steps[i]}</h3><span className="status-pill">{s.completed?'Hoàn thành':'Chưa hoàn thành'}</span></div><p className="muted" style={{whiteSpace:'pre-wrap'}}>{'Số đo: '+(s.measurements || 'Chưa ghi nhận')+'\nVật tư: '+(s.materials || 'Chưa ghi nhận')+'\nBáo cáo: '+(s.report || 'Chưa có báo cáo')}</p><div className="evidence-grid">{s.photos.map(p=><ApprenticeEvidence key={p.id} orderId={order.id} photo={p}/>)}</div></section>)}</details>
+          <details><summary>Lịch sử tiến độ & nghiệm thu · {order.history.length}</summary><div className="timeline">{order.history.slice().reverse().map((h,i)=><div className="timeline-entry" key={i}><time>{new Date(h.at).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</time><strong>{historyLabel[h.action] || h.action}</strong><p>{h.actor} · Công đoạn {h.step+1}{h.note?' · '+h.note:''}</p></div>)}</div></details>
+        </React.Fragment>}
+      </main>}
+    </div>}
+    {legacy.length>0 && <details className="legacy-panel"><summary>Dữ liệu cũ trên trình duyệt · {legacy.length} lệnh</summary><p>Các lệnh cũ được giữ nguyên để đối chiếu. Tải bản sao trước khi chuyển vào dữ liệu chung.</p><button onClick={exportLegacy}>Tải bản sao dữ liệu cũ</button></details>}
+  </section>;
+}
+window.ApprenticeshipTab = ApprenticeshipTab;
+
+</script>

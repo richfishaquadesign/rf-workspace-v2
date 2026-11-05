@@ -1,0 +1,14 @@
+{
+  "name": "rf-workspace-v2",
+  "version": "2.0.0",
+  "description": "Rich Fish Aquarium Operations Management System V2 - Powered by Supabase & Vercel High-Speed Infrastructure",
+  "main": "index.html",
+  "scripts": {
+    "build": "python tools/build_vercel_standalone.py",
+    "deploy": "vercel --prod --yes",
+    "migrate": "python tools/migrate_sheets_to_supabase.py"
+  },
+  "author": "Rich Fish Aquarium",
+  "license": "UNLICENSED",
+  "private": true
+}

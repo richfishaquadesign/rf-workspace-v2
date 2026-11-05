@@ -1,0 +1,1616 @@
+<script>
+// ==========================================
+// CONFIG.TXT - SINGLE SOURCE OF TRUTH CHO TOÀN BỘ HẰNG SỐ + HÀM TIỆN ÍCH
+// ==========================================
+// File này là nguồn duy nhất cho constants và utility functions.
+// KHÔNG duplicate các hàm parseDateTimeSafe, extractTime, formatMoney... ở file khác.
+// Nếu cần thêm hàm mới → thêm vào đây.
+// ==========================================
+
+// ==========================================
+// 1. HẰNG SỐ CẤU HÌNH GỐC
+// ==========================================
+const SALARY_PER_HOUR = 20000;
+
+const USER_PINS = {}; // Đã chuyển sang quản lý qua sheet Config_NhanSu – xem getUserConfig() ở backend
+const ADMIN_PIN = ''; // Đã chuyển sang quản lý qua sheet Config_NhanSu – xem validatePin() ở backend
+const CHANNELS = ['Shopee VN', 'Tiktok Shop', 'Bán Lẻ', 'Bán Sỉ', 'Cộng Tác Viên', 'Shopee SG', 'Shopee MA', 'Shopee TH', 'Shopee PH', 'Bảo Hành'];
+const ORDER_STATUS = { AUTO_SCAN: 'Quét Tự Động', PENDING_PROD: 'Chờ Sản Xuất', READY_PACK: 'Sẵn sàng đóng gói', PENDING_HANDOVER: 'Chờ Bàn Giao', HANDED_OVER: 'Đã Bàn Giao', CANCELLED: 'Đơn Huỷ' };
+const CATEGORIES = ['LAYOUT', 'BỂ KÍNH', 'PHỤ KIỆN', 'DANH MỤC SẢN XUẤT'];
+const SUB_CATEGORIES = { 
+    'LAYOUT': ['BIOTOP CUỘI', 'BONSAI', 'CẦU VỒNG', 'COVER', 'CỔNG VÒM', 'ĐẢO BAY', 'HANG ĐỘNG', 'HẺM NÚI', 'LINH THÚ', 'NATURE', 'NHẤT TRỤ', 'RỪNG', 'Scape KIT', 'TRĂNG', 'VÁCH SUỐI'], 
+    'BỂ KÍNH': ['BÁN CẠN', 'BỂ BETTA', 'BỂ MINI', 'BỂ NÂNG ĐÁY', 'KHÁC', 'TERRARIUM', 'BỂ LẺ SIZE'], 
+    'PHỤ KIỆN': ['BƠM LỌC', 'CÁT, ĐÁ, PHÂN NỀN', 'PHỤ KIỆN KHÁC', 'VẬT LIỆU LỌC', 'XỬ LÝ NƯỚC', 'ĐÈN LED', 'THỨC ĂN'], 
+    'DANH MỤC SẢN XUẤT': ['NGUYÊN LIỆU ĐÓNG GÓI', 'NGUYÊN LIỆU BỂ KÍNH', 'NGUYÊN LIỆU LAYOUT', 'VẬT TƯ SẢN XUẤT'] 
+};
+
+// Phân nhóm hiển thị Danh mục Kho: THÀNH PHẨM vs NGUYÊN VẬT LIỆU SẢN XUẤT
+const INVENTORY_GROUPS = {
+    FINISHED: { label: 'HÀNG HOÁ THÀNH PHẨM', icon: 'fa-cube', categories: ['LAYOUT', 'BỂ KÍNH', 'PHỤ KIỆN'] },
+    RAW_MATERIALS: { label: 'NGUYÊN LIỆU SẢN XUẤT', icon: 'fa-boxes-stacked', categories: ['DANH MỤC SẢN XUẤT'] },
+    DEFECT: { label: 'HÀNG HỎNG VỠ', icon: 'fa-heart-crack', categories: ['HÀNG HỎNG VỠ'] }
+};
+
+/**
+ * Hàm tìm kiếm nguyên liệu chuẩn xác trong Products (Kho Nguyên Liệu)
+ * Khớp chuẩn SKU, ID, Alias SKU (NLSX-NOIN <-> NLSX-NHAMNONOI, NLSX-RE <-> NLSX-REEN...) 
+ * và tên sản phẩm trong kho.
+ */
+function findMaterialInProducts(matSku, matId, prodList) {
+    if (!prodList || prodList.length === 0) return null;
+    const s = String(matSku || '').trim().toUpperCase();
+    const cleanS = s.replace(/[^A-Z0-9]/g, '');
+
+    // 1. Khớp chính xác ID hoặc SKU
+    let found = prodList.find(p => 
+        (matId && String(p.id) === String(matId)) ||
+        (s && String(p.sku || '').trim().toUpperCase() === s)
+    );
+    if (found) return found;
+
+    // 2. Tra cứu từ điển Alias SKU chuẩn xác
+    const ALIAS_MAP = {
+        'NLSX-KINH-5LI': ['KINH 5LI', 'KINH 5 LI', 'KINH 5MM', 'KINH 5 LY', 'NLSX-KINH-5MM', 'KINH 5', 'KINH 5LY', 'KINH SIEU TRONG 5LI'],
+        'NLSX-KINH-8LI': ['KINH 8LI', 'KINH 8 LI', 'KINH 8MM', 'KINH 8 LY', 'NLSX-KINH-8MM', 'KINH 8', 'KINH 8LY', 'KINH SIEU TRONG 8LI'],
+        'NLSX-MAI-CNC': ['MAI CNC', 'MAI VI TINH', 'MAI CNC VI TINH', 'CONG MAI CNC', 'MAI VI TINH CNC', 'GIA CONG MAI CNC'],
+        'NLSX-KEO-WACKER': ['KEO WACKER', 'WACKER', 'SILICONE WACKER', 'KEO DAN BE WACKER', 'KEO WACKER 121', 'KEO SILICONE WACKER'],
+        'NLSX-NOIN': ['NLSX-NHONOI', 'NHONOI', 'NHO NOI', 'LUA NHO NOI'],
+        'NLSX-NHONOI': ['NLSX-NOIN', 'NOIN', 'NHO NOI', 'LUA NHO NOI'],
+        'NLSX-NHAMXANH': ['NLSX-NHAM', 'NHAM', 'NHAM XANH', 'DA NHAM XANH'],
+        'NLSX-NHAM': ['NLSX-NHAMXANH', 'NHAMXANH', 'NHAM XANH'],
+        'NLSX-VIAVOI': ['NLSX-VIA', 'VIA', 'VIA VOI', 'DA VIA VOI', 'DA VIA'],
+        'NLSX-VIA': ['NLSX-VIAVOI', 'VIAVOI', 'VIA VOI', 'DA VIA VOI'],
+        'NLSX-DANHCANH': ['NLSX-LUASANCANH', 'LUASANCANH', 'SAN CANH', 'DANG CANH', 'LUA DANG CANH', 'LUA SAN CANH'],
+        'NLSX-LUASANHTHANG': ['NLSX-LUASANCANH', 'LUASANTHANG', 'SAN THANG', 'LUA SAN THANG'],
+        'NLSX-LUASANCANH': ['NLSX-DANHCANH', 'NLSX-LUASANHTHANG', 'SAN CANH', 'DANG CANH'],
+        'NLSX-REEN': ['NLSX-RE', 'RE', 'RE RUNG', 'LUA RE RUNG', 'RE EN'],
+        'NLSX-RE': ['NLSX-REEN', 'REEN', 'RE RUNG', 'LUA RE RUNG'],
+        'NLSX-LUASANMIENG': ['LUASANMIENG', 'SAN MIENG', 'LUA SAN MIENG', 'LUA SAM MIENG'],
+        'NLSX-TAIMEO': ['TAIMEO', 'TAI MEO', 'DA TAI MEO'],
+        'NLSX-CUOI': ['CUOI', 'DA CUOI', 'BIOTOP CUOI'],
+        'NLSX-DOQUYEN': ['DOQUYEN', 'DO QUYEN', 'LUA DO QUYEN'],
+        'NLSX-THACHSUNG': ['THACHSUNG', 'THACH SUNG', 'LUA THACH SUNG'],
+        'NLSX-REU-A04': ['REU-A04', 'A04', 'REU BOT MAU XANH', 'REU XANH', 'REU BOT XANH'],
+        'NLSX-REU-A11': ['REU-A11', 'A11', 'REU BOT MAU DO', 'REU DO', 'REU BOT DO'],
+        'NLSX-FOMEX-8LI': ['FOMEX-8LI', 'FOMEX 8LI', 'FOMEX 8', 'FOMEX8'],
+        'NLSX-FOMEX10-54': ['FOMEX10-54', 'FOMEX-10LI', 'FOMEX 10LI', 'FOMEX 10', 'FOMEX10'],
+        'NLSX-502-1CHAI': ['502', 'KEO 502', 'KEO 502 CHAI', '502-1CHAI', 'NLSX-502', 'NLSX-KEO-502'],
+        'NLSX-KEO-502': ['502', 'KEO 502', 'KEO 502 CHAI', '502-1CHAI', 'NLSX-502', 'NLSX-502-1CHAI']
+    };
+
+    const aliases = ALIAS_MAP[s] || [];
+    for (const alias of aliases) {
+        found = prodList.find(p => {
+            const pSkuUpper = String(p.sku || '').trim().toUpperCase();
+            const pNameUpper = String(p.name || '').trim().toUpperCase();
+            return pSkuUpper === alias || pSkuUpper.includes(alias) || pNameUpper.includes(alias);
+        });
+        if (found) return found;
+    }
+
+    // 3. Khớp SKU chuẩn hoá không dấu / không ký tự đặc biệt
+    found = prodList.find(p => {
+        const pSkuClean = String(p.sku || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return cleanS && pSkuClean && (pSkuClean === cleanS || pSkuClean.includes(cleanS) || cleanS.includes(pSkuClean));
+    });
+    if (found) return found;
+
+    // 4. Khớp theo Tên sản phẩm
+    found = prodList.find(p => {
+        const pName = String(p.name || '').trim().toLowerCase();
+        const matSkuLower = s.toLowerCase();
+        return pName && (pName === matSkuLower || matSkuLower.includes(pName) || pName.includes(matSkuLower));
+    });
+
+    return found || null;
+}
+
+/**
+ * Hàm tính toán chi phí và quy đổi đơn vị định mức BOM chuẩn xác
+ * Hỗ trợ tự động nhận diện: Kg/Gam, Lít/Ml, Mét/Cm/Mm ngay cả khi tên hàng có đuôi (Kg), (L)
+ */
+function calculateBomItemCost(mat, rawQty, rawBomUnit) {
+    const qty = Number(rawQty) || 0;
+    const unitPrice = Number(mat?.costPrice || mat?.price || 0);
+    if (!unitPrice || !qty) return { unitPrice, convertedPrice: unitPrice, subTotal: 0, convertedQty: qty, conversionNote: '' };
+
+    let bomUnit = String(rawBomUnit || mat?.unit || '').toLowerCase().trim();
+    let matUnit = String(mat?.unit || '').toLowerCase().trim();
+    let matName = String(mat?.name || '').toLowerCase();
+    let matSku = String(mat?.sku || '').toLowerCase();
+
+    // Nhận diện khối lượng: Kg / Gam
+    const isMatKg = matUnit === 'kg' || matUnit === 'cân' || matUnit === 'kí' || matUnit === 'kilogram' || 
+                    matName.includes('(kg)') || matName.includes(' kg') || matName.includes('/kg');
+    const isBomGram = bomUnit === 'gam' || bomUnit === 'g' || bomUnit === 'gram' || bomUnit === 'gr';
+    const isBomKg = bomUnit === 'kg' || bomUnit === 'cân' || bomUnit === 'kí' || bomUnit === 'kilogram';
+    const isMatGram = matUnit === 'gam' || matUnit === 'g' || matUnit === 'gram' || matUnit === 'gr';
+
+    // Nhận diện thể tích: Lít / Ml
+    const isMatLit = matUnit === 'lít' || matUnit === 'lit' || matUnit === 'l' || matName.includes('(l)') || matName.includes('(lít)');
+    const isBomMl = bomUnit === 'ml' || bomUnit === 'mililit' || bomUnit === 'cc';
+
+    // Nhận diện chiều dài/diện tích: Mét / Cm / Mm
+    const isMatMet = matUnit === 'm' || matUnit === 'mét' || matUnit === 'met' || matName.includes('(m)') || matName.includes('(mét)');
+    const isBomCm = bomUnit === 'cm' || bomUnit === 'centimet';
+    const isBomMm = bomUnit === 'mm' || bomUnit === 'milimet';
+
+    // Nhận diện Keo 502: 1 chai 162g - vỏ 62g = 100g keo thực tế, giá 22.000đ / 100g = 220đ/gam
+    const isKeo502 = matSku.includes('502') || matName.includes('502') || matName.includes('keo');
+    const isMatChai502 = matUnit.includes('chai') || matName.includes('chai') || matUnit.includes('100') || matUnit.includes('162') || matName.includes('162');
+
+    let convertedPrice = unitPrice;
+    let convertedQty = qty;
+    let conversionNote = '';
+
+    if (isKeo502 && isMatChai502 && isBomGram) {
+        convertedPrice = unitPrice / 100; // 22.000đ / 100g = 220đ/gam keo thực tế
+        convertedQty = qty / 100;         // Quy đổi số chai: 1 chai = 100g keo (162g tổng - 62g vỏ)
+        conversionNote = '1 chai = 100g keo (vỏ 62g, tổng 162g)';
+    } else if (isMatKg && isBomGram) {
+        convertedPrice = unitPrice / 1000;
+        convertedQty = qty / 1000;
+        conversionNote = '1kg = 1.000g';
+    } else if (isMatGram && isBomKg) {
+        convertedPrice = unitPrice * 1000;
+        convertedQty = qty * 1000;
+        conversionNote = '1g = 0.001kg';
+    } else if (isMatLit && isBomMl) {
+        convertedPrice = unitPrice / 1000;
+        convertedQty = qty / 1000;
+        conversionNote = '1L = 1.000ml';
+    } else if (isMatMet && isBomCm) {
+        convertedPrice = unitPrice / 100;
+        convertedQty = qty / 100;
+        conversionNote = '1m = 100cm';
+    } else if (isMatMet && isBomMm) {
+        convertedPrice = unitPrice / 1000;
+        convertedQty = qty / 1000;
+        conversionNote = '1m = 1.000mm';
+    }
+
+    const subTotal = qty * convertedPrice;
+    return { unitPrice, convertedPrice, subTotal, convertedQty, conversionNote };
+}
+
+const CAT_THU = ['Bán Hàng', 'COD Đối Tác Giao Hàng', 'Sàn TMĐT', 'Đầu Tư', 'Thu Khác', 'Bán Phế Liệu'];
+const CAT_CHI = ['Nguyên Liệu Sản Xuất', 'Vật Tư Sản Xuất', 'Quảng Cáo & Marketing', 'Thanh Toán Hoá Đơn', 'Phần Mềm Dịch Vụ', 'Cước Vận Chuyển', 'Bảo Hành Đơn Hàng', 'Lương Nhân Sự', 'Công Cụ Máy Móc', 'Trang Thiết Bị', 'Khác'];
+
+// Hệ thống rào chắn phân hệ tài chính (Sub-ledger Isolation)
+const FINANCE_CATEGORIES = [
+    { name: "Thu Tiền Bán Hàng", type: "Thu", module: "SALES" },
+    { name: "Thu Cọc Đơn Hàng", type: "Thu", module: "SALES" },
+    { name: "Thu Khác", type: "Thu", module: "FINANCE" },
+    { name: "Thanh Toán NCC", type: "Chi", module: "PURCHASE" },
+    { name: "Nhập Hàng", type: "Chi", module: "PURCHASE" },
+    { name: "Trả Lương", type: "Chi", module: "HR" },
+    { name: "Tạm Ứng", type: "Chi", module: "HR" },
+    { name: "Chi Phí Điện Nước", type: "Chi", module: "FINANCE" },
+    { name: "Chi Phí Mặt Bằng", type: "Chi", module: "FINANCE" },
+    { name: "Văn Phòng Phẩm", type: "Chi", module: "FINANCE" },
+    { name: "Tiếp Khách", type: "Chi", module: "FINANCE" },
+    { name: "Lãi Vay", type: "Chi", module: "FINANCE" },
+    { name: "Phí Ngân Hàng", type: "Chi", module: "FINANCE" },
+    { name: "Rút/Nạp Tiền Nội Bộ", type: "Chi", module: "FINANCE" },
+    { name: "Chi Phí Khác", type: "Chi", module: "FINANCE" },
+    { name: "Chờ Xử Lý", type: "Chờ Xử Lý", module: "SYSTEM" }
+];
+
+// ==========================================
+// 2. CÁC HÀM TIỆN ÍCH XỬ LÝ (LOGIC & THỜI GIAN)
+// ==========================================
+const parseDateTimeSafe = (val) => {
+    const now = new Date();
+    const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (!val) return { date: defaultDate, time: '00:00', fullStr: `${defaultDate} 00:00`, timestamp: 0 };
+    let str = String(val).trim();
+    
+    let datePart = defaultDate;
+    const dateMatch = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (dateMatch) {
+        datePart = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
+    } else {
+        const reverseDateMatch = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+        if (reverseDateMatch) {
+            datePart = `${reverseDateMatch[3]}-${reverseDateMatch[2].padStart(2, '0')}-${reverseDateMatch[1].padStart(2, '0')}`;
+        }
+    }
+    
+    let timePart = '00:00';
+    const timeMatch = str.match(/([0-1]?[0-9]|2[0-3]):([0-5][0-9])/);
+    if (timeMatch) {
+        timePart = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+    }
+    
+    const [y, m, d] = datePart.split('-').map(Number);
+    const [hr, min] = timePart.split(':').map(Number);
+    const ts = new Date(y, m - 1, d, hr, min, 0).getTime();
+    
+    return {
+        date: datePart,
+        time: timePart,
+        fullStr: `${datePart} ${timePart}`,
+        timestamp: isNaN(ts) ? 0 : ts
+    };
+};
+
+const formatDateTime = (val) => {
+    if (!val) return '';
+    const obj = parseDateTimeSafe(val);
+    if (!obj || !obj.date) return String(val);
+    const [y, m, d] = obj.date.split('-');
+    return `${obj.time} ${d}/${m}`;
+};
+
+const getLocalISODate = () => { 
+    try {
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        return new Date(Date.now() - tzOffset).toISOString().slice(0, -1); 
+    } catch(e) {
+        return new Date().toISOString();
+    }
+};
+
+const formatMoney = (m) => new Intl.NumberFormat('vi-VN').format(Math.round(m || 0)) + 'đ';
+
+/**
+ * Thuật toán Tự Động Định Giá & Ước Tính Định Mức BOM cho Layout / Cover
+ */
+const calcLayoutPricingAndBOM = ({ l, w, h, selectedMaterial, configGiaLayout = [], kpiConfig = [] }) => {
+    const lNum = Math.max(0, Number(l) || 0);
+    const wNum = Math.max(0, Number(w) || 0);
+    const hNum = Math.max(0, Number(h) || 0);
+    if (!lNum || !wNum || !hNum) return null;
+
+    const dimStr = `${lNum}x${wNum}x${hNum}cm`;
+    const skuSuffix = `${lNum}${wNum}${hNum}`;
+    const volume = (lNum * wNum * hNum) / 1000; // Thể tích lít
+    const maxSize = Math.max(lNum, wNum, hNum);
+
+    // 1. Tính Giá Bán Lẻ theo Barem Thể Tích & Config_GiaLayout
+    const LAYOUT_BASE_MODES = [
+        { volume: 8, basePrice: 350000 },
+        { volume: 12, basePrice: 500000 },
+        { volume: 23, basePrice: 700000 },
+        { volume: 36, basePrice: 800000 },
+        { volume: 45, basePrice: 900000 },
+        { volume: 54, basePrice: 1100000 },
+        { volume: 96, basePrice: 1250000 }
+    ];
+    const sortedModes = [...LAYOUT_BASE_MODES].sort((a, b) => a.volume - b.volume);
+    let baseRetailPrice = 0;
+    const minMode = sortedModes[0];
+    const maxMode = sortedModes[sortedModes.length - 1];
+
+    if (volume <= minMode.volume) {
+        baseRetailPrice = minMode.basePrice;
+    } else if (volume >= maxMode.volume) {
+        baseRetailPrice = maxMode.basePrice + (volume - maxMode.volume) * 10000;
+    } else {
+        for (let i = 0; i < sortedModes.length - 1; i++) {
+            if (volume >= sortedModes[i].volume && volume <= sortedModes[i + 1].volume) {
+                const modeA = sortedModes[i];
+                const modeB = sortedModes[i + 1];
+                baseRetailPrice = modeA.basePrice + ((volume - modeA.volume) / (modeB.volume - modeA.volume)) * (modeB.basePrice - modeA.basePrice);
+                break;
+            }
+        }
+    }
+
+    // Tra cứu phụ phí theo barem Size_Max nếu có
+    let matchingRows = (configGiaLayout || []).filter(r => Number(r.Size_Max || 0) >= maxSize).sort((a, b) => Number(a.Size_Max) - Number(b.Size_Max));
+    let heSoGia = 1.0;
+    if (matchingRows.length > 0 && matchingRows[0].He_So_Gia) {
+        const val = Number(matchingRows[0].He_So_Gia) || 1.0;
+        // Chỉ nhận nếu là hệ số nhân hợp lệ (0.1 -> 3.0). Tránh nhân với số tiền trực tiếp (VD: 540.000đ) gây ra giá hàng trăm tỷ!
+        if (val >= 0.1 && val <= 3.0) {
+            heSoGia = val;
+        }
+    }
+    const finalRetailPrice = Math.round((baseRetailPrice * heSoGia) / 10000) * 10000;
+
+    // 2. Tính Định Mức BOM Vật Tư Ước Tính
+    // Lượng nguyên liệu chính (Lũa/Đá): ~0.14 kg / Lít thể tích bể
+    const matQty = Math.round((volume * 0.14) * 10) / 10;
+    const matPrice = Number(selectedMaterial?.costPrice || selectedMaterial?.price || 35000);
+    const matCostTotal = Math.round(matQty * matPrice);
+
+    // Keo dán layout: tối thiểu 1 tuýp, cứ 25L thêm 1 tuýp
+    const glueQty = Math.max(1, Math.round(volume / 25));
+    const glueCostTotal = glueQty * 18000; // ~18.000đ/tuýp keo
+
+    // Mút/bông chèn: 1 gói nhỏ ~ 15.000đ
+    const spongeCostTotal = 15000;
+
+    // Tiền công thợ khâu 1 + khâu 2 (ước tính theo thể tích)
+    let laborCost = 150000;
+    if (volume <= 15) laborCost = 90000;
+    else if (volume <= 30) laborCost = 120000;
+    else if (volume <= 60) laborCost = 160000;
+    else laborCost = 220000;
+
+    const calculatedCostPrice = Math.round((matCostTotal + glueCostTotal + spongeCostTotal + laborCost) / 1000) * 1000;
+    const minSafeCost = Math.round((finalRetailPrice * 0.48) / 1000) * 1000;
+    const finalCostPrice = Math.max(minSafeCost, calculatedCostPrice);
+
+    // Chuẩn bị danh sách BOM Items
+    const bomItems = [];
+    if (selectedMaterial && selectedMaterial.sku) {
+        bomItems.push({
+            materialSku: selectedMaterial.sku,
+            materialName: selectedMaterial.name || 'Nguyên liệu chính',
+            defaultQty: matQty,
+            unit: selectedMaterial.unit || 'Kg'
+        });
+    }
+
+    return {
+        dimStr,
+        skuSuffix,
+        volume: Math.round(volume * 10) / 10,
+        suggestedPrice: finalRetailPrice,
+        suggestedCostPrice: finalCostPrice,
+        matQty,
+        glueQty,
+        laborCost,
+        bomItems
+    };
+};
+
+const extractTime = (val) => { 
+    if(!val) return '';
+    let s = String(val).replace(/'/g, '').trim(); 
+    if(s.includes('T')) { let p = s.split('T')[1]; if(p) return p.substring(0,5); } 
+    let match = s.match(/\d{1,2}:\d{2}/); 
+    if (match) return match[0].padStart(5, '0'); 
+    return '';
+};
+
+const calcDurationMins = (start, end) => { 
+    let s = extractTime(start);
+    let e = extractTime(end); 
+    if(!s || !e || !s.includes(':') || !e.includes(':')) return 0; 
+    let [sh, sm] = s.split(':').map(Number);
+    let [eh, em] = e.split(':').map(Number); 
+    let m = (eh*60 + em) - (sh*60 + sm); return m > 0 ? m : 0; 
+};
+
+const formatTotalTime = (mins) => { 
+    if (mins <= 0) return '0h';
+    const h = Math.floor(mins/60); const m = Math.round(mins % 60); 
+    return `${h}h${m > 0 ? m+'p' : ''}`; 
+};
+
+const checkIsPast = (recordDate, isMorning) => { 
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000; 
+    const localNow = new Date(now.getTime() - tzOffset); 
+    const today = localNow.toISOString().split('T')[0];
+    const currentHour = now.getHours(); 
+    if (!recordDate || recordDate < today) return true; 
+    if (recordDate === today) return isMorning ? currentHour >= 12 : currentHour >= 18; 
+    return false; 
+};
+
+const isDateInRange = (dateStr, filter, startStr, endStr) => {
+    if (!dateStr) return false;
+    const f = String(filter).trim().toLowerCase();
+    if (f === 'tất cả' || f === 'tất cả vị trí') return true;
+
+    const parseAdvancedDate = (val) => {
+        if (!val) return null;
+        let str = String(val).trim();
+        let y = null, m = null, d = null;
+        
+        const matchYMD = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+        if (matchYMD) {
+            y = parseInt(matchYMD[1]);
+            m = parseInt(matchYMD[2]);
+            d = parseInt(matchYMD[3]);
+        } else {
+            const matchDMY = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (matchDMY) {
+                d = parseInt(matchDMY[1]);
+                m = parseInt(matchDMY[2]);
+                y = parseInt(matchDMY[3]);
+            }
+        }
+        if (!y || !m || !d) return null;
+        return { year: y, month: m, day: d, dateObj: new Date(y, m - 1, d) };
+    };
+
+    const parsed = parseAdvancedDate(dateStr);
+    if (!parsed) return false;
+
+    const now = new Date();
+    const tYear = now.getFullYear();
+    const tMonth = now.getMonth() + 1;
+    const tDay = now.getDate();
+
+    if (f === 'hôm nay') {
+        return parsed.year === tYear && parsed.month === tMonth && parsed.day === tDay;
+    }
+    if (f === 'hôm qua') {
+        const yesterday = new Date(tYear, tMonth - 1, tDay - 1);
+        return parsed.year === yesterday.getFullYear() && 
+               parsed.month === (yesterday.getMonth() + 1) && 
+               parsed.day === yesterday.getDate();
+    }
+    if (f === 'tháng này') {
+        return parsed.year === tYear && parsed.month === tMonth;
+    }
+    if (f === 'tháng trước') {
+        const lastMonth = new Date(tYear, tMonth - 2, 1);
+        return parsed.year === lastMonth.getFullYear() && parsed.month === (lastMonth.getMonth() + 1);
+    }
+    if (f === 'tuần này') {
+        const todayObj = new Date(tYear, tMonth - 1, tDay);
+        const dayOfWeek = todayObj.getDay();
+        const diffToMonday = todayObj.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(todayObj.setDate(diffToMonday));
+        monday.setHours(0,0,0,0);
+        
+        const targetDate = parsed.dateObj;
+        targetDate.setHours(0,0,0,0);
+        return targetDate >= monday && targetDate <= new Date(tYear, tMonth - 1, tDay, 23, 59, 59);
+    }
+    if (f === 'tùy chọn' && startStr && endStr) {
+        const startParsed = parseAdvancedDate(startStr);
+        const endParsed = parseAdvancedDate(endStr);
+        if (!startParsed || !endParsed) return false;
+        
+        const tDate = parsed.dateObj.getTime();
+        const sDate = startParsed.dateObj.getTime();
+        const eDate = endParsed.dateObj.getTime() + (24 * 60 * 60 * 1000 - 1);
+        return tDate >= sDate && tDate <= eDate;
+    }
+    return true;
+};
+
+const getShiftStatus = (inTime, outTime, isMorning, leaveType, recordDate) => {
+  const actIn = extractTime(inTime);
+  const actOut = extractTime(outTime); const isPast = checkIsPast(recordDate, isMorning);
+  if (leaveType) return { text: leaveType, color: 'text-primary bg-primaryLight font-bold', mins: 0 };
+  if (!actIn && !actOut) { 
+      if (isPast) return { text: 'Nghỉ không phép', color: 'text-danger bg-red-50 font-black', mins: 0 };
+      return { text: 'Chưa chấm', color: 'text-gray-400 bg-gray-100', mins: 0 };
+  }
+  const lateLimit = isMorning ? '08:10' : '14:10'; const halfDayLimit = isMorning ? '09:00' : '14:30'; const earlyLimit = isMorning ? '11:45' : '17:45';
+  let mins = calcDurationMins(actIn, actOut);
+  const isLate = actIn && actIn > lateLimit; const isVeryLate = actIn && actIn > halfDayLimit;
+  const isEarly = actOut && actOut < earlyLimit;
+  if (isVeryLate && actOut) return { text: 'Muộn >1h (-0.5 Công)', color: 'text-danger bg-red-50 font-black', mins };
+  if (isVeryLate && !actOut) return { text: 'Muộn >1h (Đang làm)', color: 'text-accent bg-orange-50 font-black', mins: 0 };
+  if (!actOut && isPast) return { text: 'Quên chấm ra', color: 'text-danger bg-red-50 font-bold', mins: 0 };
+  if (!actOut) return { text: 'Đang làm...', color: 'text-primary bg-primaryLight font-bold animate-pulse', mins: 0 };
+  if (isLate && isEarly) return { text: 'Muộn & Về sớm', color: 'text-accent bg-orange-50 font-bold', mins };
+  if (isLate) return { text: 'Đi muộn', color: 'text-accent bg-orange-50 font-bold', mins };
+  if (isEarly) return { text: 'Về sớm', color: 'text-accent bg-orange-50 font-bold', mins };
+  return { text: 'Đúng giờ', color: 'text-success bg-green-50 font-bold', mins };
+};
+
+const getAutoDeadline = (ch, rawDate = null, shippingMethod = '') => { 
+    const d = rawDate ? new Date(rawDate) : new Date();
+    const h = d.getHours(); const m = d.getMinutes(); 
+    const chStr = String(ch || '').toUpperCase();
+    const shipStr = String(shippingMethod || '').toUpperCase();
+    const isInstant = shipStr.includes('HỎA TỐC') || shipStr.includes('TRONG NGÀY') || shipStr.includes('INSTANT') || shipStr.includes('NOW') || chStr.includes('HỎA TỐC') || chStr.includes('TRONG NGÀY');
+
+    // 1. ĐƠN HỎA TỐC / TRONG NGÀY (SLA CẤP TỐC 1.5H)
+    if (isInstant) {
+        if (h < 8) {
+            // Trước 8h: Chuẩn bị hàng trước 9:30 cùng ngày
+            d.setHours(9, 30, 0, 0);
+        } else if (h < 18) {
+            // Từ 8h đến trước 18h: Xử lý trong vòng 1.5 giờ (90 phút)
+            d.setMinutes(d.getMinutes() + 90);
+        } else {
+            // Từ 18h trở đi: Chuẩn bị hàng trước 9:30 ngày kế tiếp
+            d.setDate(d.getDate() + 1);
+            d.setHours(9, 30, 0, 0);
+        }
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    // 2. ĐƠN SÀN TMĐT (SHOPEE, TIKTOK SHOP, LAZADA) - CHUẨN ĐIỀU KHOẢN SHOPEE 19948
+    if (chStr.includes('SHOPEE') || chStr.includes('TIKTOK') || chStr.includes('LAZADA') || chStr.includes('SÀN')) { 
+        const dayOfWeek = d.getDay(); // 0: Chủ Nhật, 6: Thứ Bảy
+        let addDays = 0;
+        let th = 17; let tm = 30;
+
+        if (dayOfWeek === 0) {
+            // Chủ Nhật: ĐVVC nghỉ lấy/giao ➔ chuyển hạn bàn giao sang Thứ Hai lúc 11:30 (Shopee hạn 23:59 Thứ Hai)
+            addDays = 1; th = 11; tm = 30;
+        } else if (dayOfWeek === 6) {
+            // Thứ Bảy:
+            if (h >= 14) {
+                // Sau 14h Thứ Bảy: Shopee gia hạn đến Thứ Hai 23:59 ➔ Hạn xưởng Thứ Hai lúc 11:30
+                addDays = 2; th = 11; tm = 30;
+            } else {
+                // Trước 14h Thứ Bảy: Bàn giao trước 23:59 Thứ Bảy ➔ Hạn xưởng 17:30 cùng ngày
+                addDays = 0; th = 17; tm = 30;
+            }
+        } else {
+            // Thứ Hai - Thứ Sáu:
+            if (h < 14) {
+                // Phát sinh trước 14h: Bàn giao trước 23:59 cùng ngày ➔ Hạn xưởng 17:30 cùng ngày
+                addDays = 0; th = 17; tm = 30;
+            } else {
+                // Phát sinh từ 14h trở đi: Bàn giao trước 23:59 ngày kế tiếp ➔ Hạn xưởng 11:30 hôm sau
+                addDays = 1; th = 11; tm = 30;
+            }
+        }
+        d.setDate(d.getDate() + addDays); d.setHours(th, tm, 0, 0);
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    // 3. ĐƠN BÁN LẺ, CTV, BÁN SỈ, NỘI BỘ (CHU TRÌNH 6 NGÀY)
+    d.setDate(d.getDate() + 6);
+    d.setHours(18, 0, 0, 0);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); 
+};
+
+const checkTimeFilter = (dateStr, mode) => { 
+    if (!dateStr || mode === 'Tất Cả') return true;
+    const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
+    const now = new Date(Date.now() - tzOffset); 
+    const todayStr = now.toISOString().split('T')[0];
+    now.setDate(now.getDate() - 1); const yestStr = now.toISOString().split('T')[0]; 
+    now.setDate(now.getDate() + 1); const thisMonthStr = now.toISOString().slice(0, 7); 
+    now.setMonth(now.getMonth() - 1);
+    const lastMonthStr = now.toISOString().slice(0, 7); 
+    if (mode === 'Hôm Nay') return String(dateStr).startsWith(todayStr); 
+    if (mode === 'Hôm Qua') return String(dateStr).startsWith(yestStr);
+    if (mode === 'Tháng Này') return String(dateStr).startsWith(thisMonthStr); 
+    if (mode === 'Tháng Trước') return String(dateStr).startsWith(lastMonthStr); 
+    return true; 
+};
+
+function isExportChannel(raw) {
+  if (!raw) return false;
+  raw = String(raw).toUpperCase().trim();
+  if (raw.includes('XUẤT KHẨU') || raw.includes('EXPORT') || raw.includes('QUỐC TẾ') || raw.includes('INTERNATIONAL') || raw.includes('GLOBAL')) return true;
+  if (/\b(MALAYSIA|THAILAND|PHILIPPINES|SINGAPORE|TAIWAN)\b/i.test(raw)) return true;
+  if (/\bSHOPEE\s*[-_]?\s*(TH|MA|MY|SG|TW|PH)\b/i.test(raw)) return true;
+  if (/\b(SHOPEE_TH|SHOPEE_MA|SHOPEE_MY|SHOPEE_SG|SHOPEE_TW|SHOPEE_PH)\b/i.test(raw)) return true;
+  if (/\b(MY|TH|PH|SG|TW|MA)\b/i.test(raw) && raw.includes('SHOPEE')) return true;
+  return false;
+}
+
+function getSopAndReward(item, phaseName, kpiConfig = [], channel = '') {
+  if (!item?.name || !kpiConfig?.length) { return { time: 30, reward: 0 }; }
+  const rawName = String(item.name).toLowerCase().trim();
+  const phase = String(phaseName || '').toLowerCase();
+  const itemType = String(item.type || '').toUpperCase();
+  const isLayoutItem = itemType === 'LAYOUT' || /rừng|layout|đảo|bonsai|trang|cover|nature|suối|vách|hẻm|núi|cầu|thác|hang|tiểu cảnh/i.test(rawName);
+
+  let matchedRow = kpiConfig.find(row => {
+    const sku = String(row['Từ Khoá'] || '').toLowerCase().trim();
+    const name = String(row['Tên Hàng'] || '').toLowerCase().trim();
+    if (sku && rawName.includes(sku)) return true;
+    if (name && (rawName === name || rawName.includes(name))) return true;
+    return false;
+  });
+
+  if (!matchedRow && (rawName.includes('bể') || rawName.includes('terra')) && !isLayoutItem && !rawName.includes('combo') && !rawName.includes('setup')) {
+    let reward = 0;
+    let time = 30;
+    if (phase.includes('phase1') || phase.includes('cắt') || phase.includes('dán') || phase.includes('dựng') || phase.includes('khâu 1') || phase === 'v1') {
+      reward = 5000;
+    } else if (phase.includes('phase2') || phase.includes('gọt') || phase.includes('keo') || phase.includes('gia cố') || phase.includes('khâu 2') || phase === 'v2') {
+      reward = 2000;
+    } else if (phase.includes('đóng gói') || phase.includes('pack')) {
+      reward = 2000;
+    }
+    if (isExportChannel(channel)) reward *= 3;
+    return { time, reward };
+  }
+
+  if (!matchedRow && isLayoutItem) {
+    const sizeMatch = rawName.match(/size\s*(\d{2,3})|(\d{2,3})[x×]/);
+    const size = sizeMatch ? parseInt(sizeMatch[1] || sizeMatch[2]) : 0;
+
+    if (size > 0) {
+      matchedRow = kpiConfig.find(row => {
+        const rowGroup = String(row['Nhóm Hàng'] || '').toUpperCase().trim();
+        if (rowGroup && !rowGroup.includes('LAYOUT')) return false;
+
+        const rowName = String(row['Tên Hàng'] || '').toLowerCase();
+        if (size >= 130) return rowName.includes('130');
+        if (size >= 110) return rowName.includes('110') || rowName.includes('120');
+        if (size >= 90) return rowName.includes('90') || rowName.includes('100');
+        if (size >= 70) return rowName.includes('70') || rowName.includes('80');
+        if (size >= 60) return rowName.includes('60');
+        if (size >= 50) return rowName.includes('50');
+        if (size >= 40) return rowName.includes('40');
+        if (size >= 30) return rowName.includes('30');
+        if (size > 0) return rowName.includes('20') || rowName.includes('15');
+        return false;
+      });
+    }
+  }
+
+  if (!matchedRow) {
+    const specialKeywords = ['rồng', 'đại bàng', 'phượng hoàng', 'cá voi', 'khủng long', 'tê giác'];
+    if (specialKeywords.some(kw => rawName.includes(kw))) {
+      matchedRow = kpiConfig.find(row =>
+        String(row['Tên Hàng'] || '').toLowerCase().includes('đặc biệt') || String(row['Tên Hàng'] || '').toLowerCase().includes('special')
+      );
+    }
+  }
+
+  if (!matchedRow) return { time: 30, reward: 0 };
+
+  let reward = 0;
+  let time = 30;
+
+  if (phase.includes('phase1') || phase.includes('cắt') || phase.includes('dán') || phase.includes('dựng') || phase.includes('khâu 1') || phase === 'v1') {
+    reward = Number(matchedRow['Tiền Khâu 1']) || 0;
+    time = Number(matchedRow['Thời gian Khâu 1']) || 30;
+  } 
+  else if (phase.includes('phase2') || phase.includes('gọt') || phase.includes('keo') || phase.includes('gia cố') || phase.includes('khâu 2') || phase === 'v2') {
+    reward = Number(matchedRow['Tiền Khâu 2']) || 0;
+    time = Number(matchedRow['Thời gian Khâu 2']) || 30;
+  }
+  else if (phase.includes('đóng gói') || phase.includes('pack')) {
+    reward = Number(matchedRow['Tiền Đóng Gói']) || Number(matchedRow['Thưởng Đóng Gói']) || 0;
+    time = Number(matchedRow['Thời gian Đóng Gói']) || 15;
+  }
+  else if (phase.includes('bảo hành') || phase.includes('sửa')) {
+    reward = 5000; time = 60;
+  }
+
+  if (isExportChannel(channel)) {
+    reward *= 3;
+  }
+
+  return { time, reward };
+}
+
+function getPackingReward(itemInput, kpiConfig = [], channel = '') {
+  const mult = (typeof isExportChannel === 'function' ? isExportChannel(channel) : /SG|MY|TH|PH|MA|TW|Quốc Tế|Xuất Khẩu/i.test(channel)) ? 3 : 1;
+  if (!kpiConfig || kpiConfig.length === 0) return 0;
+
+  // 1. Thu thập danh sách tên sản phẩm
+  let namesToScan = [];
+  const addNameOrSku = (val) => {
+    if (!val) return;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed || trimmed === '[object Object]') return;
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) parsed.forEach(p => addNameOrSku(p));
+          else if (typeof parsed === 'object') { addNameOrSku(parsed.name); addNameOrSku(parsed.sku); }
+          return;
+        } catch (e) {}
+      }
+      const splitNames = trimmed.split(/[\n,;+]/).map(s => s.trim()).filter(Boolean);
+      if (splitNames.length > 1) {
+        splitNames.forEach(s => { if (s && s !== '[object Object]') namesToScan.push(s); });
+      } else {
+        namesToScan.push(trimmed);
+      }
+    } else if (typeof val === 'object') {
+      if (val.name) addNameOrSku(String(val.name));
+      if (val.sku) addNameOrSku(String(val.sku));
+    }
+  };
+
+  if (Array.isArray(itemInput)) {
+    itemInput.forEach(i => addNameOrSku(i));
+  } else if (itemInput && typeof itemInput === 'object') {
+    if (itemInput.items && Array.isArray(itemInput.items)) itemInput.items.forEach(i => addNameOrSku(i));
+    if (itemInput.products) addNameOrSku(itemInput.products);
+    if (itemInput.accessories) addNameOrSku(itemInput.accessories);
+    if (itemInput.name) addNameOrSku(itemInput.name);
+    if (itemInput.sku) addNameOrSku(itemInput.sku);
+  } else if (typeof itemInput === 'string') {
+    addNameOrSku(itemInput);
+  }
+
+  if (namesToScan.length === 0) {
+    const defaultRow = kpiConfig.find(row => {
+      const n = String(row['Tên Hàng'] || row['Nhóm Hàng'] || row['Từ Khoá'] || '').toLowerCase();
+      return n.includes('mặc định') || n.includes('đơn thường') || n.includes('khác') || n.includes('phụ kiện');
+    });
+    const defReward = defaultRow ? (Number(defaultRow['Thưởng Đóng Gói']) || Number(defaultRow['Tiền Đóng Gói']) || 0) : 0;
+    return defReward * mult;
+  }
+
+  // 2. Tìm mức thưởng đóng gói cao nhất từ danh sách sản phẩm khớp với Config_KPI
+  let maxReward = 0;
+
+  for (const rawName of namesToScan) {
+    const lowerName = rawName.toLowerCase().trim();
+    if (!lowerName) continue;
+
+    // A. Khớp chính xác hoặc chứa Từ Khoá / Tên Hàng trong Config_KPI
+    let matchedRow = kpiConfig.find(row => {
+      const sku = String(row['Từ Khoá'] || '').toLowerCase().trim();
+      const name = String(row['Tên Hàng'] || '').toLowerCase().trim();
+      if (sku && (lowerName.includes(sku) || sku === lowerName)) return true;
+      if (name && (lowerName.includes(name) || name === lowerName)) return true;
+      return false;
+    });
+
+    // B. Khớp theo Size (nếu là Layout hoặc Bể hoặc sản phẩm có kích thước)
+    if (!matchedRow) {
+      const sizeMatch = lowerName.match(/size\s*(\d{2,3})|(\d{2,3})\s*(x|×|\*|cm|\s|$)/i);
+      const size = sizeMatch ? parseInt(sizeMatch[1] || sizeMatch[2]) : 0;
+      if (size > 0) {
+        matchedRow = kpiConfig.find(row => {
+          const rowName = String(row['Tên Hàng'] || row['Từ Khoá'] || '').toLowerCase();
+          if (size >= 130 && (rowName.includes('130') || rowName.includes('140') || rowName.includes('150'))) return true;
+          if (size >= 110 && (rowName.includes('110') || rowName.includes('120'))) return true;
+          if (size >= 90 && (rowName.includes('90') || rowName.includes('100'))) return true;
+          if (size >= 70 && (rowName.includes('70') || rowName.includes('80'))) return true;
+          if (size >= 60 && rowName.includes('60')) return true;
+          if (size >= 50 && rowName.includes('50')) return true;
+          if (size >= 40 && rowName.includes('40')) return true;
+          if (size >= 30 && rowName.includes('30')) return true;
+          if (size >= 20 && rowName.includes('20')) return true;
+          if (size >= 10 && (rowName.includes('10') || rowName.includes('15'))) return true;
+          return false;
+        });
+      }
+    }
+
+    // C. Khớp theo nhóm ngành hàng (Bể kính, Layout, Đèn, Cây, Lũa...)
+    if (!matchedRow) {
+      if (lowerName.includes('bể') || lowerName.includes('hồ') || lowerName.includes('kính') || lowerName.includes('tank')) {
+        matchedRow = kpiConfig.find(row => {
+          const grp = String(row['Nhóm Hàng'] || row['Tên Hàng'] || '').toLowerCase();
+          return grp.includes('bể') || grp.includes('kính') || grp.includes('tank');
+        });
+      } else if (lowerName.includes('layout') || lowerName.includes('rừng') || lowerName.includes('bonsai') || lowerName.includes('núi') || lowerName.includes('hang')) {
+        matchedRow = kpiConfig.find(row => {
+          const grp = String(row['Nhóm Hàng'] || row['Tên Hàng'] || '').toLowerCase();
+          return grp.includes('layout') || grp.includes('rừng') || grp.includes('bonsai');
+        });
+      }
+    }
+
+    if (matchedRow) {
+      const itemReward = Number(matchedRow['Thưởng Đóng Gói']) || Number(matchedRow['Tiền Đóng Gói']) || 0;
+      if (itemReward > maxReward) maxReward = itemReward;
+    }
+  }
+
+  // 3. Nếu vẫn chưa tìm thấy dòng khớp, lấy mức đóng gói từ dòng đầu tiên có thưởng trong Config_KPI
+  if (maxReward === 0) {
+    const fallbackRow = kpiConfig.find(row => (Number(row['Thưởng Đóng Gói']) || Number(row['Tiền Đóng Gói'])) > 0);
+    maxReward = fallbackRow ? (Number(fallbackRow['Thưởng Đóng Gói']) || Number(fallbackRow['Tiền Đóng Gói']) || 0) : 0;
+  }
+
+  return maxReward * mult;
+}
+
+
+
+const resizeImage = (file) => new Promise((resolve, reject) => { 
+    const reader = new FileReader(); 
+    reader.onload = (e) => { 
+        const img = new Image(); 
+        img.onload = () => { 
+            try {
+                const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); 
+                const MAX_WIDTH = 800; let width = img.width; let height = img.height; 
+                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; } 
+                canvas.width = width; canvas.height = height; ctx.drawImage(img, 0, 0, width, height); 
+                resolve(canvas.toDataURL('image/jpeg', 0.6)); 
+            } catch (err) {
+                reject(err);
+            }
+        }; 
+        img.onerror = (err) => reject(new Error("Lỗi tải hình ảnh"));
+        img.src = e.target.result; 
+    }; 
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file); 
+});
+
+function getFullFromName(name, userConfigs) {
+    if (!name) return "";
+    let dbNames = [];
+    try {
+        if (userConfigs && userConfigs.avatars) dbNames = Object.keys(userConfigs.avatars);
+        else if (userConfigs && typeof userConfigs === 'object') dbNames = Object.keys(userConfigs);
+    } catch(e) {}
+    if (dbNames.length === 0) return name;
+    if (dbNames.includes(name)) return name;
+    try {
+        const cleanName = String(name).trim().toLowerCase();
+        const nameParts = cleanName.split(/[\s.]+/).filter(Boolean);
+        const mainName = nameParts[nameParts.length - 1];
+        const firstLetter = nameParts[0]?.[0];
+        const matchedFull = dbNames.find(dbName => {
+            const dbParts = String(dbName).trim().toLowerCase().split(/[\s.]+/).filter(Boolean);
+            return dbParts[dbParts.length - 1] === mainName && dbParts[0]?.[0] === firstLetter;
+        });
+        return matchedFull || name;
+    } catch(e) { return name; }
+}
+
+function getUserTitle(name, userConfigs) {
+    if (!name || !userConfigs || !userConfigs.titles) return "";
+    try {
+        if (userConfigs.titles[name]) return userConfigs.titles[name];
+        const cleanName = String(name).trim().toLowerCase();
+        const nameParts = cleanName.split(/[\s.]+/).filter(Boolean);
+        const mainName = nameParts[nameParts.length - 1];
+        const firstLetter = nameParts[0]?.[0];
+        const matchedKey = Object.keys(userConfigs.titles).find(key => {
+            const keyParts = String(key).trim().toLowerCase().split(/[\s.]+/).filter(Boolean);
+            return keyParts[keyParts.length - 1] === mainName && keyParts[0]?.[0] === firstLetter;
+        });
+        return matchedKey ? userConfigs.titles[matchedKey] : "";
+    } catch(e) { return ""; }
+}
+
+const getChannelBadge = (channel) => { 
+    const ch = String(channel || '').toUpperCase().trim();
+    if (ch.includes('SHOPEE')) {
+        return 'bg-[#f97316] text-black font-black border border-[#ea580c] shadow-sm';
+    }
+    if (ch.includes('TIKTOK')) {
+        return 'bg-[#06b6d4] text-black font-black border border-[#0891b2] shadow-sm';
+    }
+    if (ch.includes('CỘNG TÁC VIÊN') || ch.includes('CTV')) {
+        return 'bg-[#10b981] text-black font-black border border-[#059669] shadow-sm';
+    }
+    if (ch.includes('BÁN LẺ') || ch.includes('OFFLINE') || ch.includes('ZALO') || ch.includes('FACEBOOK') || ch.includes('MESSENGER')) {
+        return 'bg-[#0284c7] text-white font-black border border-[#0369a1] shadow-sm';
+    }
+    if (ch.includes('BÁN SỈ') || ch.includes('WHOLESALE')) {
+        return 'bg-[#14b8a6] text-black font-black border border-[#0d9488] shadow-sm';
+    }
+    if (ch.includes('SẢN XUẤT TỒN') || ch.includes('SẢN XUẤT BÙ KHO') || ch.includes('TỒN XƯỞNG')) {
+        return 'bg-[#a855f7] text-white font-black border border-[#9333ea] shadow-sm';
+    }
+    if (ch.includes('BẢO HÀNH') || ch.includes('SỬA CHỮA')) {
+        return 'bg-[#f43f5e] text-white font-black border border-[#e11d48] shadow-sm';
+    }
+    if (ch.includes('XUẤT KHẨU') || ch.includes('EXPORT') || ch.includes('QUỐC TẾ') || ch.includes('MA') || ch.includes('TH') || ch.includes('TW') || ch.includes('SG') || ch.includes('PH')) {
+        return 'bg-[#eab308] text-black font-black border border-[#ca8a04] shadow-sm';
+    }
+    return 'bg-[#eab308] text-black font-black border border-[#ca8a04] shadow-sm'; 
+};
+
+const getChannelInlineStyle = (groupKey) => {
+    const key = String(groupKey || '').toUpperCase().trim();
+    let accent = '#14b8a6';
+    let glow = 'rgba(20, 184, 166, 0.15)';
+
+    if (key.includes('SHOPEE VN')) {
+        accent = '#f97316';
+        glow = 'rgba(249, 115, 22, 0.15)';
+    } else if (key.includes('SHOPEE TH')) {
+        accent = '#fb923c';
+        glow = 'rgba(251, 146, 60, 0.15)';
+    } else if (key.includes('SHOPEE SG')) {
+        accent = '#ea580c';
+        glow = 'rgba(234, 88, 12, 0.15)';
+    } else if (key.includes('SHOPEE MA') || key.includes('SHOPEE MY')) {
+        accent = '#f59e0b';
+        glow = 'rgba(245, 158, 11, 0.15)';
+    } else if (key.includes('SHOPEE PH')) {
+        accent = '#facc15';
+        glow = 'rgba(250, 204, 21, 0.15)';
+    } else if (key.includes('SHOPEE TW')) {
+        accent = '#ca8a04';
+        glow = 'rgba(202, 138, 4, 0.15)';
+    } else if (key.includes('SHOPEE') || key.includes('XUẤT KHẨU') || key.includes('EXPORT') || key.includes('QUỐC TẾ')) {
+        accent = '#eab308';
+        glow = 'rgba(234, 179, 8, 0.15)';
+    } else if (key.includes('TIKTOK')) {
+        accent = '#06b6d4';
+        glow = 'rgba(6, 182, 212, 0.15)';
+    } else if (key.includes('CỘNG TÁC VIÊN') || key.includes('CTV')) {
+        accent = '#10b981';
+        glow = 'rgba(16, 185, 129, 0.15)';
+    } else if (key.includes('BÁN LẺ') || key.includes('OFFLINE') || key.includes('ZALO') || key.includes('FACEBOOK') || key.includes('MESSENGER')) {
+        accent = '#0ea5e9';
+        glow = 'rgba(14, 165, 233, 0.15)';
+    } else if (key.includes('BÁN SỈ') || key.includes('WHOLESALE')) {
+        accent = '#d4af37';
+        glow = 'rgba(139, 92, 246, 0.15)';
+    } else if (key.includes('SẢN XUẤT TỒN') || key.includes('SẢN XUẤT BÙ KHO') || key.includes('TỒN XƯỞNG')) {
+        accent = '#a855f7';
+        glow = 'rgba(168, 85, 247, 0.15)';
+    } else if (key.includes('BẢO HÀNH') || key.includes('SỬA CHỮA')) {
+        accent = '#f43f5e';
+        glow = 'rgba(244, 63, 94, 0.15)';
+    }
+
+    return {
+        background: 'linear-gradient(90deg, rgba(22, 22, 26, 0.95) 0%, rgba(14, 14, 16, 0.9) 100%)',
+        color: '#ffffff',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderLeft: `4px solid ${accent}`,
+        boxShadow: `0 4px 20px ${glow}`
+    };
+};
+
+
+const deleteOrderHandler = async (order, prods, pack, erpData, erpProducts, pushDeltas, triggerToast) => {
+  if(!window.confirm('XOÁ VĨNH VIỄN đơn này và HOÀN TRẢ toàn bộ tồn kho (nếu có)?')) return;
+  const localCode = (order.orderCode || '').split(' | MVĐ: ')[0];
+  const prodIdsToDelete = (prods || []).map(p => p.id);
+  
+  const relatedLogs = (erpData?.ImportExport || []).filter(log => log.note && log.note.includes(localCode));
+  const logsToDelete = relatedLogs.map(l => l.id);
+  
+  let relatedTransactions = (erpData?.Transactions || []).filter(tx => 
+      (tx.title && tx.title.includes(localCode)) || 
+      (tx.note && tx.note.includes(localCode))
+  );
+  
+  if (relatedTransactions.length > 0) {
+      if (!window.confirm(`Đơn hàng này có ${relatedTransactions.length} phiếu thu/chi kèm theo.\nBạn có muốn XÓA luôn các phiếu này không?\nChọn OK để Xóa, Cancel để Giữ lại.`)) {
+          relatedTransactions = [];
+      }
+  }
+  
+  let updatedProducts = [];
+  if (relatedLogs.length > 0) {
+      let diffMap = new Map();
+      relatedLogs.forEach(log => {
+          try {
+              const items = JSON.parse(log.itemsData || '[]');
+              items.forEach(item => {
+                  let p = (erpProducts || []).find(x => x.name === item.name);
+                  if (p) {
+                      let currentEntry = diffMap.get(p.id) || { product: p, diff: 0 };
+                      let change = Number(item.qty) || 0;
+                      if (log.type === 'Xuất') {
+                          currentEntry.diff += change;
+                      } else if (log.type === 'Nhập') {
+                          currentEntry.diff -= change;
+                      }
+                      diffMap.set(p.id, currentEntry);
+                  }
+              });
+          } catch(e) {}
+      });
+      
+      diffMap.forEach((entry, prodId) => {
+          if (entry.diff !== 0) {
+              updatedProducts.push({
+                  id: prodId,
+                  quantity: Math.max(0, Number(entry.product.quantity || 0) + entry.diff),
+                  _diff: entry.diff
+              });
+          }
+      });
+  }
+
+  // ĐÃ FIX: CHỮ CÁI ĐẦU PHẢI VIẾT HOA ĐỂ MÁY CHỦ NHẬN LỆNH
+  const payload = {
+      deletes: {
+          Orders: [order.id],
+          Production: prodIdsToDelete
+      }
+  };
+  if (logsToDelete.length > 0) payload.deletes.ImportExport = logsToDelete;
+  if (relatedTransactions.length > 0) payload.deletes.Transactions = relatedTransactions.map(tx => tx.id);
+  if (pack && pack.id) payload.deletes.Packings = [pack.id];
+  if (updatedProducts.length > 0) payload.Products = updatedProducts; 
+
+  const relatedKPIs = (erpData?.BonusPenalty || []).filter(bp => 
+      bp.orderCode === order.orderCode || bp.orderCode === localCode || 
+      (bp.note && bp.note.includes(localCode))
+  );
+  if (relatedKPIs.length > 0) payload.deletes.BonusPenalty = relatedKPIs.map(bp => bp.id);
+
+  if (order.shippingCode && String(order.shippingCode).trim().length > 5 && !order.shippingCode.includes(' ')) {
+      try {
+          const TOKEN = "5c588da0-1d0a-11ef-b3d7-824e1db0c320";
+          let shopId = "";
+          const shopRes = await window.safeFetchJSON("https:\/\/online-gateway.ghn.vn/shiip/public-api/v2/shop/all", { headers: { "Content-Type": "application/json", "Token": TOKEN } }).catch(()=>({}));
+          if (shopRes.code === 200 && shopRes.data?.shops?.length > 0) shopId = shopRes.data.shops[0]._id;
+          const h = { "Content-Type": "application/json", "Token": TOKEN };
+          if (shopId) h["ShopId"] = shopId;
+          await fetch("https:\/\/online-gateway.ghn.vn/shiip/public-api/v2/switch-status/cancel", {
+              method: "POST", headers: h, body: JSON.stringify({ order_codes: [String(order.shippingCode).trim()] })
+          }).catch(()=>{});
+      } catch(e){}
+  }
+
+  try {
+      await pushDeltas(payload, 'Đã xóa đơn và hoàn trả tồn kho!', 'fa-trash');
+  } catch(e) {
+      if(typeof triggerToast === 'function') triggerToast('Lỗi xóa đơn!', 'fa-times', 'danger');
+  }
+};
+
+// ═════════════════════════════════════════════════════════════════
+// 📥 BỘ ĐỘNG CƠ TẢI FILE THÔNG MINH (SMART FILE DOWNLOAD ENGINE)
+// Khắc phục triệt để lỗi Sandbox Google Apps Script iframe chặn thẻ <a download>
+// ═════════════════════════════════════════════════════════════════
+const downloadFileSmartly = (data, filename, mimeType = 'application/octet-stream', isBase64 = false) => {
+  let base64Data = isBase64 ? data : '';
+  if (!isBase64) {
+    try {
+      base64Data = btoa(unescape(encodeURIComponent(data)));
+    } catch (e) {
+      console.warn('[RF Download] Lỗi encode UTF-8 sang base64:', e);
+    }
+  }
+
+  // 1. Nếu chạy trong iframe (Vercel host wrapper hoặc Google Apps Script iframe)
+  // Gửi postMessage lên window.top để Host top-level kích hoạt download trực tiếp (không bị sandbox chặn)
+  let sentToTop = false;
+  if (window.self !== window.top && base64Data) {
+    try {
+      window.top.postMessage({
+        type: 'RF_DOWNLOAD_FILE',
+        filename: filename,
+        base64: base64Data,
+        mimeType: mimeType
+      }, '*');
+      sentToTop = true;
+      console.log('📤 [RF Download] Đã gửi thông điệp tải file lên Top Window:', filename);
+    } catch (e) {
+      console.warn('[RF Download] Không thể postMessage lên top window:', e);
+    }
+  }
+
+  // 2. Thử download bằng thẻ <a> truyền thống (chạy tốt khi trực tiếp hoặc trình duyệt hỗ trợ)
+  let directDownloadSuccess = false;
+  try {
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    directDownloadSuccess = true;
+  } catch (err) {
+    console.warn('[RF Download] Direct anchor download failed (do sandbox iframe):', err);
+  }
+
+  // 3. Fallback cho môi trường Google Apps Script thuần (nếu không có Vercel top-level listener)
+  // Mở tab mới với window.open để thoát hoàn toàn khỏi iframe sandbox của GAS
+  if (!sentToTop && !directDownloadSuccess) {
+    try {
+      const dataUri = `data:${mimeType};base64,${base64Data}`;
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Đang tải ${filename}...</title>
+            <style>
+              body { background: #09090b; color: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+              .box { background: #18191d; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px; text-align: center; max-width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+              .btn { display: inline-block; background: #2E9599; color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-decoration: none; margin-top: 16px; cursor: pointer; }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h3 style="margin-top:0">Đang xuất file Excel...</h3>
+              <p style="color:#a1a1aa;font-size:13px">${filename}</p>
+              <a id="dlLink" class="btn" href="${dataUri}" download="${filename}">Bấm Vào Đây Để Tải File</a>
+            </div>
+            <script>
+              document.getElementById('dlLink').click();
+              setTimeout(function() { window.close(); }, 3500);
+            <\/script>
+          </body>
+          </html>
+        `);
+      }
+    } catch (e) {
+      console.error('[RF Download] Fallback window.open error:', e);
+    }
+  }
+};
+
+const downloadWorkbookSmartly = (wb, filename) => {
+  const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  try {
+    const b64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+    downloadFileSmartly(b64, filename, mimeType, true);
+  } catch (err) {
+    console.error('Lỗi đóng gói workbook base64, thử writeFile truyền thống:', err);
+    try {
+      XLSX.writeFile(wb, filename);
+    } catch (e) {
+      alert('Không thể lưu file Excel: ' + e.message);
+    }
+  }
+};
+
+window.downloadFileSmartly = downloadFileSmartly;
+window.downloadWorkbookSmartly = downloadWorkbookSmartly;
+
+const exportToExcel = async (items, columns, filename = 'export.xlsx') => {
+  if (typeof XLSX === 'undefined' && typeof window.ensureXLSXLoaded === 'function') {
+    await window.ensureXLSXLoaded();
+  }
+  if (typeof XLSX === 'undefined') {
+    alert('Thư viện Excel (SheetJS) chưa được tải xong, vui lòng kiểm tra kết nối mạng!');
+    return;
+  }
+  const data = items.map(item => {
+    const row = {};
+    columns.forEach(c => {
+      let val = item[c.key];
+      if (c.formatter && typeof c.formatter === 'function') {
+        val = c.formatter(val, item);
+      }
+      row[c.label] = val !== undefined && val !== null ? String(val) : '';
+    });
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data");
+  downloadWorkbookSmartly(wb, filename);
+};
+
+// ==========================================
+// MA TRẬN PHÂN QUYỀN RBAC CHUẨN XÁC 100% (THEO CHỐT TỪ BOSS TIẾN)
+// ==========================================
+const RF_INTERNAL_ROLES = [
+  'TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ NHÂN SỰ',
+  'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN', 'THỢ SẢN XUẤT', 'NHÂN VIÊN',
+  // Các alias tương đương đề phòng tên viết tắt
+  'QUẢN LÝ KHO', 'SẢN XUẤT', 'KHO VẬN', 'BÁN HÀNG', 'NHÂN SỰ', 'FOUNDER', 'ADMIN'
+];
+
+const RF_RBAC_RULES = {
+  // 1. Header & Nút Toàn Cục
+  BLACKBOX_AUDIT: ['TỐI CAO'],
+  RELOAD_DATA: 'ALL',
+  LOGIN_LOGOUT: 'ALL',
+  CALC_FREIGHT: 'ALL',
+  CALC_TANK: 'ALL',
+  CALC_LAYOUT: 'ALL',
+  VIEW_PRICE_LIST: 'ALL_INTERNAL',
+  REIMBURSE_SUBMIT: 'ALL_INTERNAL',
+  REIMBURSE_APPROVE: ['TỐI CAO', 'KẾ TOÁN'],
+  QUICK_PENALTY: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  QUICK_EXPENSE: ['TỐI CAO', 'KẾ TOÁN'],
+
+  // 2. Tab Đơn Hàng
+  ORDER_CREATE: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN', 'CỘNG TÁC VIÊN', 'CTV'],
+  ORDER_IMPORT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  ORDER_SCAN_QR: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG'],
+  ORDER_EDIT: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG'],
+  ORDER_CANCEL: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG'],
+  ORDER_DELETE: ['TỐI CAO'],
+  ORDER_STATUS_PENDING_PROD: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG'],
+  ORDER_STATUS_DELIVERED: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG'],
+  ORDER_STATUS_RECONCILED: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  ORDER_RETURN_STOCK_IN: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  ORDER_ARCHIVE_VIEW: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  ORDER_PRINT_EXPORT: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+
+  // 3. Tab Sản Xuất
+  PROD_PHASE1_TAKE: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_PHASE1_START: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_PHASE1_SUBMIT: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_PHASE2_TAKE: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_PHASE2_START: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_PHASE2_SUBMIT: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'THỢ SẢN XUẤT', 'NHÂN VIÊN', 'SẢN XUẤT'],
+  PROD_QC_APPROVE: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO'],
+  PROD_QC_REJECT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO'],
+  PROD_REASSIGN_WORKER: ['TỐI CAO', 'QUẢN LÝ NHÂN SỰ'],
+  PROD_CREATE_STOCK_BATCH: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ'],
+  PROD_CANCEL_DEFECT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO'],
+  PROD_MOVE_TO_PACKING: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG'],
+
+  // 4. Khâu Đóng Gói
+  PACKING_TAKE: 'ALL_INTERNAL',
+  PACKING_PREFLIGHT: 'ALL_INTERNAL',
+  PACKING_PHOTO: 'ALL_INTERNAL',
+  PACKING_COMPLETE: 'ALL_INTERNAL',
+  PACKING_CARRIED_WH: 'ALL_INTERNAL',
+
+  // 5. Tab Nhân Sự
+  HR_ATTENDANCE_SELF: 'ALL_INTERNAL',
+  HR_LEAVE_SELF: 'ALL_INTERNAL',
+  HR_CLAIM_KPI_REWARD: 'ALL_INTERNAL',
+  HR_EDIT_ATTENDANCE: ['TỐI CAO', 'QUẢN LÝ NHÂN SỰ'],
+  HR_BONUS_PENALTY: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  HR_EDIT_KPI_TARGET: ['TỐI CAO'],
+  HR_VIEW_TOTAL_PAYROLL: 'ALL_INTERNAL',
+  HR_PRINT_PAYSLIP: ['TỐI CAO', 'QUẢN LÝ NHÂN SỰ', 'KẾ TOÁN'],
+  HR_PAY_SALARY_ADVANCE: ['TỐI CAO', 'KẾ TOÁN'],
+  HR_CONFIG_STAFF: ['TỐI CAO'],
+
+  // 6. Tab Kho Hàng & Định Mức BOM
+  INV_VIEW_FINISHED: 'ALL_INTERNAL',
+  INV_VIEW_RAW_MATERIALS: 'ALL_INTERNAL',
+  INV_ADD_PRODUCT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+  INV_EDIT_PRODUCT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+  INV_ADJUST_STOCK: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  INV_DELETE_PRODUCT: ['TỐI CAO'],
+  INV_STOCK_HISTORY: ['TỐI CAO', 'QUẢN LÝ SẢN XUẤT', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ NHÂN SỰ', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN', 'THỢ SẢN XUẤT'],
+  INV_BOM_CONFIG: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+
+  // 7. Tab Xuất Nhập Kho
+  IE_CREATE_IMPORT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  IE_CREATE_EXPORT: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  IE_CREATE_PO: 'ALL_INTERNAL',
+  IE_APPROVE_PO: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+  IE_EDIT_LOG: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+  IE_DELETE_LOG: ['TỐI CAO'],
+
+  // 8. Tab Tài Chính & Đối Tác
+  FIN_VIEW_ACCOUNTS: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  FIN_CREATE_TRANSACTION: ['TỐI CAO', 'KẾ TOÁN'],
+  FIN_TRANSFER_MONEY: ['TỐI CAO', 'KẾ TOÁN'],
+  FIN_EDIT_DELETE_TRANSACTION: ['TỐI CAO'],
+  FIN_INCOME: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  FIN_EXPENSE: ['TỐI CAO', 'KẾ TOÁN'],
+  FIN_TRANSFER: ['TỐI CAO', 'KẾ TOÁN'],
+  FIN_EDIT_TRANSACTION: ['TỐI CAO', 'KẾ TOÁN'],
+  FIN_DELETE_TRANSACTION: ['TỐI CAO'],
+  FIN_CONFIG_ACCOUNTS: ['TỐI CAO'],
+  SUPPLIER_MANAGE: ['TỐI CAO', 'QUẢN LÝ KHO VẬN', 'QUẢN LÝ KHO', 'KẾ TOÁN'],
+  SUPPLIER_PAY_DEBT: ['TỐI CAO', 'KẾ TOÁN'],
+
+  // 9. Tab Báo Cáo P&L & KQKD
+  REPORT_PL_VIEW: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  REPORT_BUSINESS_VIEW: ['TỐI CAO', 'KẾ TOÁN'],
+  REPORT_EXPORT_EXCEL: ['TỐI CAO', 'KẾ TOÁN'],
+
+  // 10. Cộng Tác Viên & Tiện Ích
+  CTV_WALLET_MANAGE: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG', 'KẾ TOÁN'],
+  CTV_LAYOUT_PRICE_CONFIG: ['TỐI CAO', 'QUẢN LÝ BÁN HÀNG'],
+  VIEWER_3D_VIEW: 'ALL',
+  MODELS_3D_UPLOAD: ['TỐI CAO'],
+  DOCUMENTS_UPLOAD: ['TỐI CAO'],
+  WORKSPACES_ASSIGN: ['TỐI CAO', 'QUẢN LÝ NHÂN SỰ']
+};
+
+/**
+ * Hàm kiểm tra quyền tập trung chuẩn xác (Single Source of Truth)
+ * @param {string} actionCode Mã quyền (ví dụ 'ORDER_EDIT', 'PROD_QC_APPROVE')
+ * @param {string} role Phân quyền của user (ví dụ 'TỐI CAO', 'QUẢN LÝ SẢN XUẤT')
+ * @param {string} user Tên nhân sự (ví dụ 'Nguyễn Ngọc Tiến')
+ * @returns {boolean}
+ */
+function canUserDo(actionCode, role, user) {
+  let r = String(role || localStorage.getItem('rf_role') || '').trim().toUpperCase();
+  const u = String(user || localStorage.getItem('rf_user') || '').trim();
+
+  // Boss Tối Cao luôn có 100% quyền
+  if (r === 'TỐI CAO' || u.includes('Tiến') || localStorage.getItem('rf_boss') === 'true') {
+    return true;
+  }
+
+  // Khách (Guest) không có quyền thao tác bất kỳ nút nào ngoại trừ xem
+  if (r === 'KHÁCH') return false;
+
+  // Chuẩn hóa tên phân quyền nếu viết tắt hoặc không dấu
+  if (r === 'KETOAN' || r === 'KE TOAN') r = 'KẾ TOÁN';
+  if (r === 'BAN HANG' || r === 'BANHANG') r = 'QUẢN LÝ BÁN HÀNG';
+  if (r === 'SAN XUAT' || r === 'SANXUAT') r = 'QUẢN LÝ SẢN XUẤT';
+  if (r === 'KHO VAN' || r === 'KHOVAN' || r === 'KHO') r = 'QUẢN LÝ KHO VẬN';
+  if (r === 'NHAN SU' || r === 'NHANSU') r = 'QUẢN LÝ NHÂN SỰ';
+  if (r === 'THO SAN XUAT' || r === 'THOSANXUAT') r = 'THỢ SẢN XUẤT';
+  if (r === 'NHAN VIEN' || r === 'NHANVIEN') r = 'NHÂN VIÊN';
+  if (r === 'CONG TAC VIEN' || r === 'CTV') r = 'CỘNG TÁC VIÊN';
+
+  // Cơ chế phòng thủ: Nếu phân quyền bị lưu lệch thành THỢ nhưng Chức Danh ghi rõ là Cộng Tác Viên
+  if (r === 'THỢ' || r === 'THỢ SẢN XUẤT' || !r) {
+    try {
+      const uConfigs = (typeof window !== 'undefined' ? window.userConfigs : null) || (typeof userConfigs !== 'undefined' ? userConfigs : null);
+      const erp = (typeof window !== 'undefined' ? window.erpData : null) || (typeof erpData !== 'undefined' ? erpData : null);
+      const profile = (Array.isArray(erp?.Config_NhanSu) ? erp.Config_NhanSu.find(s => (s['Tên Nhân Sự'] || s.name) === u) : null)
+        || (uConfigs?.raw ? uConfigs.raw.find(s => (s['Tên Nhân Sự'] || s.name) === u) : null);
+      const title = String(profile?.['Chức Danh'] || profile?.title || uConfigs?.titles?.[u] || '').toUpperCase();
+      const subTitle = String(profile?.['Chức Danh Phụ'] || profile?.subTitle || '').toUpperCase();
+      if (title.includes('CỘNG TÁC VIÊN') || title.includes('CTV') || subTitle.includes('CỘNG TÁC VIÊN') || subTitle.includes('CTV')) {
+        r = 'CỘNG TÁC VIÊN';
+      }
+    } catch (e) {}
+  }
+
+  const rule = RF_RBAC_RULES[actionCode];
+  if (!rule) return false;
+
+  if (rule === 'ALL') return true;
+
+  const isInternal = RF_INTERNAL_ROLES.includes(r);
+  if (rule === 'ALL_INTERNAL') {
+    return isInternal && r !== 'CỘNG TÁC VIÊN' && r !== 'CTV';
+  }
+
+  if (Array.isArray(rule)) {
+    return rule.some(allowed => {
+      const a = String(allowed).trim().toUpperCase();
+      return a === r || (a === 'CTV' && (r === 'CỘNG TÁC VIÊN' || r === 'CTV'));
+    });
+  }
+
+  return false;
+}
+
+/**
+ * Làm tròn số lượng tồn kho tối đa 3 chữ số thập phân (loại bỏ số 0 dư thừa)
+ */
+function formatStockQty(val) {
+  if (val === undefined || val === null || val === '') return '0';
+  const num = Number(val);
+  if (isNaN(num)) return '0';
+  const rounded = Math.round(num * 1000) / 1000;
+  return Number(rounded.toFixed(3)).toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+}
+
+/**
+ * Làm sạch và tối ưu hiển thị thẻ ghi chú lịch sử kho
+ */
+function cleanStockLogNote(rawNote, target) {
+  if (!rawNote && !target) return 'Giao dịch kho';
+  let text = String(rawNote || target || '').trim();
+
+  // 1. Xử lý chuỗi JSON Kiểm Kho
+  if (text.startsWith('{') && text.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(text);
+      const label = parsed.statusLabel || (parsed.status === 'BALANCED' ? 'Đã cân bằng kho' : parsed.status) || 'Cân bằng kho';
+      const user = parsed.createdBy || parsed.user || '';
+      const note = parsed.userNote || parsed.note || '';
+      let res = `${label}`;
+      if (note) res += `: ${note}`;
+      if (user) res += ` (${user})`;
+      return res;
+    } catch (e) {}
+  }
+
+  // 2. Xử lý chuỗi Trừ vật tư BOM
+  if (text.includes('Trừ vật tư') || text.includes('vật tư BOM') || text.startsWith('IE_BOM_')) {
+    let orderCode = '';
+    let prodName = '';
+
+    const orderMatch = text.match(/đơn\s+([A-Za-z0-9_\-]+)/i) || text.match(/ORD_[A-Za-z0-9_\-]+/i);
+    if (orderMatch) {
+      orderCode = orderMatch[1] || orderMatch[0];
+    }
+
+    const nameMatch = text.match(/Lệnh:\s*[^-\n\)]+-\s*([^\)\n]+)/i) || text.match(/\(Lệnh:[^\-]+\-\s*([^\)]+)\)/i);
+    if (nameMatch) {
+      prodName = nameMatch[1].trim();
+    } else {
+      const parts = text.split('-');
+      if (parts.length > 1) {
+        prodName = parts[1].replace(/\).*/, '').trim();
+      }
+    }
+
+    if (prodName && orderCode) {
+      return `Trừ vật tư lệnh sản xuất ${prodName} đơn ${orderCode}`;
+    } else if (prodName) {
+      return `Trừ vật tư lệnh sản xuất ${prodName}`;
+    } else if (orderCode) {
+      return `Trừ vật tư lệnh sản xuất đơn ${orderCode}`;
+    }
+  }
+
+  // 3. Xử lý nhập kho thành phẩm sản xuất
+  if (text.includes('Nhập kho thành phẩm sản xuất:')) {
+    return text.replace('Nhập kho thành phẩm sản xuất:', 'Nhập TP sản xuất:').trim();
+  }
+
+  return text;
+}
+
+// =========================================================================
+// ⚡ HÀM BẮN THÔNG BÁO ĐẨY ĐƠN HỎA TỐC QUA NTFY (NTFY.SH)
+// =========================================================================
+const NTFY_TOPIC = 'rf_workspace_urgent';
+
+async function sendNtfyUrgentAlert(orderCode, productName, channel) {
+  try {
+    const payload = 'Mã đơn: ' + (orderCode || '') + '\nSản phẩm: ' + (productName || 'Hàng xưởng') + '\nKênh bán: ' + (channel || 'Sàn TMĐT') + '\n👉 Yêu cầu thợ xưởng ưu tiên làm ngay!';
+    const ntfyUrl = ['https:', '', 'ntfy.sh', NTFY_TOPIC].join('/');
+    await fetch(ntfyUrl, {
+      method: 'POST',
+      headers: {
+        'Title': '🔥 ĐƠN HỎA TỐC — ƯU TIÊN LÀM NGAY!',
+        'Priority': 'urgent',
+        'Tags': 'rotating_light,fire,package'
+      },
+      body: payload
+    });
+    console.log('✅ Đã phát thông báo ntfy thành công cho đơn:', orderCode);
+  } catch (err) {
+    console.warn('⚠️ Lỗi gửi ntfy:', err);
+  }
+}
+
+// =========================================================================
+// 🖼️ HỆ THỐNG XỬ LÝ ẢNH AN TOÀN CHỐNG CHẶN GOOGLE DRIVE (CORP/COOP/nosniff)
+// =========================================================================
+function extractDriveId(url) {
+  if (!url || typeof url !== 'string') return '';
+  const clean = url.trim();
+  const idMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i) || 
+                  clean.match(/\/d\/([a-zA-Z0-9_-]+)/i) ||
+                  clean.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i);
+  return idMatch ? idMatch[1] : '';
+}
+
+function getSafeDriveViewUrl(url) {
+  const id = extractDriveId(url);
+  if (id) {
+    return 'https:' + '/' + '/drive.google.com/file/d/' + id + '/view?usp=drivesdk';
+  }
+  return url || '';
+}
+
+function getDirectImageUrl(url, size) {
+  const id = extractDriveId(url);
+  if (id) {
+    const s = size || 'w1600';
+    return 'https:' + '/' + '/lh3.googleusercontent.com/d/' + id + '=' + s;
+  }
+  return url || '';
+}
+
+function openSafeImageTab(url) {
+  if (!url) return;
+  const safeUrl = getSafeDriveViewUrl(url);
+  window.open(safeUrl, '_blank', 'noopener,noreferrer');
+}
+
+window.extractDriveId = extractDriveId;
+window.getSafeDriveViewUrl = getSafeDriveViewUrl;
+window.getDirectImageUrl = getDirectImageUrl;
+window.openSafeImageTab = openSafeImageTab;
+
+// =========================================================================
+// 📸 HỆ THỐNG DANH MỤC & TRA CỨU 5 GÓC CHỤP LAYOUT (MULTI-ANGLE STUDIO SYSTEM)
+// =========================================================================
+window.RF_LAYOUT_BASE_URL = window.RF_LAYOUT_BASE_URL || ((typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? ('http:' + '/' + '/127.0.0.1:8000/static/layouts/') : '');
+window.RF_LAYOUT_5_ANGLES_CATALOG = [{"n": "Bonsai ver.1", "s": "BONSAI", "a": {"front": "Bonsai ver.1/z7933370060007_01d0cc64e7f9b8502c339f1bf820b15a_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.1/z7933370060007_01d0cc64e7f9b8502c339f1bf820b15a_Goc_FRONT_StudioDark_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.1/z7933370060007_01d0cc64e7f9b8502c339f1bf820b15a_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.1/z7933370060007_01d0cc64e7f9b8502c339f1bf820b15a_Goc_FRONT_StudioDark_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.1/z7933370060007_01d0cc64e7f9b8502c339f1bf820b15a_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.2", "s": "BONSAI", "a": {"front": "Bonsai ver.2/z7933369735156_d3c4847cafbaef2093544616387fdec5_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.2/z7933369735156_d3c4847cafbaef2093544616387fdec5_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.2/z7933369735156_d3c4847cafbaef2093544616387fdec5_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.2/z7933369735156_d3c4847cafbaef2093544616387fdec5_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.2/z7933369735156_d3c4847cafbaef2093544616387fdec5_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.3", "s": "BONSAI", "a": {"front": "Bonsai ver.3/z7933799930134_d31fc083953359572ce192119372cb58_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.3/z7933799930134_d31fc083953359572ce192119372cb58_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.3/z7933799930134_d31fc083953359572ce192119372cb58_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.3/z7933799930134_d31fc083953359572ce192119372cb58_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.3/z7933799930134_d31fc083953359572ce192119372cb58_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.4", "s": "BONSAI", "a": {"front": "Bonsai ver.4/z7933800068609_2550a4b7552833c3410b552ba4f7edf4_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.4/z7933800068609_2550a4b7552833c3410b552ba4f7edf4_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.4/z7933800068609_2550a4b7552833c3410b552ba4f7edf4_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.4/z7933800068609_2550a4b7552833c3410b552ba4f7edf4_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.4/z7933800068609_2550a4b7552833c3410b552ba4f7edf4_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.5", "s": "BONSAI", "a": {"front": "Bonsai ver.5/z7933370060017_0f5961cb4f1f837142c017d743f24c37_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.5/z7933370060017_0f5961cb4f1f837142c017d743f24c37_Goc_FRONT_StudioDark_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.5/z7933370060017_0f5961cb4f1f837142c017d743f24c37_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.5/z7933370060017_0f5961cb4f1f837142c017d743f24c37_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.5/z7933370060017_0f5961cb4f1f837142c017d743f24c37_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.6", "s": "BONSAI", "a": {"front": "Bonsai ver.6/z7933370802387_4b2d6305eeac5176a948c0975b596095_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.6/z7933370802387_4b2d6305eeac5176a948c0975b596095_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.6/z7933370802387_4b2d6305eeac5176a948c0975b596095_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.6/z7933370802387_4b2d6305eeac5176a948c0975b596095_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.6/z7933370802387_4b2d6305eeac5176a948c0975b596095_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.7", "s": "BONSAI", "a": {"front": "Bonsai ver.7/z7933800095449_729eea8664e7ac10c3cf045224ca07df_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.7/z7933800095449_729eea8664e7ac10c3cf045224ca07df_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.7/z7933800095449_729eea8664e7ac10c3cf045224ca07df_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.7/z7933800095449_729eea8664e7ac10c3cf045224ca07df_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.7/z7933800095449_729eea8664e7ac10c3cf045224ca07df_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.8", "s": "BONSAI", "a": {"front": "Bonsai ver.8/z7933800122130_3f7576a85b90de7ddb4264872b303b02_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.8/z7933800122130_3f7576a85b90de7ddb4264872b303b02_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.8/z7933800122130_3f7576a85b90de7ddb4264872b303b02_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.8/z7933800122130_3f7576a85b90de7ddb4264872b303b02_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.8/z7933800122130_3f7576a85b90de7ddb4264872b303b02_Goc_TOP_StudioDark.jpg"}}, {"n": "Bonsai ver.9", "s": "BONSAI", "a": {"front": "Bonsai ver.9/2b583b6005e855a611fb0ea30967126f_Goc_FRONT_StudioDark.jpg", "distant": "Bonsai ver.9/2b583b6005e855a611fb0ea30967126f_Goc_DISTANT_StudioDark.jpg", "left": "Bonsai ver.9/2b583b6005e855a611fb0ea30967126f_Goc_LEFT_StudioDark.jpg", "right": "Bonsai ver.9/2b583b6005e855a611fb0ea30967126f_Goc_RIGHT_StudioDark.jpg", "top": "Bonsai ver.9/2b583b6005e855a611fb0ea30967126f_Goc_TOP_StudioDark.jpg"}}, {"n": "Cuội ver.1", "s": "BIOTOP CUỘI", "a": {"front": "Cuội ver.1/z7933370642240_7099cdb3ad2787d81dded33fe3de9074_Goc_FRONT_StudioDark.jpg", "distant": "Cuội ver.1/z7933370642240_7099cdb3ad2787d81dded33fe3de9074_Goc_DISTANT_StudioDark.jpg", "left": "Cuội ver.1/z7933367980973_e351b084814087a7e6bfa37c7f4843d8_Goc_LEFT_StudioDark.jpg", "right": "Cuội ver.1/z7933367980973_e351b084814087a7e6bfa37c7f4843d8_Goc_RIGHT_StudioDark.jpg", "top": "Cuội ver.1/z7933370642240_7099cdb3ad2787d81dded33fe3de9074_Goc_TOP_StudioDark.jpg"}}, {"n": "Cuội ver.2", "s": "BIOTOP CUỘI", "a": {"front": "Cuội ver.2/z7933369687991_fd2ad11263fbbfb8e30b0b59be51446a_Goc_FRONT_StudioDark.jpg", "distant": "Cuội ver.2/z7933369687991_fd2ad11263fbbfb8e30b0b59be51446a_Goc_DISTANT_StudioDark.jpg", "left": "Cuội ver.2/z7933369687991_fd2ad11263fbbfb8e30b0b59be51446a_Goc_LEFT_StudioDark.jpg", "right": "Cuội ver.2/z7933369687991_fd2ad11263fbbfb8e30b0b59be51446a_Goc_RIGHT_StudioDark.jpg", "top": "Cuội ver.2/z7933369687991_fd2ad11263fbbfb8e30b0b59be51446a_Goc_TOP_StudioDark.jpg"}}, {"n": "Cuội ver.3", "s": "BIOTOP CUỘI", "a": {"front": "Cuội ver.3/e8648d6ae210b00a07ebbfcbbfd66eac_Goc_FRONT_StudioDark.jpg", "distant": "Cuội ver.3/e8648d6ae210b00a07ebbfcbbfd66eac_Goc_DISTANT_StudioDark.jpg", "left": "Cuội ver.3/e8648d6ae210b00a07ebbfcbbfd66eac_Goc_LEFT_StudioDark.jpg", "right": "Cuội ver.3/e8648d6ae210b00a07ebbfcbbfd66eac_Goc_RIGHT_StudioDark.jpg", "top": "Cuội ver.3/e8648d6ae210b00a07ebbfcbbfd66eac_Goc_TOP_StudioDark.jpg"}}, {"n": "Cá Heo", "s": "LINH THÚ", "a": {"front": "Cá Heo/vn-11134207-820l4-mjydna8q3282c9_Goc_FRONT_StudioDark.jpg", "distant": "Cá Heo/vn-11134207-820l4-mjydna8q3282c9_Goc_DISTANT_StudioDark.jpg", "left": "Cá Heo/vn-11134207-820l4-mjydna8q3282c9_Goc_LEFT_StudioDark.jpg", "right": "Cá Heo/vn-11134207-820l4-mjydna8q3282c9_Goc_RIGHT_StudioDark.jpg", "top": "Cá Heo/vn-11134207-820l4-mjydna8q3282c9_Goc_TOP_StudioDark.jpg"}}, {"n": "Cầu Vồng ver.1", "s": "CẦU VỒNG", "a": {"front": "Cầu Vồng ver.1/z7933367854253_afb438610a6f0becc2d94db45779fb06_Goc_FRONT_StudioDark_Goc_FRONT_StudioDark.jpg", "distant": "Cầu Vồng ver.1/z7933367854253_afb438610a6f0becc2d94db45779fb06_Goc_DISTANT_StudioDark (1).jpg", "left": "Cầu Vồng ver.1/z7933367854253_afb438610a6f0becc2d94db45779fb06_Goc_LEFT_StudioDark.jpg", "right": "Cầu Vồng ver.1/z7933367854253_afb438610a6f0becc2d94db45779fb06_Goc_FRONT_StudioDark_Goc_RIGHT_StudioDark.jpg", "top": "Cầu Vồng ver.1/z7933367854253_afb438610a6f0becc2d94db45779fb06_Goc_FRONT_StudioDark_Goc_TOP_StudioDark.jpg"}}, {"n": "Cầu Vồng ver.2", "s": "CẦU VỒNG", "a": {"front": "Cầu Vồng ver.2/z7933370131535_627aad394e4f85d4bb2b426024b01e95_Goc_FRONT_StudioDark.jpg", "distant": "Cầu Vồng ver.2/z7933370131535_627aad394e4f85d4bb2b426024b01e95_Goc_DISTANT_StudioDark.jpg", "left": "Cầu Vồng ver.2/z7933370131535_627aad394e4f85d4bb2b426024b01e95_Goc_LEFT_StudioDark.jpg", "right": "Cầu Vồng ver.2/z7933370131535_627aad394e4f85d4bb2b426024b01e95_Goc_RIGHT_StudioDark.jpg", "top": "Cầu Vồng ver.2/z7933370131535_627aad394e4f85d4bb2b426024b01e95_Goc_TOP_StudioDark.jpg"}}, {"n": "Cầu Vồng ver.3", "s": "CẦU VỒNG", "a": {"front": "Cầu Vồng ver.3/z7933371099412_f67a07b8dade7ae37526d91fd0b0e596_Goc_FRONT_StudioDark.jpg", "distant": "Cầu Vồng ver.3/z7933371099412_f67a07b8dade7ae37526d91fd0b0e596_Goc_DISTANT_StudioDark.jpg", "left": "Cầu Vồng ver.3/z7933371066480_627de19716655acd3eff370aed2b74d3_Goc_LEFT_StudioDark.jpg", "right": "Cầu Vồng ver.3/z7933371066480_627de19716655acd3eff370aed2b74d3_Goc_RIGHT_StudioDark.jpg", "top": "Cầu Vồng ver.3/z7933371099412_f67a07b8dade7ae37526d91fd0b0e596_Goc_TOP_StudioDark.jpg"}}, {"n": "Cầu Vồng ver.4", "s": "CẦU VỒNG", "a": {"front": "Cầu Vồng ver.4/z7933370036645_d31134642984f37a98b0e2b5b2d2b88e_Goc_FRONT_StudioDark.jpg", "distant": "Cầu Vồng ver.4/z7933370036645_d31134642984f37a98b0e2b5b2d2b88e_Goc_DISTANT_StudioDark.jpg", "left": "Cầu Vồng ver.4/z7933370036645_d31134642984f37a98b0e2b5b2d2b88e_Goc_LEFT_StudioDark.jpg", "right": "Cầu Vồng ver.4/z7933370036645_d31134642984f37a98b0e2b5b2d2b88e_Goc_RIGHT_StudioDark.jpg", "top": "Cầu Vồng ver.4/z7933370036645_d31134642984f37a98b0e2b5b2d2b88e_Goc_TOP_StudioDark.jpg"}}, {"n": "Cầu Vồng ver.5", "s": "CẦU VỒNG", "a": {"front": "Cầu Vồng ver.5/3522e32e4e59f814c9729d15d534e9f4_Goc_FRONT_StudioDark.jpg", "distant": "Cầu Vồng ver.5/3522e32e4e59f814c9729d15d534e9f4_Goc_DISTANT_StudioDark.jpg", "left": "Cầu Vồng ver.5/3522e32e4e59f814c9729d15d534e9f4_Goc_LEFT_StudioDark.jpg", "right": "Cầu Vồng ver.5/3522e32e4e59f814c9729d15d534e9f4_Goc_RIGHT_StudioDark.jpg", "top": "Cầu Vồng ver.5/3522e32e4e59f814c9729d15d534e9f4_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.1", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.1/z7933367952605_464804e0bfc4acd5d39eceffc268f8ef_Goc_FRONT_StudioDark.jpg", "distant": "Cổng Vòm ver.1/z7933367952605_464804e0bfc4acd5d39eceffc268f8ef_Goc_DISTANT_StudioDark.jpg", "left": "Cổng Vòm ver.1/z7933367952605_464804e0bfc4acd5d39eceffc268f8ef_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.1/z7933367952605_464804e0bfc4acd5d39eceffc268f8ef_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.1/z7933367952605_464804e0bfc4acd5d39eceffc268f8ef_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.2", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.2/z7933367886085_fcccb60bd92be2ade94aff31d6a14fa6_Goc_FRONT_StudioDark.jpg", "distant": "Cổng Vòm ver.2/z7933367886085_fcccb60bd92be2ade94aff31d6a14fa6_Goc_DISTANT_StudioDark (1).jpg", "left": "Cổng Vòm ver.2/z7933367886085_fcccb60bd92be2ade94aff31d6a14fa6_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.2/z7933367886085_fcccb60bd92be2ade94aff31d6a14fa6_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.2/z7933367886085_fcccb60bd92be2ade94aff31d6a14fa6_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.3", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.3/z7933367351380_97bc84ca8c3c671e713f116ed8ab5931_Goc_FRONT_StudioDark.jpg", "distant": "Cổng Vòm ver.3/z7933367351380_97bc84ca8c3c671e713f116ed8ab5931_Goc_DISTANT_StudioDark.jpg", "left": "Cổng Vòm ver.3/z7933367299290_5fe498a6e9ae8206a426780a79690edc_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.3/z7933367299290_5fe498a6e9ae8206a426780a79690edc_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.3/z7933367351380_97bc84ca8c3c671e713f116ed8ab5931_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.4", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.4/z7933367912020_96ea68bcf85ee4ed82ea40326978d095_Goc_FRONT_StudioDark.jpg", "distant": "Cổng Vòm ver.4/z7933367912020_96ea68bcf85ee4ed82ea40326978d095_Goc_DISTANT_StudioDark.jpg", "left": "Cổng Vòm ver.4/z7933367912020_96ea68bcf85ee4ed82ea40326978d095_Goc_DISTANT_StudioDark_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.4/z7933367912020_96ea68bcf85ee4ed82ea40326978d095_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.4/z7933367912020_96ea68bcf85ee4ed82ea40326978d095_Goc_DISTANT_StudioDark_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.5", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.5/VOM005_Goc_DISTANT_StudioDark.jpg", "distant": "Cổng Vòm ver.5/VOM005_Goc_DISTANT_StudioDark.jpg", "left": "Cổng Vòm ver.5/acba0062f978b79f03e96f585d2f69b2_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.5/acba0062f978b79f03e96f585d2f69b2_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.5/acba0062f978b79f03e96f585d2f69b2_Goc_TOP_StudioDark.jpg"}}, {"n": "Cổng Vòm ver.6", "s": "CỔNG VÒM", "a": {"front": "Cổng Vòm ver.6/z7933367362401_133d4c600ae00c9dee303381aabe09c7_Goc_FRONT_StudioDark.jpg", "distant": "Cổng Vòm ver.6/z7933367362401_133d4c600ae00c9dee303381aabe09c7_Goc_DISTANT_StudioDark.jpg", "left": "Cổng Vòm ver.6/z7933367362401_133d4c600ae00c9dee303381aabe09c7_Goc_LEFT_StudioDark.jpg", "right": "Cổng Vòm ver.6/z7933367362401_133d4c600ae00c9dee303381aabe09c7_Goc_RIGHT_StudioDark.jpg", "top": "Cổng Vòm ver.6/z7933367362401_133d4c600ae00c9dee303381aabe09c7_Goc_TOP_StudioDark.jpg"}}, {"n": "Dragon ver.1", "s": "LINH THÚ", "a": {"front": "Dragon ver.1/vn-11134207-7ra0g-m6weztsl8wip97_Goc_FRONT_StudioDark.jpg", "distant": "Dragon ver.1/vn-11134207-7ra0g-m6weztsl8wip97_Goc_DISTANT_StudioDark.jpg", "left": "Dragon ver.1/vn-11134207-7ra0g-m6weztsl8wip97_Goc_LEFT_StudioDark.jpg", "right": "Dragon ver.1/vn-11134207-7ra0g-m6weztsl8wip97_Goc_RIGHT_StudioDark.jpg", "top": "Dragon ver.1/vn-11134207-7ra0g-m6weztsl8wip97_Goc_TOP_StudioDark.jpg"}}, {"n": "Dragon ver.2", "s": "LINH THÚ", "a": {"front": "Dragon ver.2/hardscape-dragon-drifwood-rfaquarium_Goc_FRONT_StudioDark.jpg", "distant": "Dragon ver.2/hardscape-dragon-drifwood-rfaquarium_Goc_DISTANT_StudioDark.jpg", "left": "Dragon ver.2/hardscape-dragon-drifwood-rfaquarium_Goc_LEFT_StudioDark.jpg", "right": "Dragon ver.2/hardscape-dragon-drifwood-rfaquarium_Goc_RIGHT_StudioDark.jpg", "top": "Dragon ver.2/hardscape-dragon-drifwood-rfaquarium_Goc_TOP_StudioDark.jpg"}}, {"n": "Hang Động ver.1", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.1/z7933368000649_cc54de6f44fb9341474cefb04d2dd9a7_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.1/z7933368000649_cc54de6f44fb9341474cefb04d2dd9a7_Goc_DISTANT_StudioDark (1).jpg", "left": "Hang Động ver.1/z7933368000649_cc54de6f44fb9341474cefb04d2dd9a7_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.1/z7933368000649_cc54de6f44fb9341474cefb04d2dd9a7_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.1/z7933368000649_cc54de6f44fb9341474cefb04d2dd9a7_Goc_TOP_StudioDark (1).jpg"}}, {"n": "Hang Động ver.2", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.2/z7933370096563_58e64398f22d8b43bc7fb7f5b29b6212_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.2/z7933370096563_58e64398f22d8b43bc7fb7f5b29b6212_Goc_DISTANT_StudioDark.jpg", "left": "Hang Động ver.2/z7933370096563_58e64398f22d8b43bc7fb7f5b29b6212_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.2/z7933370096563_58e64398f22d8b43bc7fb7f5b29b6212_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.2/z7933370096563_58e64398f22d8b43bc7fb7f5b29b6212_Goc_TOP_StudioDark.jpg"}}, {"n": "Hang Động ver.3", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.3/z7933370050203_016808d0cd19b34ef936c1eb070699f3_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.3/z7933370050203_016808d0cd19b34ef936c1eb070699f3_Goc_DISTANT_StudioDark.jpg", "left": "Hang Động ver.3/z7933370050203_016808d0cd19b34ef936c1eb070699f3_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.3/z7933370050203_016808d0cd19b34ef936c1eb070699f3_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.3/z7933370050203_016808d0cd19b34ef936c1eb070699f3_Goc_TOP_StudioDark.jpg"}}, {"n": "Hang Động ver.4", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.4/z7933370186829_da9213ccbe0197a8fbeff7e7b982c84e_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.4/z7933370186829_da9213ccbe0197a8fbeff7e7b982c84e_Goc_DISTANT_StudioDark.jpg", "left": "Hang Động ver.4/z7933370186829_da9213ccbe0197a8fbeff7e7b982c84e_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.4/z7933370166188_9ae1239c268a0d66b0177442f13863d2_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.4/z7933370166188_9ae1239c268a0d66b0177442f13863d2_Goc_TOP_StudioDark.jpg"}}, {"n": "Hang Động ver.5", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.5/z7933369583304_26dbb56281b4ff19c2151eb49c35d88e_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.5/z7933369583304_26dbb56281b4ff19c2151eb49c35d88e_Goc_DISTANT_StudioDark.jpg", "left": "Hang Động ver.5/z7933369583304_26dbb56281b4ff19c2151eb49c35d88e_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.5/z7933369583304_26dbb56281b4ff19c2151eb49c35d88e_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.5/z7933369583304_26dbb56281b4ff19c2151eb49c35d88e_Goc_TOP_StudioDark.jpg"}}, {"n": "Hang Động ver.6", "s": "HANG ĐỘNG", "a": {"front": "Hang Động ver.6/7cc23bd33e17a4a9951f3319a122c847_Goc_FRONT_StudioDark.jpg", "distant": "Hang Động ver.6/7cc23bd33e17a4a9951f3319a122c847_Goc_DISTANT_StudioDark.jpg", "left": "Hang Động ver.6/7cc23bd33e17a4a9951f3319a122c847_Goc_LEFT_StudioDark.jpg", "right": "Hang Động ver.6/7cc23bd33e17a4a9951f3319a122c847_Goc_RIGHT_StudioDark.jpg", "top": "Hang Động ver.6/7cc23bd33e17a4a9951f3319a122c847_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.1", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.1/z7933735352710_2a9a0fc9668f830ffaabfb560b148e36_Goc_FRONT_StudioDark.jpg", "distant": "Hẻm Núi ver.1/z7933735352710_2a9a0fc9668f830ffaabfb560b148e36_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.1/z7933735352710_2a9a0fc9668f830ffaabfb560b148e36_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.1/z7933735352710_2a9a0fc9668f830ffaabfb560b148e36_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.1/z7933735352710_2a9a0fc9668f830ffaabfb560b148e36_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.2", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.2/z7933370677940_efb5a49f52cd5c658fcb849d691d38c6_Goc_FRONT_StudioDark_Goc_FRONT_StudioDark.jpg", "distant": "Hẻm Núi ver.2/z7933370677940_efb5a49f52cd5c658fcb849d691d38c6_Goc_FRONT_StudioDark_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.2/z7933370677940_efb5a49f52cd5c658fcb849d691d38c6_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.2/z7933370677940_efb5a49f52cd5c658fcb849d691d38c6_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.2/z7933370677940_efb5a49f52cd5c658fcb849d691d38c6_Goc_FRONT_StudioDark_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.3", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.3/z7933370012940_0c9830d70bf3ce687a0829f38d5d89f1_Goc_DISTANT_StudioDark.jpg", "distant": "Hẻm Núi ver.3/z7933370012940_0c9830d70bf3ce687a0829f38d5d89f1_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.3/z7933370012940_0c9830d70bf3ce687a0829f38d5d89f1_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.3/z7933370182454_31643a0ad52da9fc396884e25fc37a1b_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.3/z7933370012940_0c9830d70bf3ce687a0829f38d5d89f1_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.4", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.4/z7933368858124_f797feacea765c49ef4851a5383afedf_Goc_FRONT_StudioDark.jpg", "distant": "Hẻm Núi ver.4/z7933368858124_f797feacea765c49ef4851a5383afedf_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.4/z7933368858124_f797feacea765c49ef4851a5383afedf_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.4/z7933368858124_f797feacea765c49ef4851a5383afedf_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.4/z7933368858124_f797feacea765c49ef4851a5383afedf_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.5", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.5/z7933369464646_6bf13af1b8709c5e35db2dc7a005298a_Goc_FRONT_StudioDark_generated-v1.png", "distant": "Hẻm Núi ver.5/z7933369464646_6bf13af1b8709c5e35db2dc7a005298a_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.5/z7933369464646_6bf13af1b8709c5e35db2dc7a005298a_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.5/z7933369464646_6bf13af1b8709c5e35db2dc7a005298a_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.5/z7933369464646_6bf13af1b8709c5e35db2dc7a005298a_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.6", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.6/z7933800211925_029abb83d3de890366b5f22ab900f7ad_Goc_FRONT_StudioDark_generated-v1.png", "distant": "Hẻm Núi ver.6/z7933800211925_029abb83d3de890366b5f22ab900f7ad_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.6/z7933800211925_029abb83d3de890366b5f22ab900f7ad_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.6/z7933800211925_029abb83d3de890366b5f22ab900f7ad_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.6/z7933800211925_029abb83d3de890366b5f22ab900f7ad_Goc_TOP_StudioDark.jpg"}}, {"n": "Hẻm Núi ver.7", "s": "HẺM NÚI", "a": {"front": "Hẻm Núi ver.7/vn-11134207-81ztc-ml8wxw3rjg9038_Goc_FRONT_StudioDark.jpg", "distant": "Hẻm Núi ver.7/vn-11134207-81ztc-ml8wxw3rjg9038_Goc_DISTANT_StudioDark.jpg", "left": "Hẻm Núi ver.7/vn-11134207-81ztc-ml8wxw3rjg9038_Goc_LEFT_StudioDark.jpg", "right": "Hẻm Núi ver.7/vn-11134207-81ztc-ml8wxw3rjg9038_Goc_RIGHT_StudioDark.jpg", "top": "Hẻm Núi ver.7/vn-11134207-81ztc-ml8wxw3rjg9038_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.1", "s": "NATURE", "a": {"front": "Nature ver.1/NAT001_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.1/NAT001_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.1/NAT001_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.1/NAT001_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.1/NAT001_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.10", "s": "NATURE", "a": {"front": "Nature ver.10/z7933367953567_aa462d18530d93ac75a691b876248e83_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.10/z7933367953567_aa462d18530d93ac75a691b876248e83_Goc_DISTANT_StudioDark (1).jpg", "left": "Nature ver.10/z7933367953567_aa462d18530d93ac75a691b876248e83_Goc_LEFT_StudioDark (1).jpg", "right": "Nature ver.10/z7933367953567_aa462d18530d93ac75a691b876248e83_Goc_RIGHT_StudioDark (1).jpg", "top": "Nature ver.10/z7933367953567_aa462d18530d93ac75a691b876248e83_Goc_FRONT_StudioDark_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.11", "s": "NATURE", "a": {"front": "Nature ver.11/z7933371083748_e9f41f00b5488bc20f9f36e42eb33f12_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.11/z7933371083748_e9f41f00b5488bc20f9f36e42eb33f12_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.11/z7933371083748_e9f41f00b5488bc20f9f36e42eb33f12_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.11/z7933371083748_e9f41f00b5488bc20f9f36e42eb33f12_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.11/z7933371083748_e9f41f00b5488bc20f9f36e42eb33f12_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.12", "s": "NATURE", "a": {"front": "Nature ver.12/NAT012_StudioClean_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.12/NAT012_StudioClean_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.12/NAT012_StudioClean_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.12/NAT012_StudioClean_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.12/NAT012_StudioClean_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.13", "s": "NATURE", "a": {"front": "Nature ver.13/9af1e1aaa093f80cd0c12e72561165ed_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.13/9af1e1aaa093f80cd0c12e72561165ed_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.13/9af1e1aaa093f80cd0c12e72561165ed_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.13/9af1e1aaa093f80cd0c12e72561165ed_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.13/9af1e1aaa093f80cd0c12e72561165ed_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.2", "s": "NATURE", "a": {"front": "Nature ver.2/z7933367980069_5ec36042f2f676d533148edc8fb4470b_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.2/z7933367980069_5ec36042f2f676d533148edc8fb4470b_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.2/z7933367980069_5ec36042f2f676d533148edc8fb4470b_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.2/z7933367980069_5ec36042f2f676d533148edc8fb4470b_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.2/z7933367980069_5ec36042f2f676d533148edc8fb4470b_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.3", "s": "NATURE", "a": {"front": "Nature ver.3/z7933368864198_b7eecc1a55b26fc4fae9da746780dddd_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.3/z7933368864198_b7eecc1a55b26fc4fae9da746780dddd_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.3/z7933368864198_b7eecc1a55b26fc4fae9da746780dddd_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.3/z7933368864198_b7eecc1a55b26fc4fae9da746780dddd_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.3/z7933368864198_b7eecc1a55b26fc4fae9da746780dddd_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.4", "s": "NATURE", "a": {"front": "Nature ver.4/z7933486535168_fe927143da126c88398a2ece96bd1889_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.4/z7933486535168_fe927143da126c88398a2ece96bd1889_Goc_DISTANT_StudioDark_generated-v1.png", "left": "Nature ver.4/z7933486535168_fe927143da126c88398a2ece96bd1889_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.4/z7933486535168_fe927143da126c88398a2ece96bd1889_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.4/z7933486535168_fe927143da126c88398a2ece96bd1889_Goc_TOP_StudioDark_generated-v1.png"}}, {"n": "Nature ver.5", "s": "NATURE", "a": {"front": "Nature ver.5/z7933367314639_d8bd614bbd0e83171abccd0f3d425545_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.5/z7933367314639_d8bd614bbd0e83171abccd0f3d425545_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.5/z7933367314639_d8bd614bbd0e83171abccd0f3d425545_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.5/z7933367314639_d8bd614bbd0e83171abccd0f3d425545_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.5/z7933367314639_d8bd614bbd0e83171abccd0f3d425545_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.6", "s": "NATURE", "a": {"front": "Nature ver.6/z7933368019498_28240446b9ded0c7daede169230913d6_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.6/z7933368019498_28240446b9ded0c7daede169230913d6_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.6/z7933368019498_28240446b9ded0c7daede169230913d6_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.6/z7933368019498_28240446b9ded0c7daede169230913d6_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.6/z7933368019498_28240446b9ded0c7daede169230913d6_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.7", "s": "NATURE", "a": {"front": "Nature ver.7/z7933367502226_b22b3db825e441719b778c793f6888df_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.7/z7933367502226_b22b3db825e441719b778c793f6888df_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.7/z7933367502226_b22b3db825e441719b778c793f6888df_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.7/z7933367502226_b22b3db825e441719b778c793f6888df_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.7/z7933367502226_b22b3db825e441719b778c793f6888df_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.8", "s": "NATURE", "a": {"front": "Nature ver.8/NAT008_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.8/NAT008_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.8/NAT008_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.8/NAT008_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.8/NAT008_Goc_TOP_StudioDark.jpg"}}, {"n": "Nature ver.9", "s": "NATURE", "a": {"front": "Nature ver.9/z7933367886588_de77aa3fe55d8a466380dbf2e9665013_Goc_FRONT_StudioDark.jpg", "distant": "Nature ver.9/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_DISTANT_StudioDark.jpg", "left": "Nature ver.9/z7933367886588_de77aa3fe55d8a466380dbf2e9665013_Goc_LEFT_StudioDark.jpg", "right": "Nature ver.9/z7933367886588_de77aa3fe55d8a466380dbf2e9665013_Goc_RIGHT_StudioDark.jpg", "top": "Nature ver.9/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_TOP_StudioDark.jpg"}}, {"n": "Nhất Trụ ver.1", "s": "NHẤT TRỤ", "a": {"front": "Nhất Trụ ver.1/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_FRONT_StudioDark.jpg", "distant": "Nhất Trụ ver.1/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_DISTANT_StudioDark_generated-v1.png", "left": "Nhất Trụ ver.1/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_LEFT_StudioDark.jpg", "right": "Nhất Trụ ver.1/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_RIGHT_StudioDark.jpg", "top": "Nhất Trụ ver.1/grok-image-776492a0-5195-4bc0-b5ed-efaa3924c79f_Goc_TOP_StudioDark.jpg"}}, {"n": "Nhất Trụ ver.2", "s": "NHẤT TRỤ", "a": {"front": "Nhất Trụ ver.2/z7933368756490_34e9021ed2e5e0f37302d3003c50b251_Goc_FRONT_StudioDark.jpg", "distant": "Nhất Trụ ver.2/z7933368756490_34e9021ed2e5e0f37302d3003c50b251_Goc_DISTANT_StudioDark.jpg", "left": "Nhất Trụ ver.2/z7933368756490_34e9021ed2e5e0f37302d3003c50b251_Goc_LEFT_StudioDark.jpg", "right": "Nhất Trụ ver.2/z7933368756490_34e9021ed2e5e0f37302d3003c50b251_Goc_RIGHT_StudioDark.jpg", "top": "Nhất Trụ ver.2/z7933368756490_34e9021ed2e5e0f37302d3003c50b251_Goc_TOP_StudioDark.jpg"}}, {"n": "Nhất Trụ ver.3", "s": "NHẤT TRỤ", "a": {"front": "Nhất Trụ ver.3/z7933368851233_71137e3a947b974140ca8391f4ff22a1_Goc_FRONT_StudioDark.jpg", "distant": "Nhất Trụ ver.3/z7933368851233_71137e3a947b974140ca8391f4ff22a1_Goc_DISTANT_StudioDark.jpg", "left": "Nhất Trụ ver.3/z7933368851233_71137e3a947b974140ca8391f4ff22a1_Goc_LEFT_StudioDark.jpg", "right": "Nhất Trụ ver.3/z7933368851233_71137e3a947b974140ca8391f4ff22a1_Goc_RIGHT_StudioDark.jpg", "top": "Nhất Trụ ver.3/z7933368851233_71137e3a947b974140ca8391f4ff22a1_Goc_TOP_StudioDark.jpg"}}, {"n": "Nhất Trụ ver.4", "s": "NHẤT TRỤ", "a": {"front": "Nhất Trụ ver.4/z7933367911135_2319a7ad70969b5420abbe86c4aa8328_Goc_FRONT_StudioDark.jpg", "distant": "Nhất Trụ ver.4/z7933367911135_2319a7ad70969b5420abbe86c4aa8328_Goc_DISTANT_StudioDark.jpg", "left": "Nhất Trụ ver.4/z7933367911135_2319a7ad70969b5420abbe86c4aa8328_Goc_LEFT_StudioDark.jpg", "right": "Nhất Trụ ver.4/z7933367911135_2319a7ad70969b5420abbe86c4aa8328_Goc_RIGHT_StudioDark.jpg", "top": "Nhất Trụ ver.4/z7933367911135_2319a7ad70969b5420abbe86c4aa8328_Goc_TOP_StudioDark.jpg"}}, {"n": "Phượng Hoàng", "s": "LINH THÚ", "a": {"front": "Phượng Hoàng/770A5294_Goc_FRONT_StudioDark.jpg", "distant": "Phượng Hoàng/770A5294_Goc_DISTANT_StudioDark.jpg", "left": "Phượng Hoàng/770A5294_Goc_LEFT_StudioDark.jpg", "right": "Phượng Hoàng/770A5294_Goc_RIGHT_StudioDark.jpg", "top": "Phượng Hoàng/770A5294_Goc_TOP_StudioDark.jpg"}}, {"n": "Rồng Châu Á ver.1", "s": "LINH THÚ", "a": {"front": "Rồng Châu Á ver.1/vn-11134207-820l4-metrei56zocg50_Goc_FRONT_StudioDark.jpg", "distant": "Rồng Châu Á ver.1/vn-11134207-820l4-metrei56zocg50_Goc_DISTANT_StudioDark.jpg", "left": "Rồng Châu Á ver.1/vn-11134207-820l4-metrei56zocg50_Goc_LEFT_StudioDark.jpg", "right": "Rồng Châu Á ver.1/vn-11134207-820l4-metrei56zocg50_Goc_RIGHT_StudioDark.jpg", "top": "Rồng Châu Á ver.1/vn-11134207-820l4-metrei56zocg50_Goc_TOP_StudioDark.jpg"}}, {"n": "Rồng Châu Á ver.2", "s": "LINH THÚ", "a": {"front": "Rồng Châu Á ver.2/vn-11134207-81ztc-mmkeoze0b0n866_Goc_FRONT_StudioDark.jpg", "distant": "Rồng Châu Á ver.2/vn-11134207-81ztc-mmkeoze0b0n866_Goc_DISTANT_StudioDark.jpg", "left": "Rồng Châu Á ver.2/vn-11134207-81ztc-mmkeoze0b0n866_Goc_LEFT_StudioDark.jpg", "right": "Rồng Châu Á ver.2/vn-11134207-81ztc-mmkeoze0b0n866_Goc_RIGHT_StudioDark.jpg", "top": "Rồng Châu Á ver.2/vn-11134207-81ztc-mmkeoze0b0n866_Goc_TOP_StudioDark.jpg"}}, {"n": "Rồng Châu Âu ver.2", "s": "LINH THÚ", "a": {"front": "Rồng Châu Âu ver.2/770A5243_Goc_FRONT_StudioDark.jpg", "distant": "Rồng Châu Âu ver.2/770A5243_Goc_DISTANT_StudioDark.jpg", "left": "Rồng Châu Âu ver.2/770A5243_Goc_LEFT_StudioDark.jpg", "right": "Rồng Châu Âu ver.2/770A5243_Goc_RIGHT_StudioDark.jpg", "top": "Rồng Châu Âu ver.2/770A5243_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.1", "s": "RỪNG", "a": {"front": "Rừng ver.1/z7933367974527_6365dc0b7a998e5362be517dd308c149_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.1/z7933367974527_6365dc0b7a998e5362be517dd308c149_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.1/z7933367974527_6365dc0b7a998e5362be517dd308c149_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.1/z7933367974527_6365dc0b7a998e5362be517dd308c149_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.1/z7933367974527_6365dc0b7a998e5362be517dd308c149_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.10", "s": "RỪNG", "a": {"front": "Rừng ver.10/z7933369901963_06857ac7d8a1129956b816028e409c2f_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.10/z7933369901963_06857ac7d8a1129956b816028e409c2f_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.10/z7933369901963_06857ac7d8a1129956b816028e409c2f_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.10/z7933369901963_06857ac7d8a1129956b816028e409c2f_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.10/z7933369901963_06857ac7d8a1129956b816028e409c2f_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.11", "s": "RỪNG", "a": {"front": "Rừng ver.11/z7933800095435_d51f1c5d6e07d8d1bbcd7031605b2a1d_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.11/z7933800095435_d51f1c5d6e07d8d1bbcd7031605b2a1d_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.11/z7933800095435_d51f1c5d6e07d8d1bbcd7031605b2a1d_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.11/z7933800095435_d51f1c5d6e07d8d1bbcd7031605b2a1d_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.11/z7933800095435_d51f1c5d6e07d8d1bbcd7031605b2a1d_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.13", "s": "RỪNG", "a": {"front": "Rừng ver.13/z7933739064775_cea90f75c7f6434419af15739a3c3084_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.13/z7933739064775_cea90f75c7f6434419af15739a3c3084_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.13/z7933739064775_cea90f75c7f6434419af15739a3c3084_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.13/z7933739064775_cea90f75c7f6434419af15739a3c3084_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.13/z7933739064775_cea90f75c7f6434419af15739a3c3084_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.14", "s": "RỪNG", "a": {"front": "Rừng ver.14/z7933800068619_04c2f0f208acb316cb3480b7c395946d_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.14/z7933800068619_04c2f0f208acb316cb3480b7c395946d_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.14/z7933800068619_04c2f0f208acb316cb3480b7c395946d_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.14/z7933800068619_04c2f0f208acb316cb3480b7c395946d_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.14/z7933800068619_04c2f0f208acb316cb3480b7c395946d_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.15", "s": "RỪNG", "a": {"front": "Rừng ver.15/z7933369765795_f0d03f536bbc8ea9fbaa1344fd1986d6_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.15/z7933369765795_f0d03f536bbc8ea9fbaa1344fd1986d6_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.15/z7933369765795_f0d03f536bbc8ea9fbaa1344fd1986d6_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.15/z7933369765795_f0d03f536bbc8ea9fbaa1344fd1986d6_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.15/z7933369765795_f0d03f536bbc8ea9fbaa1344fd1986d6_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.16", "s": "RỪNG", "a": {"front": "Rừng ver.16/vn-11134207-7r98o-lxxntlysl597a0_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.16/vn-11134207-7r98o-lxxntlysl597a0_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.16/vn-11134207-7r98o-lxxntlysl597a0_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.16/vn-11134207-7r98o-lxxntlysl597a0_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.16/vn-11134207-7r98o-lxxntlysl597a0_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.17", "s": "RỪNG", "a": {"front": "Rừng ver.17/z7933369503355_06da8a609dfc9f00f49eb6dfe94713fe_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.17/z7933369503355_06da8a609dfc9f00f49eb6dfe94713fe_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.17/z7933369503355_06da8a609dfc9f00f49eb6dfe94713fe_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.17/z7933369503355_06da8a609dfc9f00f49eb6dfe94713fe_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.17/z7933369503355_06da8a609dfc9f00f49eb6dfe94713fe_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.19", "s": "RỪNG", "a": {"front": "Rừng ver.19/2aoboql48jp14itzfrt0y3qpmtpayrpd0cgfz2rs1_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.19/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.19/2aoboql48jp14itzfrt0y3qpmtpayrpd0cgfz2rs1_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.19/2aoboql48jp14itzfrt0y3qpmtpayrpd0cgfz2rs1_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.19/2aoboql48jp14itzfrt0y3qpmtpayrpd0cgfz2rs1_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.2", "s": "RỪNG", "a": {"front": "Rừng ver.2/z7933369980533_e5156529010a53c4ee064881334415c8_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.2/z7933369980533_e5156529010a53c4ee064881334415c8_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.2/z7933369980533_e5156529010a53c4ee064881334415c8_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.2/z7933369980533_e5156529010a53c4ee064881334415c8_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.2/z7933369980533_e5156529010a53c4ee064881334415c8_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.20", "s": "RỪNG", "a": {"front": "Rừng ver.20/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.20/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.20/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.20/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.20/2aoboql48je8tjdjvu4ksvvgieugrygvwzjikd0q4_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.21", "s": "RỪNG", "a": {"front": "Rừng ver.21/Rf-aquarium-layout-rừng6_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.21/Rf-aquarium-layout-rừng6_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.21/Rf-aquarium-layout-rừng6_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.21/Rf-aquarium-layout-rừng6_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.21/Rf-aquarium-layout-rừng6_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.22", "s": "RỪNG", "a": {"front": "Rừng ver.22/watermarked_img_13870633234632357482_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.22/watermarked_img_13870633234632357482_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.22/watermarked_img_13870633234632357482_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.22/watermarked_img_13870633234632357482_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.22/watermarked_img_13870633234632357482_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.23", "s": "RỪNG", "a": {"front": "Rừng ver.23/a257b322c7b60c3fa48f5f944dc6813c_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.23/a257b322c7b60c3fa48f5f944dc6813c_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.23/a257b322c7b60c3fa48f5f944dc6813c_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.23/a257b322c7b60c3fa48f5f944dc6813c_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.23/a257b322c7b60c3fa48f5f944dc6813c_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.3", "s": "RỪNG", "a": {"front": "Rừng ver.3/z7933367346524_adeae50dc29d5e7fe82d3395991ab002_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.3/z7933367346524_adeae50dc29d5e7fe82d3395991ab002_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.3/z7933367346524_adeae50dc29d5e7fe82d3395991ab002_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.3/z7933367346524_adeae50dc29d5e7fe82d3395991ab002_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.3/z7933367346524_adeae50dc29d5e7fe82d3395991ab002_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.5", "s": "RỪNG", "a": {"front": "Rừng ver.5/z7933368030020_6c15c5940cb772fbdc6d58ce2ff087f9_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.5/z7933368030020_6c15c5940cb772fbdc6d58ce2ff087f9_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.5/z7933368030020_6c15c5940cb772fbdc6d58ce2ff087f9_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.5/z7933368030020_6c15c5940cb772fbdc6d58ce2ff087f9_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.5/z7933368030020_6c15c5940cb772fbdc6d58ce2ff087f9_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.6", "s": "RỪNG", "a": {"front": "Rừng ver.6/z7933370076800_5201f0cb7a84e3737f3eb866bc329ae6_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.6/z7933370076800_5201f0cb7a84e3737f3eb866bc329ae6_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.6/z7933370076800_5201f0cb7a84e3737f3eb866bc329ae6_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.6/z7933370076800_5201f0cb7a84e3737f3eb866bc329ae6_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.6/z7933370076800_5201f0cb7a84e3737f3eb866bc329ae6_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.8", "s": "RỪNG", "a": {"front": "Rừng ver.8/z7933420624566_3c1669977579e715a133865366dfc19e_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.8/z7933420624566_3c1669977579e715a133865366dfc19e_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.8/z7933420624566_3c1669977579e715a133865366dfc19e_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.8/z7933420624566_3c1669977579e715a133865366dfc19e_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.8/z7933420624566_3c1669977579e715a133865366dfc19e_Goc_TOP_StudioDark.jpg"}}, {"n": "Rừng ver.9", "s": "RỪNG", "a": {"front": "Rừng ver.9/z7933368801067_1d799f4e385b1268a25f29e014cb9545_Goc_FRONT_StudioDark.jpg", "distant": "Rừng ver.9/z7933368801067_1d799f4e385b1268a25f29e014cb9545_Goc_DISTANT_StudioDark.jpg", "left": "Rừng ver.9/z7933368801067_1d799f4e385b1268a25f29e014cb9545_Goc_LEFT_StudioDark.jpg", "right": "Rừng ver.9/z7933368801067_1d799f4e385b1268a25f29e014cb9545_Goc_RIGHT_StudioDark.jpg", "top": "Rừng ver.9/z7933369940298_9a883072437e358cf42d52b37779b037_Goc_TOP_StudioDark.jpg"}}, {"n": "Trăng", "s": "TRĂNG", "a": {"front": "Trăng/z7933367865749_5bcfc1edd736a8c0c3ce2d07d1e2cca1_Goc_FRONT_StudioDark.jpg", "distant": "Trăng/z7933367865749_5bcfc1edd736a8c0c3ce2d07d1e2cca1_Goc_DISTANT_StudioDark.jpg", "left": "Trăng/z7933367865749_5bcfc1edd736a8c0c3ce2d07d1e2cca1_Goc_LEFT_StudioDark.jpg", "right": "Trăng/z7933367865749_5bcfc1edd736a8c0c3ce2d07d1e2cca1_Goc_RIGHT_StudioDark.jpg", "top": "Trăng/z7933367865749_5bcfc1edd736a8c0c3ce2d07d1e2cca1_Goc_TOP_StudioDark.jpg"}}, {"n": "Tê Giác", "s": "LINH THÚ", "a": {"front": "Tê Giác/vn-11134207-820l4-mjydsfbdgoat97_Goc_FRONT_StudioDark.jpg", "distant": "Tê Giác/vn-11134207-820l4-mjydsfbdgoat97_Goc_DISTANT_StudioDark.jpg", "left": "Tê Giác/vn-11134207-820l4-mjydsfbdgoat97_Goc_LEFT_StudioDark.jpg", "right": "Tê Giác/vn-11134207-820l4-mjydsfbdgoat97_Goc_RIGHT_StudioDark.jpg", "top": "Tê Giác/vn-11134207-820l4-mjydsfbdgoat97_Goc_TOP_StudioDark.jpg"}}, {"n": "Vách ver.1", "s": "VÁCH SUỐI", "a": {"front": "Vách ver.1/z7933367152575_7f9c77f6c6158de870b445f6106f479e_Goc_FRONT_StudioDark.jpg", "distant": "Vách ver.1/z7933367152575_7f9c77f6c6158de870b445f6106f479e_Goc_DISTANT_StudioDark.jpg", "left": "Vách ver.1/z7933367152575_7f9c77f6c6158de870b445f6106f479e_Goc_LEFT_StudioDark.jpg", "right": "Vách ver.1/z7933367152575_7f9c77f6c6158de870b445f6106f479e_Goc_RIGHT_StudioDark.jpg", "top": "Vách ver.1/z7933367152575_7f9c77f6c6158de870b445f6106f479e_Goc_TOP_StudioDark.jpg"}}, {"n": "Vách ver.2", "s": "VÁCH SUỐI", "a": {"front": "Vách ver.2/z7933368062000_16b027ec33051f2555a6d0553fbf79f9_Goc_FRONT_StudioDark.jpg", "distant": "Vách ver.2/z7933368062000_16b027ec33051f2555a6d0553fbf79f9_Goc_DISTANT_StudioDark.jpg", "left": "Vách ver.2/z7933368062000_16b027ec33051f2555a6d0553fbf79f9_Goc_LEFT_StudioDark.jpg", "right": "Vách ver.2/z7933368062000_16b027ec33051f2555a6d0553fbf79f9_Goc_RIGHT_StudioDark.jpg", "top": "Vách ver.2/z7933368062000_16b027ec33051f2555a6d0553fbf79f9_Goc_TOP_StudioDark.jpg"}}, {"n": "Vách ver.3", "s": "VÁCH SUỐI", "a": {"front": "Vách ver.3/z7933367402486_61e192c3ef892dc1647d0aa542a4c477_Goc_FRONT_StudioDark.jpg", "distant": "Vách ver.3/z7933367402486_61e192c3ef892dc1647d0aa542a4c477_Goc_DISTANT_StudioDark.jpg", "left": "Vách ver.3/z7933367402486_61e192c3ef892dc1647d0aa542a4c477_Goc_LEFT_StudioDark.jpg", "right": "Vách ver.3/z7933367402486_61e192c3ef892dc1647d0aa542a4c477_Goc_RIGHT_StudioDark.jpg", "top": "Vách ver.3/z7933367402486_61e192c3ef892dc1647d0aa542a4c477_Goc_TOP_StudioDark.jpg"}}, {"n": "Vách ver.4", "s": "VÁCH SUỐI", "a": {"front": "Vách ver.4/aquascape (1)_Goc_FRONT_StudioDark.jpg", "distant": "Vách ver.4/aquascape (1)_Goc_DISTANT_StudioDark.jpg", "left": "Vách ver.4/aquascape (1)_Goc_LEFT_StudioDark.jpg", "right": "Vách ver.4/aquascape (1)_Goc_RIGHT_StudioDark.jpg", "top": "Vách ver.4/aquascape (1)_Goc_TOP_StudioDark.jpg"}}, {"n": "Đại Bàng", "s": "LINH THÚ", "a": {"front": "Đại Bàng/770A5302_Goc_FRONT_StudioDark.jpg", "distant": "Đại Bàng/770A5426_Goc_DISTANT_StudioDark.jpg", "left": "Đại Bàng/770A5302_Goc_LEFT_StudioDark.jpg", "right": "Đại Bàng/770A5302_Goc_RIGHT_StudioDark.jpg", "top": "Đại Bàng/770A5302_Goc_TOP_StudioDark.jpg"}}, {"n": "Đảo Bay ver.1", "s": "ĐẢO BAY", "a": {"front": "Đảo Bay ver.1/z7933367894150_c842558decc9096189d2bcb0ae44e9ff_Goc_FRONT_StudioDark.jpg", "distant": "Đảo Bay ver.1/z7933367894150_c842558decc9096189d2bcb0ae44e9ff_Goc_DISTANT_StudioDark.jpg", "left": "Đảo Bay ver.1/z7933367894150_c842558decc9096189d2bcb0ae44e9ff_Goc_LEFT_StudioDark.jpg", "right": "Đảo Bay ver.1/z7933367894150_c842558decc9096189d2bcb0ae44e9ff_Goc_RIGHT_StudioDark.jpg", "top": "Đảo Bay ver.1/z7933367894150_c842558decc9096189d2bcb0ae44e9ff_Goc_TOP_StudioDark.jpg"}}, {"n": "Đảo Bay ver.2", "s": "ĐẢO BAY", "a": {"front": "Đảo Bay ver.2/DAO002_Goc_FRONT_StudioDark.jpg", "distant": "Đảo Bay ver.2/DAO002_Goc_DISTANT_StudioDark.jpg", "left": "Đảo Bay ver.2/DAO002_Goc_LEFT_StudioDark.jpg", "right": "Đảo Bay ver.2/DAO002_Goc_RIGHT_StudioDark.jpg", "top": "Đảo Bay ver.2/DAO002_Goc_TOP_StudioDark.jpg"}}, {"n": "Đảo Bay ver.3", "s": "ĐẢO BAY", "a": {"front": "Đảo Bay ver.3/z7933370136722_ab5bd78a76ee749fa4ded46b26455c6c_Goc_FRONT_StudioDark.jpg", "distant": "Đảo Bay ver.3/z7933370136722_ab5bd78a76ee749fa4ded46b26455c6c_Goc_DISTANT_StudioDark.jpg", "left": "Đảo Bay ver.3/z7933370136722_ab5bd78a76ee749fa4ded46b26455c6c_Goc_LEFT_StudioDark.jpg", "right": "Đảo Bay ver.3/z7933370136722_ab5bd78a76ee749fa4ded46b26455c6c_Goc_RIGHT_StudioDark.jpg", "top": "Đảo Bay ver.3/z7933370136722_ab5bd78a76ee749fa4ded46b26455c6c_Goc_TOP_StudioDark.jpg"}}];
+
+window.formatLayoutAngleItem = function(item, originalInput) {
+  var baseUrl = window.RF_LAYOUT_BASE_URL || ('http:' + '/' + '/127.0.0.1:8000/static/layouts/');
+  var makeUrl = function(relPath) {
+    if (!relPath) return '';
+    return baseUrl + encodeURI(relPath);
+  };
+  
+  var angles = {
+    front: {
+      key: 'front',
+      label: 'Chính Diện',
+      shortLabel: 'Trước',
+      icon: 'fa-bullseye',
+      relativePath: item.a.front,
+      url: makeUrl(item.a.front)
+    },
+    distant: {
+      key: 'distant',
+      label: 'Toàn Cảnh (Góc Xa)',
+      shortLabel: 'Toàn Cảnh',
+      icon: 'fa-globe',
+      relativePath: item.a.distant,
+      url: makeUrl(item.a.distant)
+    },
+    left: {
+      key: 'left',
+      label: 'Góc Trái (Cạnh Trái)',
+      shortLabel: 'Trái',
+      icon: 'fa-arrow-left',
+      relativePath: item.a.left,
+      url: makeUrl(item.a.left)
+    },
+    right: {
+      key: 'right',
+      label: 'Góc Phải (Cạnh Phải)',
+      shortLabel: 'Phải',
+      icon: 'fa-arrow-right',
+      relativePath: item.a.right,
+      url: makeUrl(item.a.right)
+    },
+    top: {
+      key: 'top',
+      label: 'Mặt Trên (Nhìn Xuống)',
+      shortLabel: 'Trên',
+      icon: 'fa-arrow-up',
+      relativePath: item.a.top,
+      url: makeUrl(item.a.top)
+    }
+  };
+  
+  return {
+    name: item.n,
+    subCategory: item.s,
+    angles: angles,
+    angleList: [angles.front, angles.distant, angles.left, angles.right, angles.top],
+    totalAngles: 5,
+    coverUrl: angles.front.url || angles.distant.url
+  };
+};
+
+window.findLayoutAngles = function(productOrName) {
+  if (!productOrName) return null;
+  var raw = typeof productOrName === 'object' ? (productOrName.name || productOrName.productName || productOrName.sku || '') : String(productOrName);
+  if (!raw) return null;
+  
+  var clean = String(raw).trim().toLowerCase()
+    .replace(/^(layout|kho layout|bộ layout)\s+/i, '')
+    .trim();
+  
+  var catalog = window.RF_LAYOUT_5_ANGLES_CATALOG || [];
+  if (!catalog || !catalog.length) return null;
+
+  // Tách tên layout gốc trước dấu gạch nối hoặc trước thông số kích thước (vd: " - 40x23x25cm", " 40*23*25", "(40x23x25cm)")
+  var cleanBase = clean
+    .split(/[\-\–\—|]/)[0]
+    .replace(/\s*\(\s*\d+\s*[xX*×]\s*\d+.*?\)/g, '')
+    .replace(/\s+\d+\s*[xX*×]\s*\d+\s*[xX*×]\s*\d+.*$/g, '')
+    .trim();
+
+  // 1. So khớp tuyệt đối (Exact Match) tên đầy đủ hoặc tên gốc sau bóc tách
+  for (var i = 0; i < catalog.length; i++) {
+    var it = catalog[i];
+    var itName = it.n.toLowerCase();
+    if (itName === clean || itName === cleanBase || itName === raw.toLowerCase()) {
+      return window.formatLayoutAngleItem(it, productOrName);
+    }
+  }
+
+  // 2. Trích xuất chính xác số version (VD: "ver.8", "ver 8", "v8", "ver8")
+  var verMatch = clean.match(/(?:ver\.?|v\.?)\s*(\d+)\b/i);
+  var targetVer = verMatch ? String(verMatch[1]) : null;
+
+  if (targetVer) {
+    // Đơn có chỉ định version cụ thể: BẮT BUỘC chỉ khớp với catalog item CÙNG version number
+    // Tuyệt đối không để số trong kích thước (như 23 trong 23x25cm) làm nhảy sai version
+    for (var j = 0; j < catalog.length; j++) {
+      var item = catalog[j];
+      var itemName = item.n.toLowerCase();
+      if (itemName.indexOf('ver.') !== -1) {
+        var parts = itemName.split('ver.');
+        var baseKw = parts[0].trim();
+        var vNum = parts[1].trim();
+        if (vNum === targetVer) {
+          if (cleanBase.indexOf(baseKw) !== -1 || clean.indexOf(baseKw) !== -1) {
+            return window.formatLayoutAngleItem(item, productOrName);
+          }
+        }
+      }
+    }
+  } else {
+    // Không có version: tìm kiếm layout định danh đơn lẻ (Trăng, Cá Heo, Phượng Hoàng, Tê Giác,...)
+    for (var k = 0; k < catalog.length; k++) {
+      var itemK = catalog[k];
+      var itemKName = itemK.n.toLowerCase();
+      if (itemKName.indexOf('ver.') === -1) {
+        if (cleanBase.indexOf(itemKName) !== -1 || clean.indexOf(itemKName) !== -1) {
+          return window.formatLayoutAngleItem(itemK, productOrName);
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+window.isLayoutWith5Angles = function(productOrName) {
+  return !!window.findLayoutAngles(productOrName);
+};
+
+
+</script>
