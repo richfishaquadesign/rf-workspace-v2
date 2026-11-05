@@ -3,7 +3,7 @@
 
 <head>
 
-  <!-- ⚡ VERCEL TURBO-CACHE & DIRECT HTTP BRIDGE ⚡ -->
+  <!-- ⚡ VERCEL TURBO-CACHE & DIRECT SUPABASE DATABASE ENGINE ⚡ -->
   <script>
     (function() {
       window.RF_STANDALONE = true;
@@ -12,7 +12,7 @@
       window.__rfDeferredInjected = true;
       window.__rfLoadTabNow = function() { return Promise.resolve({ok:true}); };
       
-      console.log('🚀 RF Workspace Pro V2 running in High-Performance Standalone Mode (Powered by Supabase)');
+      console.log('🚀 RF Workspace Pro V2 running in High-Performance Mode (Supabase Engine Direct)');
 
       var SUPABASE_URL = 'https://oxtttywpelbyitgxspfm.supabase.co';
       var SUPABASE_KEY = 'sb_publishable_Bi-hpAsVX5nS10wE_LugRA_RF8wnu0W';
@@ -26,7 +26,10 @@
         try {
           var url = SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
           var resp = await fetch(url, { headers: SUPABASE_HEADERS });
-          if (!resp.ok) return [];
+          if (!resp.ok) {
+            console.warn('Supabase fetch returned ' + resp.status + ' for ' + table);
+            return [];
+          }
           return await resp.json();
         } catch(e) {
           console.warn('Fetch Supabase ' + table + ' error:', e);
@@ -34,8 +37,50 @@
         }
       }
 
+      // Parallel multi-page fetcher for tables exceeding Supabase 1,000 limit
+      async function fetchAllFromSupabase(table, query, maxPages) {
+        maxPages = maxPages || 3;
+        var pages = [];
+        for (var p = 0; p < maxPages; p++) {
+          var offset = p * 1000;
+          var sep = query ? '&' : '';
+          var q = (query || '') + sep + 'limit=1000&offset=' + offset;
+          pages.push(fetchFromSupabase(table, q));
+        }
+        var results = await Promise.all(pages);
+        var combined = [];
+        for (var i = 0; i < results.length; i++) {
+          if (results[i] && results[i].length) {
+            combined = combined.concat(results[i]);
+            if (results[i].length < 1000) break;
+          } else {
+            break;
+          }
+        }
+        return combined;
+      }
+
+      // Supabase Upsert Helper
+      async function upsertToSupabase(table, rows) {
+        if (!rows || !rows.length) return;
+        try {
+          var url = SUPABASE_URL + '/rest/v1/' + table;
+          var headers = Object.assign({}, SUPABASE_HEADERS, {
+            'Prefer': 'resolution=merge-duplicates'
+          });
+          await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(rows)
+          });
+        } catch(e) {
+          console.warn('Upsert to ' + table + ' failed:', e);
+        }
+      }
+
       // HTTP fetch helper with Supabase direct acceleration
       async function callRemoteGasApi(action, args, pin) {
+        // 1. PIN Authentication
         if (action === 'validatePin') {
           var inputPin = String(args[0] || pin || '').trim();
           var staffRows = await fetchFromSupabase('Config_NhanSu', 'select=*');
@@ -56,28 +101,94 @@
               };
             }
           }
-          // Fallback to Apps Script validation
         }
 
-        if (action === 'getAppData') {
-          console.log('⚡ [SUPABASE] Pulling live dataset directly from Supabase...');
+        // 2. User Config
+        if (action === 'getUserConfig') {
+          var staffRows = await fetchFromSupabase('Config_NhanSu', 'select=*');
+          var cfg = {
+            avatars: {},
+            titles: {},
+            subTitles: {},
+            salaries: {},
+            users: [],
+            roles: {},
+            pins: {},
+            raw: staffRows || [],
+            staffList: [],
+            staffDetails: {},
+            statuses: {}
+          };
+          (staffRows || []).forEach(function(s) {
+            var name = (s['Tên Nhân Sự'] || '').trim();
+            if (!name) return;
+            cfg.users.push(name);
+            cfg.staffList.push(name);
+            if (s['ID Ảnh']) {
+              var m = String(s['ID Ảnh']).match(/[-\w]{25,}/);
+              cfg.avatars[name] = m ? m[0] : s['ID Ảnh'];
+            }
+            if (s['Chức Danh']) cfg.titles[name] = s['Chức Danh'];
+            if (s['Chức Danh Phụ']) cfg.subTitles[name] = s['Chức Danh Phụ'];
+            if (s['Phân Quyền']) cfg.roles[name] = s['Phân Quyền'];
+            if (s['Mã PIN']) cfg.pins[name] = s['Mã PIN'];
+            if (s['Trạng Thái']) cfg.statuses[name] = s['Trạng Thái'];
+            cfg.staffDetails[name] = s;
+          });
+          return cfg;
+        }
+
+        // 3. Core App Data (getAppData / getAppDataIfChanged)
+        if (action === 'getAppData' || action === 'getAppDataIfChanged') {
+          console.log('⚡ [SUPABASE] Pulling live dataset from PostgreSQL tables...');
           try {
-            const [ordersRaw, prodRaw, packingsRaw, productsRaw, staffRaw, kpiRaw, giaLayoutRaw, bomRaw, transRaw, impRaw, accRaw, supRaw, attRaw] = await Promise.all([
-              fetchFromSupabase('Orders', 'select=*&order=createdAt.desc&limit=2500'),
-              fetchFromSupabase('Production', 'select=*&order=deadline.asc&limit=2000'),
-              fetchFromSupabase('Packings', 'select=*&order=start.desc&limit=2500'),
+            const [ordersRaw, prodRaw, packingsRaw, productsRaw, staffRaw, kpiRaw, giaLayoutRaw, bomRaw, transRaw, impRaw, accRaw, supRaw, attRaw, docRaw, trainRaw, modRaw, ctvRaw, snapRaw] = await Promise.all([
+              fetchAllFromSupabase('Orders', 'select=*&order=createdAt.desc', 3),
+              fetchAllFromSupabase('Production', 'select=*&order=deadline.asc', 3),
+              fetchAllFromSupabase('Packings', 'select=*&order=start.desc', 3),
               fetchFromSupabase('Products', 'select=*&limit=1000'),
               fetchFromSupabase('Config_NhanSu', 'select=*'),
               fetchFromSupabase('Config_KPI', 'select=*'),
               fetchFromSupabase('Config_GiaLayout', 'select=*'),
-              fetchFromSupabase('BOM_Config', 'select=*&limit=2000'),
-              fetchFromSupabase('Transactions', 'select=*&order=date.desc&limit=1500'),
-              fetchFromSupabase('ImportExport', 'select=*&order=date.desc&limit=2500'),
+              fetchAllFromSupabase('BOM_Config', 'select=*', 2),
+              fetchAllFromSupabase('Transactions', 'select=*&order=date.desc', 2),
+              fetchAllFromSupabase('ImportExport', 'select=*&order=date.desc', 3),
               fetchFromSupabase('Accounts', 'select=*'),
               fetchFromSupabase('Suppliers', 'select=*'),
-              fetchFromSupabase('Attendance', 'select=*&order=date.desc&limit=1500')
+              fetchAllFromSupabase('Attendance', 'select=*&order=date.desc', 2),
+              fetchFromSupabase('Documents', 'select=*'),
+              fetchFromSupabase('Trainings', 'select=*'),
+              fetchFromSupabase('Models3D', 'select=*'),
+              fetchFromSupabase('CTV_Finance', 'select=*'),
+              fetchFromSupabase('Monthly_Snapshots', 'select=*')
             ]);
 
+            // Normalise Orders (accessories, boolean flags, numbers)
+            (ordersRaw || []).forEach(function(o) {
+              if (o.accessories && typeof o.accessories === 'string') {
+                try {
+                  var p = JSON.parse(o.accessories);
+                  while (typeof p === 'string') p = JSON.parse(p);
+                  o.accessories = Array.isArray(p) ? p : [p];
+                } catch(e) {
+                  o.accessories = [];
+                }
+              } else if (!Array.isArray(o.accessories)) {
+                o.accessories = [];
+              }
+              o.hasProduction = Boolean(o.hasProduction);
+              o.isCarriedToWH = Boolean(o.isCarriedToWH);
+              o.isReconciled = Boolean(o.isReconciled);
+              o.isUrgent = Boolean(o.isUrgent);
+              o.revenue = Number(o.revenue || 0);
+              o.cogs = Number(o.cogs || 0);
+              o.costTotal = Number(o.costTotal || 0);
+              o.prePaid = Number(o.prePaid || 0);
+              o.cod = Number(o.cod || 0);
+              o.discount = Number(o.discount || 0);
+            });
+
+            // Normalise Production items into phases format
             var prodItems = (prodRaw || []).map(function(p) {
               return {
                 id: p.id,
@@ -92,6 +203,9 @@
                 qc_side_photo: p.qc_side_photo || '',
                 qc_status: p.qc_status || '',
                 qc_note: p.qc_note || '',
+                serialCode: p.serialCode || '',
+                usedByOrderCode: p.usedByOrderCode || '',
+                usedAt: p.usedAt || '',
                 phases: {
                   phase1: {
                     name: p.p1_name || '',
@@ -115,6 +229,7 @@
               };
             });
 
+            var nowTs = Date.now();
             var appData = {
               orders: ordersRaw || [],
               prodItems: prodItems,
@@ -129,12 +244,21 @@
               ImportExport: impRaw || [],
               Accounts: accRaw || [],
               Suppliers: supRaw || [],
-              documents: [],
-              trainings: [],
-              models3D: [],
-              ctvFinance: [],
+              documents: docRaw || [],
+              trainings: trainRaw || [],
+              models3D: modRaw || [],
+              ctvFinance: ctvRaw || [],
+              monthlySnapshots: snapRaw || [],
               reimbursements: [],
-              monthlySnapshots: []
+              announcement: 'Hệ thống RF Workspace V2 vận hành trực tiếp trên CSDL Supabase High-Performance.',
+              tabPermissions: {},
+              archiveStats: {
+                lastArchivedAt: '',
+                lastArchivedCount: 0,
+                lastCutoff: ''
+              },
+              serverTime: nowTs,
+              dataVersion: 'sb_' + nowTs
             };
 
             console.log('✅ [SUPABASE] Successfully loaded ' + appData.orders.length + ' orders & ' + appData.prodItems.length + ' production items!');
@@ -144,26 +268,20 @@
 
             return appData;
           } catch(e) {
-            console.error('Supabase getAppData failed, falling back to GAS API:', e);
+            console.error('Supabase load failed, falling back to GAS API:', e);
           }
         }
 
+        // 4. Fallback to GAS Remote Web App for any specialized procedures
         var payload = {
           action: action,
           pin: pin || localStorage.getItem('rf_pin') || '',
           args: args || []
         };
         
-        // Map common function signatures
-        if (action === 'getAppData') {
-          payload.pin = args[0] || payload.pin;
-        } else if (action === 'syncDeltas') {
+        if (action === 'syncDeltas') {
           payload.payload = args[0];
           payload.pin = args[1] || payload.pin;
-        } else if (action === 'validatePin') {
-          payload.pin = args[0];
-        } else if (action === 'api_insertManualKPI') {
-          payload.payload = args[0];
         }
 
         var url = window.RF_BACKEND_API_URL;
@@ -225,48 +343,12 @@
       });
 
       // Enhanced runGAS bridge
-      var origRunGAS = window.runGAS;
       window.runGAS = function(serverFunctionName, ...args) {
-        // 1. INSTANT TURBO-CACHE: Trả về dữ liệu ngay trong 5ms nếu có trong máy!
-        if (serverFunctionName === 'getAppData') {
-          var cached = localStorage.getItem('rf_turbo_cache_app_data');
-          if (cached) {
-            try {
-              var parsed = JSON.parse(cached);
-              console.log('⚡ [TURBO-CACHE] App loaded in 0.05s from Local Cache!');
-              
-              // Chạy đồng bộ ngầm để cập nhật dữ liệu mới nhất mà không bắt người dùng chờ
-              setTimeout(function() {
-                callRemoteGasApi('getAppData', args).then(function(fresh) {
-                  if (fresh && (fresh.data || fresh.Orders)) {
-                    var freshData = fresh.data || fresh;
-                    localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(freshData));
-                    window.dispatchEvent(new CustomEvent('rf_data_updated', { detail: freshData }));
-                  }
-                }).catch(function(e) { console.warn('Background sync error:', e); });
-              }, 100);
-              
-              return Promise.resolve(parsed);
-            } catch(e) {}
-          }
-        }
-
-        // 2. Fetch directly from Apps Script Web App
         return new Promise(function(resolve, reject) {
           callRemoteGasApi(serverFunctionName, args).then(function(res) {
             if (res && res.success !== undefined && res.data !== undefined) {
-              if (serverFunctionName === 'getAppData' && res.data) {
-                try {
-                  localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(res.data));
-                } catch(e) {}
-              }
               resolve(res.data);
             } else {
-              if (serverFunctionName === 'getAppData' && (res.Orders || res.data)) {
-                try {
-                  localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(res.data || res));
-                } catch(e) {}
-              }
               resolve(res);
             }
           }).catch(function(err) {
