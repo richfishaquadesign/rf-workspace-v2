@@ -68,6 +68,12 @@
             if (prop === 'withUserObject') {
               return function() { return new Proxy({}, handler); };
             }
+            if (prop === 'getDeferredUiBundle') {
+              return function() {
+                var raw = sessionStorage.getItem('rf_deferred_v2_direct');
+                if (_success) _success(raw);
+              };
+            }
             return function() {
               var callArgs = Array.prototype.slice.call(arguments);
               callRemoteGasApi(prop, callArgs).then(function(res) {
