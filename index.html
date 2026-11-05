@@ -41,8 +41,11 @@
         if (!resp.ok) {
           throw new Error('HTTP ' + resp.status + ': Không thể kết nối máy chủ dữ liệu.');
         }
-        var data = await resp.json();
-        return data;
+        var resJson = await resp.json();
+        if (resJson && resJson.data !== undefined && resJson.data !== null) {
+          return resJson.data;
+        }
+        return resJson;
       }
 
       // Universal Google Apps Script Proxy for Standalone Hosting
