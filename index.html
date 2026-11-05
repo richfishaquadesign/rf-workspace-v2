@@ -12,10 +12,142 @@
       window.__rfDeferredInjected = true;
       window.__rfLoadTabNow = function() { return Promise.resolve({ok:true}); };
       
-      console.log('🚀 RF Workspace Pro V2 running in High-Performance Standalone Mode');
+      console.log('🚀 RF Workspace Pro V2 running in High-Performance Standalone Mode (Powered by Supabase)');
 
-      // HTTP fetch helper with timeout
+      var SUPABASE_URL = 'https://oxtttywpelbyitgxspfm.supabase.co';
+      var SUPABASE_KEY = 'sb_publishable_Bi-hpAsVX5nS10wE_LugRA_RF8wnu0W';
+      var SUPABASE_HEADERS = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      };
+
+      async function fetchFromSupabase(table, query) {
+        try {
+          var url = SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
+          var resp = await fetch(url, { headers: SUPABASE_HEADERS });
+          if (!resp.ok) return [];
+          return await resp.json();
+        } catch(e) {
+          console.warn('Fetch Supabase ' + table + ' error:', e);
+          return [];
+        }
+      }
+
+      // HTTP fetch helper with Supabase direct acceleration
       async function callRemoteGasApi(action, args, pin) {
+        if (action === 'validatePin') {
+          var inputPin = String(args[0] || pin || '').trim();
+          var staffRows = await fetchFromSupabase('Config_NhanSu', 'select=*');
+          if (staffRows && staffRows.length > 0) {
+            var matched = staffRows.find(function(s) {
+              return String(s['Mã PIN'] || '').trim() === inputPin;
+            });
+            if (matched) {
+              var roleStr = String(matched['Phân Quyền'] || 'THỢ').toUpperCase();
+              var isFounder = roleStr.indexOf('TỐI CAO') >= 0 || inputPin === '226868';
+              return {
+                valid: true,
+                user: matched['Tên Nhân Sự'] || 'Nhân viên',
+                role: matched['Phân Quyền'] || 'THỢ',
+                title: matched['Chức Danh'] || 'Thợ',
+                isAdmin: isFounder || roleStr.indexOf('QUẢN LÝ') >= 0,
+                isBoss: isFounder
+              };
+            }
+          }
+          // Fallback to Apps Script validation
+        }
+
+        if (action === 'getAppData') {
+          console.log('⚡ [SUPABASE] Pulling live dataset directly from Supabase...');
+          try {
+            const [ordersRaw, prodRaw, packingsRaw, productsRaw, staffRaw, kpiRaw, giaLayoutRaw, bomRaw, transRaw, impRaw, accRaw, supRaw, attRaw] = await Promise.all([
+              fetchFromSupabase('Orders', 'select=*&order=createdAt.desc&limit=2500'),
+              fetchFromSupabase('Production', 'select=*&order=deadline.asc&limit=2000'),
+              fetchFromSupabase('Packings', 'select=*&order=start.desc&limit=2500'),
+              fetchFromSupabase('Products', 'select=*&limit=1000'),
+              fetchFromSupabase('Config_NhanSu', 'select=*'),
+              fetchFromSupabase('Config_KPI', 'select=*'),
+              fetchFromSupabase('Config_GiaLayout', 'select=*'),
+              fetchFromSupabase('BOM_Config', 'select=*&limit=2000'),
+              fetchFromSupabase('Transactions', 'select=*&order=date.desc&limit=1500'),
+              fetchFromSupabase('ImportExport', 'select=*&order=date.desc&limit=2500'),
+              fetchFromSupabase('Accounts', 'select=*'),
+              fetchFromSupabase('Suppliers', 'select=*'),
+              fetchFromSupabase('Attendance', 'select=*&order=date.desc&limit=1500')
+            ]);
+
+            var prodItems = (prodRaw || []).map(function(p) {
+              return {
+                id: p.id,
+                orderId: p.orderId,
+                type: p.type,
+                name: p.name,
+                note: p.note,
+                status: p.status,
+                deadline: p.deadline,
+                fulfilledFromStock: Boolean(p.fulfilledFromStock),
+                qc_front_photo: p.qc_front_photo || '',
+                qc_side_photo: p.qc_side_photo || '',
+                qc_status: p.qc_status || '',
+                qc_note: p.qc_note || '',
+                phases: {
+                  phase1: {
+                    name: p.p1_name || '',
+                    status: p.p1_status || '',
+                    user: p.p1_user || '',
+                    start: p.p1_start || '',
+                    endTime: p.p1_endTime || '',
+                    photo: p.p1_photo || '',
+                    reward_vnd: Number(p.p1_reward_vnd || 0)
+                  },
+                  phase2: {
+                    name: p.p2_name || '',
+                    status: p.p2_status || '',
+                    user: p.p2_user || '',
+                    start: p.p2_start || '',
+                    endTime: p.p2_endTime || '',
+                    photo: p.p2_photo || '',
+                    reward_vnd: Number(p.p2_reward_vnd || 0)
+                  }
+                }
+              };
+            });
+
+            var appData = {
+              orders: ordersRaw || [],
+              prodItems: prodItems,
+              packings: packingsRaw || [],
+              attendance: attRaw || [],
+              kpiConfig: kpiRaw || [],
+              configGiaLayout: giaLayoutRaw || [],
+              Config_NhanSu: staffRaw || [],
+              Products: productsRaw || [],
+              BOM_Config: bomRaw || [],
+              Transactions: transRaw || [],
+              ImportExport: impRaw || [],
+              Accounts: accRaw || [],
+              Suppliers: supRaw || [],
+              documents: [],
+              trainings: [],
+              models3D: [],
+              ctvFinance: [],
+              reimbursements: [],
+              monthlySnapshots: []
+            };
+
+            console.log('✅ [SUPABASE] Successfully loaded ' + appData.orders.length + ' orders & ' + appData.prodItems.length + ' production items!');
+            try {
+              localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(appData));
+            } catch(e) {}
+
+            return appData;
+          } catch(e) {
+            console.error('Supabase getAppData failed, falling back to GAS API:', e);
+          }
+        }
+
         var payload = {
           action: action,
           pin: pin || localStorage.getItem('rf_pin') || '',
