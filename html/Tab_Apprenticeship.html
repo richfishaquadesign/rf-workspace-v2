@@ -127,7 +127,7 @@ function RFVisualTrainingEngine({
       setPinModalData({ x: pt.x, y: pt.y });
     } else if (activeTool === 'step_marker') {
       // Đếm số step hiện có
-      const currentSteps = annotations.filter(a => a.type === 'step_marker').length;
+      const currentSteps = (annotations || []).filter(a => a.type === 'step_marker').length;
       const newStep = {
         id: 'ann_step_' + Date.now(),
         imageId: currentImage?.id,
@@ -224,7 +224,7 @@ function RFVisualTrainingEngine({
   };
 
   const handleDeleteAnnotation = (id) => {
-    pushHistory(annotations.filter(a => a.id !== id));
+    pushHistory((annotations || []).filter(a => a.id !== id));
     setSelectedAnnotationId(null);
   };
 
@@ -472,7 +472,7 @@ function RFVisualTrainingEngine({
               </defs>
 
               {/* 1. LỚP ĐO KÍCH THƯỚC (DIMENSIONS) */}
-              {activeLayer.dimensions && annotations.filter(a => a.type === 'dimension').map(ann => {
+              {activeLayer.dimensions && (annotations || []).filter(a => a.type === 'dimension').map(ann => {
                 const g = ann.geometry;
                 const isSel = selectedAnnotationId === ann.id;
                 const midX = (g.x1 + g.x2) / 2;
@@ -494,7 +494,7 @@ function RFVisualTrainingEngine({
               })}
 
               {/* 2. LỚP VẼ MŨI TÊN (ARROWS) */}
-              {activeLayer.guides && annotations.filter(a => a.type === 'arrow').map(ann => {
+              {activeLayer.guides && (annotations || []).filter(a => a.type === 'arrow').map(ann => {
                 const g = ann.geometry;
                 const isSel = selectedAnnotationId === ann.id;
                 return (
@@ -510,7 +510,7 @@ function RFVisualTrainingEngine({
               })}
 
               {/* 3. LỚP VẼ TỰ DO (FREEHAND) */}
-              {activeLayer.guides && annotations.filter(a => a.type === 'freehand').map(ann => {
+              {activeLayer.guides && (annotations || []).filter(a => a.type === 'freehand').map(ann => {
                 const pts = ann.geometry?.points || [];
                 if (pts.length < 2) return null;
                 const dStr = pts.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
@@ -530,7 +530,7 @@ function RFVisualTrainingEngine({
               })}
 
               {/* 4. LỚP KHOANH VÙNG LỖI KCS (REWORK BOX) */}
-              {activeLayer.rework && annotations.filter(a => a.type === 'rework_box').map(ann => {
+              {activeLayer.rework && (annotations || []).filter(a => a.type === 'rework_box').map(ann => {
                 const g = ann.geometry;
                 const isSel = selectedAnnotationId === ann.id;
                 return (
@@ -590,7 +590,7 @@ function RFVisualTrainingEngine({
             </svg>
 
             {/* 5. CÁC ĐỐI TƯỢNG DOM GHIM NẰM TRÊN ẢNH (MATERIAL PIN & STEP MARKER) */}
-            {activeLayer.materials && annotations.filter(a => a.type === 'material_pin').map(ann => {
+            {activeLayer.materials && (annotations || []).filter(a => a.type === 'material_pin').map(ann => {
               const g = ann.geometry;
               const isSel = selectedAnnotationId === ann.id;
               return (
@@ -616,7 +616,7 @@ function RFVisualTrainingEngine({
             })}
 
             {/* ĐÁNH SỐ THỨ TỰ (STEP MARKER) */}
-            {activeLayer.guides && annotations.filter(a => a.type === 'step_marker').map(ann => {
+            {activeLayer.guides && (annotations || []).filter(a => a.type === 'step_marker').map(ann => {
               const g = ann.geometry;
               const isSel = selectedAnnotationId === ann.id;
               return (
@@ -636,7 +636,7 @@ function RFVisualTrainingEngine({
             })}
 
             {/* GHI CHÚ KỸ THUẬT (TEXT NOTE) */}
-            {activeLayer.notes && annotations.filter(a => a.type === 'text_note').map(ann => {
+            {activeLayer.notes && (annotations || []).filter(a => a.type === 'text_note').map(ann => {
               const g = ann.geometry;
               const isSel = selectedAnnotationId === ann.id;
               return (
@@ -1059,7 +1059,28 @@ function ApprenticeshipTab({erpData = {}, erpProducts = [], userConfigs = {}}) {
     return null;
   };
   const writeAppCache = v => { try { localStorage.setItem(appCacheKey, JSON.stringify({ id: appCacheId(), at: Date.now(), state: v })); } catch(e) {} };
-  const load = async (instant) => { if (!instant) setBusy(true); setError(''); try { const r = await rpc('api_apprenticeshipList'); setState(r); setLoaded(true); } catch(e) { if (!instant) setError(e.message); } finally { if (!instant) setBusy(false); } };
+  const load = async (instant) => {
+    if (!instant) setBusy(true);
+    setError('');
+    try {
+      const r = await rpc('api_apprenticeshipList');
+      if (r && Array.isArray(r.orders)) {
+        setState(r);
+      } else if (r && typeof r === 'object') {
+        setState(prev => ({
+          ...prev,
+          studio: (typeof r.studio === 'boolean') ? r.studio : prev.studio,
+          user: r.user || prev.user || localStorage.getItem('rf_user') || '',
+          orders: Array.isArray(r.orders) ? r.orders : (prev.orders || [])
+        }));
+      }
+      setLoaded(true);
+    } catch(e) {
+      if (!instant) setError(e.message);
+    } finally {
+      if (!instant) setBusy(false);
+    }
+  };
   React.useEffect(() => {
     const cached = readAppCache();
     if (cached) { setState(cached); setLoaded(true); }
@@ -1097,12 +1118,24 @@ function ApprenticeshipTab({erpData = {}, erpProducts = [], userConfigs = {}}) {
       {checklistIssues.length > 0 && <div className="notice" role="alert"><span>!</span><p>{checklistIssues.join(' · ')}</p></div>}
     </section>
   );
-  const visibleOrders = state.orders.filter(o=>queueFilter!=='review' || o.status==='AWAITING_REVIEW');
+  const ordersList = Array.isArray(state?.orders) ? state.orders : [];
+  const visibleOrders = ordersList.filter(o=>queueFilter!=='review' || o.status==='AWAITING_REVIEW');
   const order = visibleOrders.find(o => o.id === selected);
   const openLesson = id => { select(id); setLessonOpen(true); };
   React.useEffect(() => { if (lessonOpen && !formOpen && order) { lessonHeading.current?.scrollIntoView({block:"start"}); lessonHeading.current?.focus({preventScroll:true}); } }, [lessonOpen, formOpen, order?.id, order?.step, order?.status]);
   React.useEffect(() => { setDraft(order ? JSON.parse(JSON.stringify(order.steps[order.step])) : null); setAnnotations(null); setImageIndex(0); }, [order?.id, order?.revision]);
-  const acceptOrder = d => { setState(s => ({...s, orders: s.orders.some(o => o.id === d.id) ? s.orders.map(o => o.id === d.id ? d : o) : [d, ...s.orders]})); select(d.id); setLessonOpen(true); };
+  const acceptOrder = d => {
+    if (!d || !d.id) return;
+    setState(s => {
+      const cur = Array.isArray(s?.orders) ? s.orders : [];
+      return {
+        ...s,
+        orders: cur.some(o => o.id === d.id) ? cur.map(o => o.id === d.id ? d : o) : [d, ...cur]
+      };
+    });
+    select(d.id);
+    setLessonOpen(true);
+  };
   const mutate = async (action, data, target = order) => {
     setBusy(true); setError('');
     try { if(action==='incident' && target?.assignee===state.user && target.status==='IN_PROGRESS' && draft){ const saved=await rpc('api_apprenticeshipMutate',{action:'save',id:target.id,revision:target.revision,data:{...draft,checked:draft.checklist.map((_,i)=>!!draft.checked[i]),step:target.step}}); target=saved.order; acceptOrder(target); } const r = await rpc('api_apprenticeshipMutate', {action, id:target?.id, revision:target?.revision, data}); acceptOrder(r.order); return true; }
@@ -1128,9 +1161,9 @@ function ApprenticeshipTab({erpData = {}, erpProducts = [], userConfigs = {}}) {
   const exportLegacy = () => { const blob = new Blob([JSON.stringify(legacy,null,2)],{type:'application/json'}), url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='rf-hoc-viec-local-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000); };
   const statusLabel = o => o.status === 'ACCEPTED' ? 'Đã nghiệm thu' : o.status === 'AWAITING_REVIEW' ? 'Chờ nghiệm thu' : 'Bước ' + (o.step + 1) + ' / 5';
   const phaseNames = ['Chuẩn bị', 'Xử lý', 'Bố cục', 'Gia cố', 'Báo cáo'];
-  const workingCount = state.orders.filter(o=>o.status==='IN_PROGRESS').length;
-  const reviewCount = state.orders.filter(o=>o.status==='AWAITING_REVIEW').length;
-  const acceptedCount = state.orders.filter(o=>o.status==='ACCEPTED').length;
+  const workingCount = ordersList.filter(o=>o.status==='IN_PROGRESS').length;
+  const reviewCount = ordersList.filter(o=>o.status==='AWAITING_REVIEW').length;
+  const acceptedCount = ordersList.filter(o=>o.status==='ACCEPTED').length;
   const openComposer = () => { setFormOpen(true); if(!form.layout) selectTemplate(RICH_FISH_LAYOUT_CATALOG[0].n); };
   const saveTemplate = async () => { setBusy(true); setError(''); try { const r=await rpc('api_apprenticeshipTemplateSave',form.layout,templateImages,templateRevision); setTemplateRevision(r.template.revision); setTemplateNotice('Đã lưu hướng dẫn mẫu trên máy chủ'); } catch(e) { setError(e.message); } finally { setBusy(false); } };
   const historyLabel = {CREATE:'Giao bài thực hành',SAVE_PROGRESS:'Lưu tiến độ',COMPLETE_STEP:'Hoàn thành công đoạn',INCIDENT:'Báo sự cố',PHOTO:'Thêm ảnh bằng chứng',ACCEPT:'Nghiệm thu đạt',RETURN:'Trả về công đoạn',ANNOTATIONS:'Cập nhật hướng dẫn ảnh',SETUP:'Thiết lập bài mẫu'};

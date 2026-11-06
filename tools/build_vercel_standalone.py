@@ -465,6 +465,259 @@ bridge_script = """
           }
         }
 
+        // 5. Apprenticeship Module Handlers
+        if (action === 'api_apprenticeshipList') {
+          var user = localStorage.getItem('rf_user') || 'Admin';
+          var role = (localStorage.getItem('rf_role') || '').toUpperCase();
+          var isStudio = role.indexOf('TỐI CAO') >= 0 || role.indexOf('ADMIN') >= 0 || role.indexOf('QUẢN LÝ') >= 0;
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try {
+            orders = JSON.parse(localStorage.getItem(storeKey) || '[]');
+          } catch(e) {
+            orders = [];
+          }
+          if (!Array.isArray(orders)) orders = [];
+          return {
+            success: true,
+            studio: isStudio,
+            user: user,
+            orders: orders.filter(function(d) {
+              return d && d.kind !== 'TEMPLATE' && (isStudio || d.assignee === user);
+            })
+          };
+        }
+
+        if (action === 'api_apprenticeshipResolveLayout') {
+          var layout = args[1] || args[0] || '';
+          var layoutNorm = String(layout).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').trim();
+          var bomCache = [];
+          try {
+            var cachedData = JSON.parse(localStorage.getItem('rf_turbo_cache_app_data') || '{}');
+            bomCache = cachedData.BOM_Config || [];
+          } catch(e) {}
+          
+          var matchedBom = bomCache.filter(function(b) {
+            var codeNorm = String(b.layoutCode || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').trim();
+            return codeNorm && (layoutNorm.indexOf(codeNorm) >= 0 || codeNorm.indexOf(layoutNorm) >= 0);
+          });
+
+          var materials = matchedBom.map(function(b) {
+            return {
+              sku: b.materialSku,
+              name: b.materialSku,
+              qty: Number(b.defaultQty) || 1,
+              unit: b.unit || 'cái'
+            };
+          });
+
+          var options = materials.length > 0 ? [{
+            key: 'config:' + layout,
+            code: layout,
+            name: layout,
+            source: 'BOM_Config',
+            materials: materials
+          }] : [];
+
+          var templates = {};
+          try {
+            templates = JSON.parse(localStorage.getItem('RF_APPRENTICESHIP_TEMPLATES_V2') || '{}');
+          } catch(e) {}
+
+          var tpl = templates[layout] || null;
+
+          return {
+            success: true,
+            options: options,
+            selected: options[0] || null,
+            template: tpl,
+            message: options.length ? '' : 'Chưa có định mức BOM cho ' + layout + '. Có thể soạn và lưu hướng dẫn ngay; cần bổ sung BOM trước khi giao bài.'
+          };
+        }
+
+        if (action === 'api_apprenticeshipTemplateSave') {
+          var tLayout = args[1] || args[0] || '';
+          var tImages = args[2] || args[1] || [];
+          var tRevision = Number(args[3] || args[2] || 0);
+          var templates = {};
+          try {
+            templates = JSON.parse(localStorage.getItem('RF_APPRENTICESHIP_TEMPLATES_V2') || '{}');
+          } catch(e) {}
+          var current = templates[tLayout] || { id: 'template:' + tLayout, kind: 'TEMPLATE', layout: tLayout, revision: 0, history: [] };
+          current.images = tImages;
+          current.revision = (current.revision || 0) + 1;
+          templates[tLayout] = current;
+          try {
+            localStorage.setItem('RF_APPRENTICESHIP_TEMPLATES_V2', JSON.stringify(templates));
+          } catch(e) {}
+          return { success: true, template: current };
+        }
+
+        if (action === 'api_apprenticeshipMutate') {
+          var mReq = args[1] || args[0] || {};
+          var mAction = mReq.action;
+          var mData = mReq.data || {};
+          var user = localStorage.getItem('rf_user') || 'Admin';
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try {
+            orders = JSON.parse(localStorage.getItem(storeKey) || '[]');
+          } catch(e) {}
+          if (!Array.isArray(orders)) orders = [];
+
+          if (mAction === 'create') {
+            var newId = 'appr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+            var steps = (mData.checklists || []).map(function(list) {
+              var chks = Array.isArray(list) ? list : [];
+              return {
+                checklist: chks,
+                checked: [],
+                measurements: '',
+                materials: '',
+                report: '',
+                photos: [],
+                completed: false
+              };
+            });
+            if (steps.length === 0) {
+              steps = [
+                { checklist: ['Kiểm tra dụng cụ', 'Lấy vật tư BOM'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Làm sạch nguyên liệu'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Dựng bố cục layout'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Gia cố liên kết'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Báo cáo số đo', 'Ảnh 5 góc'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false }
+              ];
+            }
+            var newDoc = {
+              id: newId,
+              title: mData.title || ('Thực hành ' + (mData.layout || '')),
+              assignee: mData.assignee || user,
+              layout: mData.layout || '',
+              norms: mData.norms || '',
+              images: mData.images || [],
+              steps: steps,
+              step: 0,
+              status: 'IN_PROGRESS',
+              revision: 0,
+              history: [{ at: new Date().toISOString(), actor: user, action: 'CREATE', note: 'Giao bài' }],
+              incidents: [],
+              bom: mData.bom || null
+            };
+            orders.unshift(newDoc);
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: newDoc };
+          }
+
+          var doc = orders.find(function(o) { return o && o.id === mReq.id; });
+          if (!doc) {
+            return { success: false, message: 'Không tìm thấy bài học' };
+          }
+
+          if (mAction === 'save') {
+            if (doc.steps && doc.steps[doc.step]) {
+              Object.assign(doc.steps[doc.step], mData);
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'SAVE_PROGRESS', step: doc.step, note: 'Lưu tiến độ' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'advance') {
+            if (doc.steps && doc.steps[doc.step]) {
+              Object.assign(doc.steps[doc.step], mData);
+              doc.steps[doc.step].completed = true;
+            }
+            if (doc.step < 4) {
+              doc.step++;
+            } else {
+              doc.status = 'AWAITING_REVIEW';
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'COMPLETE_STEP', step: doc.step, note: 'Hoàn thành công đoạn' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'review') {
+            doc.history = doc.history || [];
+            if (mData.accept) {
+              doc.status = 'ACCEPTED';
+              doc.history.push({ at: new Date().toISOString(), actor: user, action: 'ACCEPT', step: doc.step, note: mData.note || 'Nghiệm thu đạt' });
+            } else {
+              doc.status = 'IN_PROGRESS';
+              doc.step = typeof mData.returnStep === 'number' ? mData.returnStep : 0;
+              doc.history.push({ at: new Date().toISOString(), actor: user, action: 'RETURN', step: doc.step, note: mData.note || 'Trả về công đoạn' });
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'incident') {
+            doc.incidents = doc.incidents || [];
+            doc.incidents.push({ at: new Date().toISOString(), actor: user, note: mData.note || '' });
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'INCIDENT', step: doc.step, note: mData.note || '' });
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'annotations') {
+            if (Array.isArray(mData.updates)) {
+              mData.updates.forEach(function(u) {
+                var img = (doc.images || []).find(function(im) { return im && im.id === u.imageId; });
+                if (img) img.annotations = u.annotations;
+              });
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'ANNOTATIONS', step: doc.step, note: 'Cập nhật hướng dẫn ảnh' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          return { success: true, order: doc };
+        }
+
+        if (action === 'api_apprenticeshipPhoto') {
+          var pId = args[1] || args[0];
+          var pImg = args[3] || args[2];
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try { orders = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+          var doc = (orders || []).find(function(o) { return o && o.id === pId; });
+          if (doc && doc.steps && doc.steps[doc.step]) {
+            doc.steps[doc.step].photos = doc.steps[doc.step].photos || [];
+            var photoId = 'ph_' + Date.now();
+            doc.steps[doc.step].photos.push({ id: photoId, url: pImg });
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+          return { success: false, message: 'Không thể thêm ảnh' };
+        }
+
+        if (action === 'api_apprenticeshipPhotoRead') {
+          var pId = args[2] || args[1];
+          var fId = args[3] || args[2];
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try { orders = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+          var doc = (orders || []).find(function(o) { return o && o.id === pId; });
+          if (doc && doc.steps) {
+            for (var si = 0; si < doc.steps.length; si++) {
+              var stp = doc.steps[si];
+              var foundP = (stp.photos || []).find(function(p) { return p && (p.id === fId || p.url); });
+              if (foundP) return foundP.url || foundP;
+            }
+          }
+          return '';
+        }
+
         // Default mock response for auxiliary client actions
         return { success: true };
       }

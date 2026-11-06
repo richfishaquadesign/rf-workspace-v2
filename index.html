@@ -412,6 +412,259 @@
           }
         }
 
+        // 5. Apprenticeship Module Handlers
+        if (action === 'api_apprenticeshipList') {
+          var user = localStorage.getItem('rf_user') || 'Admin';
+          var role = (localStorage.getItem('rf_role') || '').toUpperCase();
+          var isStudio = role.indexOf('TỐI CAO') >= 0 || role.indexOf('ADMIN') >= 0 || role.indexOf('QUẢN LÝ') >= 0;
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try {
+            orders = JSON.parse(localStorage.getItem(storeKey) || '[]');
+          } catch(e) {
+            orders = [];
+          }
+          if (!Array.isArray(orders)) orders = [];
+          return {
+            success: true,
+            studio: isStudio,
+            user: user,
+            orders: orders.filter(function(d) {
+              return d && d.kind !== 'TEMPLATE' && (isStudio || d.assignee === user);
+            })
+          };
+        }
+
+        if (action === 'api_apprenticeshipResolveLayout') {
+          var layout = args[1] || args[0] || '';
+          var layoutNorm = String(layout).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').trim();
+          var bomCache = [];
+          try {
+            var cachedData = JSON.parse(localStorage.getItem('rf_turbo_cache_app_data') || '{}');
+            bomCache = cachedData.BOM_Config || [];
+          } catch(e) {}
+          
+          var matchedBom = bomCache.filter(function(b) {
+            var codeNorm = String(b.layoutCode || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').trim();
+            return codeNorm && (layoutNorm.indexOf(codeNorm) >= 0 || codeNorm.indexOf(layoutNorm) >= 0);
+          });
+
+          var materials = matchedBom.map(function(b) {
+            return {
+              sku: b.materialSku,
+              name: b.materialSku,
+              qty: Number(b.defaultQty) || 1,
+              unit: b.unit || 'cái'
+            };
+          });
+
+          var options = materials.length > 0 ? [{
+            key: 'config:' + layout,
+            code: layout,
+            name: layout,
+            source: 'BOM_Config',
+            materials: materials
+          }] : [];
+
+          var templates = {};
+          try {
+            templates = JSON.parse(localStorage.getItem('RF_APPRENTICESHIP_TEMPLATES_V2') || '{}');
+          } catch(e) {}
+
+          var tpl = templates[layout] || null;
+
+          return {
+            success: true,
+            options: options,
+            selected: options[0] || null,
+            template: tpl,
+            message: options.length ? '' : 'Chưa có định mức BOM cho ' + layout + '. Có thể soạn và lưu hướng dẫn ngay; cần bổ sung BOM trước khi giao bài.'
+          };
+        }
+
+        if (action === 'api_apprenticeshipTemplateSave') {
+          var tLayout = args[1] || args[0] || '';
+          var tImages = args[2] || args[1] || [];
+          var tRevision = Number(args[3] || args[2] || 0);
+          var templates = {};
+          try {
+            templates = JSON.parse(localStorage.getItem('RF_APPRENTICESHIP_TEMPLATES_V2') || '{}');
+          } catch(e) {}
+          var current = templates[tLayout] || { id: 'template:' + tLayout, kind: 'TEMPLATE', layout: tLayout, revision: 0, history: [] };
+          current.images = tImages;
+          current.revision = (current.revision || 0) + 1;
+          templates[tLayout] = current;
+          try {
+            localStorage.setItem('RF_APPRENTICESHIP_TEMPLATES_V2', JSON.stringify(templates));
+          } catch(e) {}
+          return { success: true, template: current };
+        }
+
+        if (action === 'api_apprenticeshipMutate') {
+          var mReq = args[1] || args[0] || {};
+          var mAction = mReq.action;
+          var mData = mReq.data || {};
+          var user = localStorage.getItem('rf_user') || 'Admin';
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try {
+            orders = JSON.parse(localStorage.getItem(storeKey) || '[]');
+          } catch(e) {}
+          if (!Array.isArray(orders)) orders = [];
+
+          if (mAction === 'create') {
+            var newId = 'appr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+            var steps = (mData.checklists || []).map(function(list) {
+              var chks = Array.isArray(list) ? list : [];
+              return {
+                checklist: chks,
+                checked: [],
+                measurements: '',
+                materials: '',
+                report: '',
+                photos: [],
+                completed: false
+              };
+            });
+            if (steps.length === 0) {
+              steps = [
+                { checklist: ['Kiểm tra dụng cụ', 'Lấy vật tư BOM'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Làm sạch nguyên liệu'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Dựng bố cục layout'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Gia cố liên kết'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false },
+                { checklist: ['Báo cáo số đo', 'Ảnh 5 góc'], checked: [], measurements: '', materials: '', report: '', photos: [], completed: false }
+              ];
+            }
+            var newDoc = {
+              id: newId,
+              title: mData.title || ('Thực hành ' + (mData.layout || '')),
+              assignee: mData.assignee || user,
+              layout: mData.layout || '',
+              norms: mData.norms || '',
+              images: mData.images || [],
+              steps: steps,
+              step: 0,
+              status: 'IN_PROGRESS',
+              revision: 0,
+              history: [{ at: new Date().toISOString(), actor: user, action: 'CREATE', note: 'Giao bài' }],
+              incidents: [],
+              bom: mData.bom || null
+            };
+            orders.unshift(newDoc);
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: newDoc };
+          }
+
+          var doc = orders.find(function(o) { return o && o.id === mReq.id; });
+          if (!doc) {
+            return { success: false, message: 'Không tìm thấy bài học' };
+          }
+
+          if (mAction === 'save') {
+            if (doc.steps && doc.steps[doc.step]) {
+              Object.assign(doc.steps[doc.step], mData);
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'SAVE_PROGRESS', step: doc.step, note: 'Lưu tiến độ' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'advance') {
+            if (doc.steps && doc.steps[doc.step]) {
+              Object.assign(doc.steps[doc.step], mData);
+              doc.steps[doc.step].completed = true;
+            }
+            if (doc.step < 4) {
+              doc.step++;
+            } else {
+              doc.status = 'AWAITING_REVIEW';
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'COMPLETE_STEP', step: doc.step, note: 'Hoàn thành công đoạn' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'review') {
+            doc.history = doc.history || [];
+            if (mData.accept) {
+              doc.status = 'ACCEPTED';
+              doc.history.push({ at: new Date().toISOString(), actor: user, action: 'ACCEPT', step: doc.step, note: mData.note || 'Nghiệm thu đạt' });
+            } else {
+              doc.status = 'IN_PROGRESS';
+              doc.step = typeof mData.returnStep === 'number' ? mData.returnStep : 0;
+              doc.history.push({ at: new Date().toISOString(), actor: user, action: 'RETURN', step: doc.step, note: mData.note || 'Trả về công đoạn' });
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'incident') {
+            doc.incidents = doc.incidents || [];
+            doc.incidents.push({ at: new Date().toISOString(), actor: user, note: mData.note || '' });
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'INCIDENT', step: doc.step, note: mData.note || '' });
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          if (mAction === 'annotations') {
+            if (Array.isArray(mData.updates)) {
+              mData.updates.forEach(function(u) {
+                var img = (doc.images || []).find(function(im) { return im && im.id === u.imageId; });
+                if (img) img.annotations = u.annotations;
+              });
+            }
+            doc.revision = (doc.revision || 0) + 1;
+            doc.history = doc.history || [];
+            doc.history.push({ at: new Date().toISOString(), actor: user, action: 'ANNOTATIONS', step: doc.step, note: 'Cập nhật hướng dẫn ảnh' });
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+
+          return { success: true, order: doc };
+        }
+
+        if (action === 'api_apprenticeshipPhoto') {
+          var pId = args[1] || args[0];
+          var pImg = args[3] || args[2];
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try { orders = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+          var doc = (orders || []).find(function(o) { return o && o.id === pId; });
+          if (doc && doc.steps && doc.steps[doc.step]) {
+            doc.steps[doc.step].photos = doc.steps[doc.step].photos || [];
+            var photoId = 'ph_' + Date.now();
+            doc.steps[doc.step].photos.push({ id: photoId, url: pImg });
+            doc.revision = (doc.revision || 0) + 1;
+            try { localStorage.setItem(storeKey, JSON.stringify(orders)); } catch(e) {}
+            return { success: true, order: doc };
+          }
+          return { success: false, message: 'Không thể thêm ảnh' };
+        }
+
+        if (action === 'api_apprenticeshipPhotoRead') {
+          var pId = args[2] || args[1];
+          var fId = args[3] || args[2];
+          var storeKey = 'RF_APPRENTICESHIP_STORE_V2';
+          var orders = [];
+          try { orders = JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch(e) {}
+          var doc = (orders || []).find(function(o) { return o && o.id === pId; });
+          if (doc && doc.steps) {
+            for (var si = 0; si < doc.steps.length; si++) {
+              var stp = doc.steps[si];
+              var foundP = (stp.photos || []).find(function(p) { return p && (p.id === fId || p.url); });
+              if (foundP) return foundP.url || foundP;
+            }
+          }
+          return '';
+        }
+
         // Default mock response for auxiliary client actions
         return { success: true };
       }
@@ -41944,7 +42197,7 @@ function RFVisualTrainingEngine({
       });
     } else if (activeTool === 'step_marker') {
       // Đếm số step hiện có
-      const currentSteps = annotations.filter(a => a.type === 'step_marker').length;
+      const currentSteps = (annotations || []).filter(a => a.type === 'step_marker').length;
       const newStep = {
         id: 'ann_step_' + Date.now(),
         imageId: currentImage?.id,
@@ -42068,7 +42321,7 @@ function RFVisualTrainingEngine({
     setStartPoint(null);
   };
   const handleDeleteAnnotation = id => {
-    pushHistory(annotations.filter(a => a.id !== id));
+    pushHistory((annotations || []).filter(a => a.id !== id));
     setSelectedAnnotationId(null);
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -42301,7 +42554,7 @@ function RFVisualTrainingEngine({
   }, /*#__PURE__*/React.createElement("polygon", {
     points: "0 0, 8 3, 0 6",
     fill: "#f59e0b"
-  }))), activeLayer.dimensions && annotations.filter(a => a.type === 'dimension').map(ann => {
+  }))), activeLayer.dimensions && (annotations || []).filter(a => a.type === 'dimension').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     const midX = (g.x1 + g.x2) / 2;
@@ -42346,7 +42599,7 @@ function RFVisualTrainingEngine({
       fontWeight: "900",
       fontFamily: "monospace"
     }, ann.metadata?.dimensionValue, " ", ann.metadata?.dimensionUnit || 'cm'));
-  }), activeLayer.guides && annotations.filter(a => a.type === 'arrow').map(ann => {
+  }), activeLayer.guides && (annotations || []).filter(a => a.type === 'arrow').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     return /*#__PURE__*/React.createElement("g", {
@@ -42372,7 +42625,7 @@ function RFVisualTrainingEngine({
       strokeWidth: "3",
       paintOrder: "stroke"
     }, ann.metadata.text));
-  }), activeLayer.guides && annotations.filter(a => a.type === 'freehand').map(ann => {
+  }), activeLayer.guides && (annotations || []).filter(a => a.type === 'freehand').map(ann => {
     const pts = ann.geometry?.points || [];
     if (pts.length < 2) return null;
     const dStr = pts.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
@@ -42387,7 +42640,7 @@ function RFVisualTrainingEngine({
       className: "pointer-events-auto cursor-pointer",
       onClick: () => setSelectedAnnotationId(ann.id)
     });
-  }), activeLayer.rework && annotations.filter(a => a.type === 'rework_box').map(ann => {
+  }), activeLayer.rework && (annotations || []).filter(a => a.type === 'rework_box').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     return /*#__PURE__*/React.createElement("g", {
@@ -42441,7 +42694,7 @@ function RFVisualTrainingEngine({
     stroke: "#f43f5e",
     strokeWidth: "2",
     strokeDasharray: "6,3"
-  }) : null)), activeLayer.materials && annotations.filter(a => a.type === 'material_pin').map(ann => {
+  }) : null)), activeLayer.materials && (annotations || []).filter(a => a.type === 'material_pin').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     return /*#__PURE__*/React.createElement("div", {
@@ -42466,7 +42719,7 @@ function RFVisualTrainingEngine({
     }, ann.metadata?.materialQty, ann.metadata?.materialUnit)), /*#__PURE__*/React.createElement("div", {
       className: "w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-emerald-500 mx-auto"
     }));
-  }), activeLayer.guides && annotations.filter(a => a.type === 'step_marker').map(ann => {
+  }), activeLayer.guides && (annotations || []).filter(a => a.type === 'step_marker').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     return /*#__PURE__*/React.createElement("div", {
@@ -42483,7 +42736,7 @@ function RFVisualTrainingEngine({
     }, /*#__PURE__*/React.createElement("div", {
       className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shadow-lg transition-transform ${isSel ? 'bg-amber-400 text-zinc-950 ring-2 ring-white scale-125' : 'bg-amber-500 text-zinc-950 hover:scale-110'}`
     }, ann.metadata?.stepNumber || 1));
-  }), activeLayer.notes && annotations.filter(a => a.type === 'text_note').map(ann => {
+  }), activeLayer.notes && (annotations || []).filter(a => a.type === 'text_note').map(ann => {
     const g = ann.geometry;
     const isSel = selectedAnnotationId === ann.id;
     return /*#__PURE__*/React.createElement("div", {
@@ -42977,7 +43230,16 @@ function ApprenticeshipTab({
     setError('');
     try {
       const r = await rpc('api_apprenticeshipList');
-      setState(r);
+      if (r && Array.isArray(r.orders)) {
+        setState(r);
+      } else if (r && typeof r === 'object') {
+        setState(prev => ({
+          ...prev,
+          studio: typeof r.studio === 'boolean' ? r.studio : prev.studio,
+          user: r.user || prev.user || localStorage.getItem('rf_user') || '',
+          orders: Array.isArray(r.orders) ? r.orders : prev.orders || []
+        }));
+      }
       setLoaded(true);
     } catch (e) {
       if (!instant) setError(e.message);
@@ -43052,7 +43314,8 @@ function ApprenticeshipTab({
     className: "notice",
     role: "alert"
   }, /*#__PURE__*/React.createElement("span", null, "!"), /*#__PURE__*/React.createElement("p", null, checklistIssues.join(' · '))));
-  const visibleOrders = state.orders.filter(o => queueFilter !== 'review' || o.status === 'AWAITING_REVIEW');
+  const ordersList = Array.isArray(state?.orders) ? state.orders : [];
+  const visibleOrders = ordersList.filter(o => queueFilter !== 'review' || o.status === 'AWAITING_REVIEW');
   const order = visibleOrders.find(o => o.id === selected);
   const openLesson = id => {
     select(id);
@@ -43074,10 +43337,14 @@ function ApprenticeshipTab({
     setImageIndex(0);
   }, [order?.id, order?.revision]);
   const acceptOrder = d => {
-    setState(s => ({
-      ...s,
-      orders: s.orders.some(o => o.id === d.id) ? s.orders.map(o => o.id === d.id ? d : o) : [d, ...s.orders]
-    }));
+    if (!d || !d.id) return;
+    setState(s => {
+      const cur = Array.isArray(s?.orders) ? s.orders : [];
+      return {
+        ...s,
+        orders: cur.some(o => o.id === d.id) ? cur.map(o => o.id === d.id ? d : o) : [d, ...cur]
+      };
+    });
     select(d.id);
     setLessonOpen(true);
   };
@@ -43177,9 +43444,9 @@ function ApprenticeshipTab({
   };
   const statusLabel = o => o.status === 'ACCEPTED' ? 'Đã nghiệm thu' : o.status === 'AWAITING_REVIEW' ? 'Chờ nghiệm thu' : 'Bước ' + (o.step + 1) + ' / 5';
   const phaseNames = ['Chuẩn bị', 'Xử lý', 'Bố cục', 'Gia cố', 'Báo cáo'];
-  const workingCount = state.orders.filter(o => o.status === 'IN_PROGRESS').length;
-  const reviewCount = state.orders.filter(o => o.status === 'AWAITING_REVIEW').length;
-  const acceptedCount = state.orders.filter(o => o.status === 'ACCEPTED').length;
+  const workingCount = ordersList.filter(o => o.status === 'IN_PROGRESS').length;
+  const reviewCount = ordersList.filter(o => o.status === 'AWAITING_REVIEW').length;
+  const acceptedCount = ordersList.filter(o => o.status === 'ACCEPTED').length;
   const openComposer = () => {
     setFormOpen(true);
     if (!form.layout) selectTemplate(RICH_FISH_LAYOUT_CATALOG[0].n);

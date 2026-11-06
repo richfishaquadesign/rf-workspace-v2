@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-11-06T03:48:57.444Z",
+  "coreFiles": [
+    "Config.html",
+    "ReturnClaimRules.js",
+    "Components.html",
+    "Modals.html",
+    "Modals_Orders.html",
+    "Tab_Dashboard.html",
+    "Tab_Orders.html",
+    "App_Main.html"
+  ],
+  "deferredFiles": [
+    "Tab_Production.html",
+    "Tab_Inventory.html",
+    "Tab_ImportExport.html",
+    "Tab_Suppliers.html",
+    "Tab_Finance.html",
+    "Tab_BusinessReport.html",
+    "Tab_HR.html",
+    "Tab_Documents.html",
+    "Tab_Affiliate.html",
+    "Tab_Analytics.html",
+    "Tab_Workspaces.html",
+    "Tab_Apprenticeship.html"
+  ],
+  "hashes": {
+    "Tab_Production.html": "be4e7d4e347a6533c5c1813b249a5ee946beec94b497b0740c0509f6760478c0",
+    "Tab_Inventory.html": "c554aabf3bea8413f528c941ee2376df06e235b341579e28db980709800f7446",
+    "Tab_ImportExport.html": "5c145295a967383e16a0b856aabf51a45e786600de3c88ae0944ef4048565d5f",
+    "Tab_Suppliers.html": "969726d65202d48caa910e1b2715955ee7682035df2d77fb7d375a61ca53cba7",
+    "Tab_Finance.html": "17296dcd4bc39a6f8944ec19dcee2bfdbba9063b96fd8d21a0b6f9b2ff9522e5",
+    "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
+    "Tab_HR.html": "86ea35d4dda91a4befa245c05cf6f7604045f73a93498c5dc5c85713e629db57",
+    "Tab_Documents.html": "57ebce63dd01df39115352a2bc54b47268a97a172dc4b207b3c2377d1dbd242b",
+    "Tab_Affiliate.html": "3f6cf4f4d16304614cd1df8c125b8ee3ed1d4e93e54c73ef752be0b0d044d4a1",
+    "Tab_Analytics.html": "27eb00b1f8b95497a4be7b82aafd95856069135cbdbeaeccc00d69530ba217e1",
+    "Tab_Workspaces.html": "e3c9c0ef686499d1a65743eb54e1653634c53d8d98378435d2c7e1edcd27c23b",
+    "Tab_Apprenticeship.html": "b72e62e01305aea499b5cf79e8de1a9e0ed0c27dcc67327ef966a30f58a96da9"
+  },
+  "bundleHashes": {
+    "Compiled_Core.html": "a2a2ca46ac7f40ff8f65b86ef88d8fd8244c695ac2b280531d0d8ffb491c021c",
+    "Compiled_Deferred.html": "355244d8b9c691455033db1eb773b28a7ff8b965db397249ca5334e205c6d2cb"
+  }
+}
