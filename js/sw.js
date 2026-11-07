@@ -3,7 +3,7 @@
 // High Reliability Web Push + Multi-Pattern Haptic Engine for iOS & Android
 // ============================================================================
 
-const CACHE_NAME = 'rf-shell-v6-ios-20261023-r1';
+const CACHE_NAME = 'rf-shell-v6-20261108-v4-nocache';
 const ICON_URL = '/icons/rf-workspace-v3-192.png';
 const BADGE_URL = '/icons/rf-workspace-v3-192.png';
 
@@ -18,32 +18,33 @@ const VIBRATION_PATTERNS = {
 
 // Các tài nguyên cần cache ngay khi install → mở app = tải từ disk (0ms)
 const SHELL_ASSETS = [
-  '/',
-  '/vercel_index.html',
   '/manifest.json',
   '/icons/rf-workspace-v3-192.png',
   '/icons/rf-workspace-v3-512.png',
   '/icons/rf-workspace-v3-180.png'
 ];
 
-// === INSTALL: Cache App Shell ngay lập tức ===
+// === INSTALL: Kích hoạt ngay lập tức ===
 self.addEventListener('install', function (event) {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(SHELL_ASSETS);
-    }).then(function () {
-      return self.skipWaiting(); // Kích hoạt ngay lập tức
+      return cache.addAll(SHELL_ASSETS).catch(function(){});
     })
   );
 });
 
-// === ACTIVATE: Dọn dẹp cache cũ & claim clients ===
+// === ACTIVATE: Dọn dẹp sạch toàn bộ cache cũ & claim clients ===
 self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (names) {
       return Promise.all(
-        names.filter(function (n) { return n.indexOf('rf-shell-') === 0 && n !== CACHE_NAME; })
-          .map(function (n) { return caches.delete(n); })
+        names.map(function (n) {
+          if (n !== CACHE_NAME) {
+            console.log('🧹 [SW] Purging old cache:', n);
+            return caches.delete(n);
+          }
+        })
       );
     }).then(function () {
       return self.clients.claim(); // Chiếm quyền điều khiển tất cả tab đang mở
@@ -51,21 +52,34 @@ self.addEventListener('activate', function (event) {
   );
 });
 
-// Navigation must see the current shell on the first online launch.
+// Navigation: Network-Only for HTML pages to ensure latest V6 UI
 self.addEventListener('fetch', function(event){
-  var url=new URL(event.request.url);
-  if(url.origin!==self.location.origin || event.request.method!=='GET') return;
-  if(!SHELL_ASSETS.includes(url.pathname)) return;
-  event.respondWith(caches.open(CACHE_NAME).then(async function(cache){
-    try {
-      var response=await fetch(event.request,{cache:'no-cache'});
-      if(response.ok) await cache.put(event.request,response.clone());
-      return response;
-    } catch(error) {
-      var cached=await cache.match(event.request);
-      return cached || Response.error();
-    }
-  }));
+  var url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
+  
+  // HTML navigation luôn đi thẳng ra network để không bao giờ bị dính bản giao diện cũ
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' }).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  if (!SHELL_ASSETS.includes(url.pathname)) return;
+  event.respondWith(
+    caches.open(CACHE_NAME).then(async function(cache){
+      try {
+        var response = await fetch(event.request, { cache: 'no-cache' });
+        if (response.ok) await cache.put(event.request, response.clone());
+        return response;
+      } catch(error) {
+        var cached = await cache.match(event.request);
+        return cached || Response.error();
+      }
+    })
+  );
 });
 
 // === PUSH NOTIFICATION: Xử lý thông báo đẩy đa tầng cho iOS & Android ===

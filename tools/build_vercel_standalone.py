@@ -63,7 +63,42 @@ bridge_script = """
       window.RF_V2_APP = true;
       window.deferredReady = true;
       window.__rfDeferredInjected = true;
-      window.__rfLoadTabNow = function() { return Promise.resolve({ok:true}); };
+      window.__rfLoadTabNow = function(tab, forceNetwork) {
+        window.deferredReady = true;
+        window.__rfDeferredInjected = true;
+        try {
+          window.dispatchEvent(new CustomEvent('rf-deferred-ready'));
+          window.dispatchEvent(new CustomEvent('rf-tab-loaded'));
+        } catch(e) {}
+        if (typeof window.__rfOnDeferredLoaded === 'function') {
+          try { window.__rfOnDeferredLoaded(); } catch(e) {}
+        }
+        return Promise.resolve({ ok: true });
+      };
+
+      // 🧹 TỰ ĐỘNG DIỆT SERVICE WORKER CŨ & XÓA SẠCH CACHE ĐỂ NẠP BẢN GIAO DIỆN MỚI 🧹
+      try {
+        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var reg of regs) {
+              reg.update();
+              if (localStorage.getItem('rf_sw_cache_purged_v4') !== 'true') {
+                reg.unregister();
+              }
+            }
+            localStorage.setItem('rf_sw_cache_purged_v4', 'true');
+          });
+        }
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) {
+              if (name.indexOf('20261108') === -1) {
+                caches.delete(name);
+              }
+            });
+          });
+        }
+      } catch(e) {}
 
       console.log('🚀 RF Workspace V2: Kết nối trực tiếp CSDL Supabase PostgreSQL (Project ID: oxtttywpelbyitgxspfm).');
 
@@ -794,6 +829,10 @@ bridge_script = """
           return [];
         }
 
+        if (action === 'getDeferredUiBundle') {
+          return '';
+        }
+
         // Default mock response for auxiliary client actions
         return { success: true };
       }
@@ -872,7 +911,8 @@ bridge_script = """
   </script>
 """
 
-# Inject Deferred Content (Extended Tabs: Production, Inventory, HR, Finance, etc.) directly before </body>
+# Inject Deferred Content (Extended Tabs: Production, Inventory, HR, Finance, etc.) BEFORE Compiled_Core
+# Điều này đảm bảo khi App render thì tất cả 15 phân hệ đã tồn tại trong bộ nhớ, không bao giờ bị kẹt loader!
 deferred_script = f"""
   <!-- ⚡ PRELOADED COMPILED DEFERRED TABS (PRODUCTION, INVENTORY, FINANCE, HR, ETC.) ⚡ -->
   <script id="rf-bundle-Compiled_Deferred">
@@ -884,13 +924,19 @@ deferred_script = f"""
       window.__rfDeferredInjected = true;
       try {{
         window.dispatchEvent(new CustomEvent('rf-deferred-ready'));
+        window.dispatchEvent(new CustomEvent('rf-tab-loaded'));
       }} catch(e) {{}}
     }})();
   </script>
 """
 
 output_html = output_html.replace('</head>', bridge_script + '\n</head>')
-output_html = output_html.replace('</body>', deferred_script + '\n</body>')
+
+target_core_marker = '<script type="text/plain" id="rf-bundle-Compiled_Core">'
+if target_core_marker in output_html:
+    output_html = output_html.replace(target_core_marker, deferred_script + '\n' + target_core_marker)
+else:
+    output_html = re.sub(r'(<script[^>]*id=["\']rf-bundle-Compiled_Core["\'])', deferred_script + r'\n\1', output_html)
 
 
 # 5. Write to V2 directory as index.html

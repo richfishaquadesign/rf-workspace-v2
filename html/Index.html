@@ -853,8 +853,13 @@
         markReady();
       }
       window.__rfLoadTabNow = function (tab, forceNetwork) {
-        if (modulesReady()) { markReady(); return Promise.resolve({ok:true}); }
-        if (window.deferredReady) return Promise.resolve({ok:true});
+        if (window.RF_STANDALONE || modulesReady() || window.deferredReady) {
+          markReady();
+          if (typeof window.__rfOnDeferredLoaded === 'function') {
+            try { window.__rfOnDeferredLoaded(); } catch(e) {}
+          }
+          return Promise.resolve({ok:true});
+        }
         if (tab && extendedTabs.indexOf(tab) < 0) return Promise.resolve({ok:true});
 
         // 1. Kiểm tra cache SessionStorage để kích hoạt tức thì 0ms không chờ network roundtrip
