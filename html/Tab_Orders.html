@@ -3302,10 +3302,10 @@
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                         {[
                             { id: 'ALL', label: 'Tất Cả', count: (channelFiltered || []).length },
-                            { id: 'Chờ Sản Xuất', label: 'Chờ SX', count: countChoSX },
-                            { id: 'Sẵn Sàng Đóng Gói', label: 'Đóng Gói', count: countSanSangDongGoi },
-                            { id: 'Chờ Bàn Giao', label: 'Chờ Giao', count: countChoBanGiao },
-                            { id: 'Đã Bàn Giao', label: 'Đã Giao', count: countDaBanGiao }
+                            { id: 'Chờ Sản Xuất', label: 'Chờ SX', count: (stats?.pending || 0) },
+                            { id: 'Sẵn Sàng Đóng Gói', label: 'Đóng Gói', count: (stats?.ready || 0) },
+                            { id: 'Chờ Bàn Giao', label: 'Chờ Giao', count: (stats?.shipping || 0) },
+                            { id: 'Đã Bàn Giao', label: 'Đã Giao', count: (stats?.done || 0) }
                         ].map(item => {
                             const isActive = (item.id === 'ALL' && (filterStatus === 'ALL' || filterStatus === 'Tất Cả')) ||
                                              (filterStatus === item.id);
@@ -3365,9 +3365,9 @@
                                                 <div className="fixed inset-0 z-40" onClick={() => setIsStatusMoreOpen(false)} />
                                                 <div className="absolute left-0 top-full mt-1.5 w-48 bg-[#18181b] border border-white/[0.12] rounded-2xl shadow-2xl z-50 p-1.5 space-y-0.5 animate-scale-up">
                                                     {[
-                                                        { id: 'Đơn Huỷ', label: 'Đơn Huỷ', icon: 'fa-ban', count: countDonHuy },
-                                                        { id: 'Hàng Hoàn', label: 'Hàng Hoàn', icon: 'fa-undo', count: countHangHoan },
-                                                        { id: 'Hoàn Thành', label: 'Hoàn Thành', icon: 'fa-check-circle', count: countHoanThanh }
+                                                        { id: 'Đơn Huỷ', label: 'Đơn Huỷ', icon: 'fa-ban', count: (stats?.cancel || 0) },
+                                                        { id: 'Hàng Hoàn', label: 'Hàng Hoàn', icon: 'fa-undo', count: (stats?.returns || 0) },
+                                                        { id: 'Hoàn Thành', label: 'Hoàn Thành', icon: 'fa-check-circle', count: (stats?.completed || 0) }
                                                     ].map(sub => {
                                                         const cur = String(filterStatus || '').toUpperCase().trim();
                                                         const tgt = sub.id.toUpperCase().trim();

@@ -25016,19 +25016,19 @@ const OrdersTab = React.memo(function OrdersTab({
   }, {
     id: 'Chờ Sản Xuất',
     label: 'Chờ SX',
-    count: countChoSX
+    count: stats?.pending || 0
   }, {
     id: 'Sẵn Sàng Đóng Gói',
     label: 'Đóng Gói',
-    count: countSanSangDongGoi
+    count: stats?.ready || 0
   }, {
     id: 'Chờ Bàn Giao',
     label: 'Chờ Giao',
-    count: countChoBanGiao
+    count: stats?.shipping || 0
   }, {
     id: 'Đã Bàn Giao',
     label: 'Đã Giao',
-    count: countDaBanGiao
+    count: stats?.done || 0
   }].map(item => {
     const isActive = item.id === 'ALL' && (filterStatus === 'ALL' || filterStatus === 'Tất Cả') || filterStatus === item.id;
     return /*#__PURE__*/React.createElement("button", {
@@ -25068,17 +25068,17 @@ const OrdersTab = React.memo(function OrdersTab({
       id: 'Đơn Huỷ',
       label: 'Đơn Huỷ',
       icon: 'fa-ban',
-      count: countDonHuy
+      count: stats?.cancel || 0
     }, {
       id: 'Hàng Hoàn',
       label: 'Hàng Hoàn',
       icon: 'fa-undo',
-      count: countHangHoan
+      count: stats?.returns || 0
     }, {
       id: 'Hoàn Thành',
       label: 'Hoàn Thành',
       icon: 'fa-check-circle',
-      count: countHoanThanh
+      count: stats?.completed || 0
     }].map(sub => {
       const cur = String(filterStatus || '').toUpperCase().trim();
       const tgt = sub.id.toUpperCase().trim();
