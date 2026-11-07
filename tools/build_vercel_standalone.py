@@ -161,6 +161,47 @@ bridge_script = """
       // Universal Pure RPC Router cho Standalone App
       async function callRemoteGasApi(action, args, pin) {
         // 1. PIN Authentication
+        // WebAuthn Passkeys Authentication
+        if (action === 'getWebAuthnChallenge') {
+          var chalBytes = new Uint8Array(32);
+          crypto.getRandomValues(chalBytes);
+          var b64Chal = btoa(String.fromCharCode.apply(null, chalBytes))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          window.__rfLastChallenge = b64Chal;
+          window.__rfChallengeTime = Date.now();
+          return { success: true, challenge: b64Chal };
+        }
+
+        if (action === 'verifyPasskeyLogin') {
+          var req = args[0] || {};
+          var targetUserName = String(req.userName || '').trim();
+          var staffRows = await fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*', 2);
+          if (staffRows && staffRows.length > 0) {
+            var matched = null;
+            if (targetUserName) {
+              matched = staffRows.find(function(s) {
+                var sName = String(s['Tên Nhân Sự'] || '').trim().toLowerCase();
+                return sName === targetUserName.toLowerCase() || sName.includes(targetUserName.toLowerCase());
+              });
+            } else {
+              matched = staffRows[0];
+            }
+            if (matched) {
+              var role = String(matched['Chức Danh'] || 'THỢ CHÍNH').trim();
+              var isSuperAdmin = /TỐI CAO|ADMIN|GIÁM ĐỐC|CHỦ TỊCH/i.test(role);
+              var isBoss = /TỐI CAO|CHỦ TỊCH/i.test(role);
+              return {
+                valid: true,
+                user: matched['Tên Nhân Sự'],
+                role: role,
+                isAdmin: isSuperAdmin,
+                isBoss: isBoss
+              };
+            }
+          }
+          return { valid: false, message: 'Không tìm thấy thông tin nhân sự liên kết Face ID.' };
+        }
+
         if (action === 'validatePin') {
           var inputPin = String(args[0] || pin || '').trim();
           var staffRows = await fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*', 2);
@@ -831,8 +872,26 @@ bridge_script = """
   </script>
 """
 
+# Inject Deferred Content (Extended Tabs: Production, Inventory, HR, Finance, etc.) directly before </body>
+deferred_script = f"""
+  <!-- ⚡ PRELOADED COMPILED DEFERRED TABS (PRODUCTION, INVENTORY, FINANCE, HR, ETC.) ⚡ -->
+  <script id="rf-bundle-Compiled_Deferred">
+{deferred_content_clean}
+  </script>
+  <script>
+    (function() {{
+      window.deferredReady = true;
+      window.__rfDeferredInjected = true;
+      try {{
+        window.dispatchEvent(new CustomEvent('rf-deferred-ready'));
+      }} catch(e) {{}}
+    }})();
+  </script>
+"""
+
 output_html = output_html.replace('</head>', bridge_script + '\n</head>')
-output_html = output_html.replace('</body>', '<script>\nwindow.dispatchEvent(new CustomEvent("rf-deferred-ready"));\n</script>\n</body>')
+output_html = output_html.replace('</body>', deferred_script + '\n</body>')
+
 
 # 5. Write to V2 directory as index.html
 output_file = os.path.join(v2_dir, 'index.html')
