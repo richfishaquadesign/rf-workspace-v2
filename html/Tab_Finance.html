@@ -1917,7 +1917,7 @@ const ImportStatementModal = React.memo(function ImportStatementModal({ onClose,
                         <span className="text-[11px] text-sky-400 font-black px-2 flex items-center gap-1.5 shrink-0 uppercase tracking-wider">
                             <i className="fas fa-layer-group"></i> Chọn Sheet:
                         </span>
-                        <div className="flex items-center gap-1.5 flex-1 overflow-x-auto custom-scrollbar py-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 flex-1 py-0.5 max-w-full">
                             {availableSheets.map(s => {
                                 const isActive = selectedSheetName === s;
                                 return (
@@ -4260,7 +4260,7 @@ const FinanceTab = React.memo(function FinanceTab({
             </div>
 
             {/* THANH TAB CUỘN NGANG CÁC TÀI KHOẢN / QUỸ (TỐI GIẢN - HIỂN THỊ Ở SỔ QUỸ HOẶC KHI CẦN LỌC) */}
-            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-0.5 px-0.5">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-0.5 px-0.5 max-w-full">
                 {/* Nút Tất Cả Quỹ */}
                 <button 
                     onClick={() => setFilterAccount('ALL')}
@@ -4922,7 +4922,7 @@ const FinanceTab = React.memo(function FinanceTab({
                 <div className="space-y-3 animate-fade-in w-full">
                     {/* BỘ LỌC NHANH: TẤT CẢ / THU / CHI / CHUYỂN / ĐIỀU CHỈNH (FOUR SEASONS SOLID PILLS) */}
                     <div className="bg-[#202228] p-2.5 rounded-2xl shadow-md border-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 py-0.5 max-w-full">
                             <button 
                                 onClick={() => setFilterTxType('ALL')} 
                                 className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 active:scale-95 border-0 ${

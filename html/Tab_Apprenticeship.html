@@ -233,7 +233,7 @@ function RFVisualTrainingEngine({
       {/* 1. THANH ĐIỀU HƯỚNG GÓC CHỤP & THAO TÁC TRÊN */}
       <div className="flex flex-wrap items-center justify-between px-3 py-2 bg-[#141414] border-b border-zinc-800 gap-2 text-xs">
         {/* Nút chọn góc ảnh */}
-        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+        <div className="flex flex-wrap items-center gap-1.5 py-0.5 max-w-full">
           <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px] mr-1 hidden sm:inline">Góc ảnh:</span>
           {(order?.images || []).map((img, idx) => {
             const isAct = idx === activeImageIndex;

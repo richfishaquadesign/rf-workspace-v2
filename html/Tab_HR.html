@@ -4515,7 +4515,7 @@
 
                 {/* 1. THANH ĐIỀU HƯỚNG 4 TAB CHUẨN RF WORKSPACE PRO (MONOCHROME MINIMAL) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121214] border border-white/[0.08] p-2 sm:p-2.5 rounded-2xl shadow-sm mb-3">
-                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar p-0.5">
+                    <div className="flex flex-wrap items-center gap-1 p-0.5 max-w-full">
                         {[
                             { id: 'STAFF', label: 'Nhân Sự', icon: 'fa-id-card-clip', count: staffList.length },
                             { id: 'ATTENDANCE', label: 'Chấm Công', icon: 'fa-calendar-check' },
@@ -9433,7 +9433,7 @@
                                 </div>
 
                                 {/* FILTER CHIPS */}
-                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-[11px] font-black">
+                                <div className="flex flex-wrap items-center gap-1.5 pb-1 text-[11px] font-black max-w-full">
                                     <button
                                         type="button"
                                         onClick={() => setFilterType('ALL')}

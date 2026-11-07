@@ -1057,7 +1057,7 @@ const WorkerActionAuditModal = React.memo(function WorkerActionAuditModal({
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-trash-alt text-[9.5px]"
   }), /*#__PURE__*/React.createElement("span", null, "Xo\xE1 (", countLocal, ")"))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar py-0.5"
+    className: "flex flex-wrap items-center gap-1.5 py-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center bg-[#09090b] p-0.5 rounded-lg border border-white/[0.08] shrink-0"
   }, [{
@@ -1544,7 +1544,7 @@ const OutOfStockProductsModal = React.memo(function OutOfStockProductsModal({
     onClick: handleClearSelection,
     className: "text-[10px] text-zinc-400 hover:text-rose-400 underline transition-colors cursor-pointer"
   }, "B\u1ECF ch\u1ECDn t\u1EA5t c\u1EA3")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5"
+    className: "flex flex-wrap items-center gap-1.5 pb-0.5 max-w-full"
   }, selectedItems.map(it => {
     const key = it.product.id || it.product.sku || it.product.name;
     return /*#__PURE__*/React.createElement("span", {
@@ -5407,7 +5407,7 @@ const ProductionTab = React.memo(function ProductionTab({
     onChange: e => setCustomMonth(e.target.value),
     className: "h-8 px-2 bg-black/20 rounded-xl text-xs font-mono font-medium text-zinc-300 focus:outline-none focus:border-emerald-500/50 border border-white/[0.08]"
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 overflow-x-auto custom-scrollbar no-scrollbar pt-0.5"
+    className: "flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5 max-w-full"
   }, [{
     id: 'CHO_SAN_XUAT',
     label: 'Chờ Sản Xuất',
@@ -9109,7 +9109,7 @@ function InventoryListView({
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 pb-8 w-full max-w-full overflow-x-hidden animate-fade-in text-zinc-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#202228] p-1.5 rounded-2xl flex items-center gap-1.5 overflow-x-auto hide-scrollbar border-0 shadow-md"
+    className: "bg-[#202228] p-1.5 rounded-2xl flex flex-wrap items-center gap-1.5 max-w-full border-0 shadow-md"
   }, [{
     id: 'ALL',
     label: 'Tất Cả',
@@ -9158,7 +9158,7 @@ function InventoryListView({
       className: `px-1.5 py-0.2 rounded-full text-[9px] ${isActive ? 'bg-black/40 text-white' : tab.badgeColor}`
     }, tab.badge));
   })), availableSubCategories.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-0.5"
+    className: "flex flex-wrap items-center gap-1.5 py-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-mono text-zinc-500 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("i", {
@@ -9281,7 +9281,7 @@ function InventoryListView({
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-times-circle text-xs"
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 shrink-0 overflow-x-auto hide-scrollbar"
+    className: "flex flex-wrap items-center gap-1.5 py-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: handleExportExcel,
     className: "h-9 px-3 rounded-xl bg-[#202228] hover:bg-[#282b33] text-[#2E9599] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-0 transition-all active:scale-95 cursor-pointer shadow-md",
@@ -15757,7 +15757,7 @@ const SuppliersTab = React.memo(function SuppliersTab({
   }, canViewDebt ? formatMoney(enrichedSuppliers.reduce((s, x) => s + x.paid60d, 0)) + ' đ' : '******')))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#121214] border border-white/[0.06] rounded-xl p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 lg:pb-0"
+    className: "flex flex-wrap items-center gap-1 pb-1 lg:pb-0 max-w-full"
   }, SUPPLIER_GROUPS.map(grp => /*#__PURE__*/React.createElement("button", {
     key: grp.id,
     onClick: () => setSelectedGroup(grp.id),
@@ -18425,7 +18425,7 @@ const ImportStatementModal = React.memo(function ImportStatementModal({
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-layer-group"
   }), " Ch\u1ECDn Sheet:"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 flex-1 overflow-x-auto custom-scrollbar py-0.5"
+    className: "flex flex-wrap items-center gap-1.5 flex-1 py-0.5 max-w-full"
   }, availableSheets.map(s => {
     const isActive = selectedSheetName === s;
     return /*#__PURE__*/React.createElement("button", {
@@ -20760,7 +20760,7 @@ const FinanceTab = React.memo(function FinanceTab({
     onChange: e => setCustomMonth(e.target.value),
     className: "bg-[#18191d] text-zinc-200 text-xs font-mono font-medium px-2 py-1.5 rounded-xl outline-none border-0"
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 overflow-x-auto hide-scrollbar py-0.5 px-0.5"
+    className: "flex flex-wrap items-center gap-1.5 sm:gap-2 py-0.5 px-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setFilterAccount('ALL'),
     className: `px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 shrink-0 active:scale-95 ${filterAccount === 'ALL' ? 'bg-zinc-800 text-white border border-zinc-600 shadow-sm' : 'bg-[#121214] text-zinc-400 hover:text-white hover:bg-zinc-800/80 border border-white/[0.06]'}`
@@ -21265,7 +21265,7 @@ const FinanceTab = React.memo(function FinanceTab({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-[#202228] p-2.5 rounded-2xl shadow-md border-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 overflow-x-auto hide-scrollbar py-0.5"
+    className: "flex flex-wrap items-center gap-1.5 py-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setFilterTxType('ALL'),
     className: `px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 active:scale-95 border-0 ${filterTxType === 'ALL' ? 'bg-[#282b33] text-white shadow-sm font-black' : 'bg-[#18191d] text-zinc-400 hover:text-white'}`
@@ -28334,7 +28334,7 @@ const HRTab = React.memo(function HRTab({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121214] border border-white/[0.08] p-2 sm:p-2.5 rounded-2xl shadow-sm mb-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 overflow-x-auto custom-scrollbar p-0.5"
+    className: "flex flex-wrap items-center gap-1 p-0.5 max-w-full"
   }, [{
     id: 'STAFF',
     label: 'Nhân Sự',
@@ -33118,7 +33118,7 @@ const ExpHistoryRoadmapModal = React.memo(function ExpHistoryRoadmapModal({
   }, formatMoney(totalXu), " Xu"), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-zinc-400 font-semibold"
   }, xuLogs.length, " l\u1EA7n nh\u1EADn th\u01B0\u1EDFng"))))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-[11px] font-black"
+    className: "flex flex-wrap items-center gap-1.5 pb-1 text-[11px] font-black max-w-full"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setFilterType('ALL'),
@@ -33737,7 +33737,7 @@ function DocumentsTab({
     onChange: e => setSearch(e.target.value),
     className: "w-full pl-12 pr-4 py-3.5 bg-[#0a0a0a] rounded-xl border border-[#222] font-medium outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] text-white transition-all shadow-inner placeholder:text-gray-600"
   })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2.5 overflow-x-auto pb-2 custom-scrollbar"
+    className: "flex flex-wrap gap-2 pb-1 max-w-full"
   }, categories.map(cat => /*#__PURE__*/React.createElement("button", {
     key: cat,
     onClick: () => setCategoryFilter(cat),
@@ -35283,7 +35283,7 @@ function TabAffiliate({
   }, formatMoney(debtStats.totalPaidByShop), "\u0111"))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#121214] border border-white/[0.08] rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0"
+    className: "flex flex-wrap items-center gap-1.5 pb-1 sm:pb-0 max-w-full"
   }, [{
     id: 'ALL',
     label: 'Tất Cả',
@@ -40715,7 +40715,7 @@ function RFVisualTrainingEngine({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center justify-between px-3 py-2 bg-[#141414] border-b border-zinc-800 gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5"
+    className: "flex flex-wrap items-center gap-1.5 py-0.5 max-w-full"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-zinc-500 font-bold uppercase tracking-wider text-[10px] mr-1 hidden sm:inline"
   }, "G\xF3c \u1EA3nh:"), (order?.images || []).map((img, idx) => {

@@ -354,26 +354,9 @@ div[data-rf-sidebar-backdrop="true"] {
 @media (min-width:768px) and (max-width:1023px){.rf-v6-dashboard .rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
 
 
-/* --- ZERO HORIZONTAL SCROLL ENFORCEMENT --- */
-html, body {
-  overflow-x: clip !important;
-  max-width: 100vw !important;
-  width: 100% !important;
-}
-
-#root, .rf-v6-workspace, main, .rf-app-main {
-  max-width: 100vw !important;
-  overflow-x: clip !important;
-  box-sizing: border-box !important;
-}
-
+/* --- NATURAL ZERO HORIZONTAL SCROLL (NO CLIPPING HACKS) --- */
 .rf-v6-workspace * {
   box-sizing: border-box;
-}
-
-/* Dam bao cac bang table co container cuon noi bo khong lam toac toan trang */
-.overflow-x-auto {
-  max-width: 100% !important;
 }
 
 </style>
