@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T07:12:52.582Z",
+  "generatedAt": "2026-11-07T17:30:05.149Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -25,15 +25,15 @@
     "Tab_Apprenticeship.html"
   ],
   "hashes": {
-    "Tab_Production.html": "934c9efff7666210d0e5ecfd62a2576439ca24235d8dd866dbf9e3d9fc2e2609",
-    "Tab_Inventory.html": "b1dd3fa97385de9787d6a915a7bb0c9ff97d424fca7a8b2787746e6e3691bc2c",
+    "Tab_Production.html": "a653b2ec29875be74be4c6fdb162a4c1babd16d7baf3e30622ae2d1fb04c417b",
+    "Tab_Inventory.html": "d25cf9a5274b52683cd8dd155ec0c7e36f51dcb61766ae6563dce76e65dfe846",
     "Tab_ImportExport.html": "c5f7edcd25f2e4f8b40ca8de079a4ee78a371bcfb7ed3b0835abfc092d8ff74e",
     "Tab_Suppliers.html": "5d81017a680f23cdf656e94d4453666260562a522e128c74fa8b2ff18dd29c04",
     "Tab_Finance.html": "7c8a4712a944fb830f2e2d33295f7e1b52840af56700f85edc2f0a119e6af2cb",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
     "Tab_HR.html": "6c108c774cd48079e170975617cd4a5eed1a4a5d8d662fc52be09e6402259778",
     "Tab_Documents.html": "57ebce63dd01df39115352a2bc54b47268a97a172dc4b207b3c2377d1dbd242b",
-    "Tab_Affiliate.html": "f747b998f9dbd84e652cce435d2b9bd451474550c11b3180c6661d7a68f005ca",
+    "Tab_Affiliate.html": "e0597beaf0bc35a65bff33ffe54b94b413fdf505f6d20505e317dc9e8d268c61",
     "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
     "Tab_Workspaces.html": "71d29d53ce7f942db49bb8dc9bb948d504ac1b6b08c4380ff5e3cf8d3b871104",
     "Tab_Apprenticeship.html": "b72e62e01305aea499b5cf79e8de1a9e0ed0c27dcc67327ef966a30f58a96da9",
@@ -47,7 +47,7 @@
     "App_Main.html": "a0ffb19ae435bbb9d28eb814eff8cbd0d4da39a5da165134db78ea48849edf5e"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "849a9ddfe4acb929313c703ecfee13996a8c0e37af1c54afd457ff60a6dff448",
-    "Compiled_Deferred.html": "b8ba3b8985eed98cfd1572bf9de45e064bfaee69a2e1d20d278fa58e22aa4a05"
+    "Compiled_Core.html": "e3d1c448354698272d86a8df54cd308ae83c4fa068fdde78954d7d38bfd17762",
+    "Compiled_Deferred.html": "8ab2c2b7aab047f76df311eddb89f75fb82b4ffe2225387512da6c61fc90fe2d"
   }
 }

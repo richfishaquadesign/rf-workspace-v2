@@ -3105,7 +3105,7 @@
                     </div>
 
                     {/* HÀNG DƯỚI: SEGMENTED CONTROL KÊNH BÁN (TỐI GIẢN) */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 py-1 max-w-full">
                         {[
                             { id: 'ALL', label: 'Tất Cả Kênh', icon: 'fa-layer-group', activeBg: 'bg-[#2E9599] text-white' },
                             { id: 'SHOPEE', label: 'Shopee VN', icon: 'fa-shopping-bag', activeBg: 'bg-[#F46C3F] text-white' },
@@ -3133,7 +3133,7 @@
 
                     {/* BỘ LỌC TRẠNG THÁI CUỘN NGANG (TỐI GIẢN) */}
                     <div className="relative pt-1">
-                        <div ref={tabsContainerRef} className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar scroll-smooth pb-0.5">
+                        <div ref={tabsContainerRef} className="flex flex-wrap items-center gap-1.5 py-1 max-w-full">
                             {tabs.map(t => {
                                 const cur = String(filterStatus || '').toUpperCase().trim();
                                 const target = String(t.id || '').toUpperCase().trim();
@@ -3315,7 +3315,7 @@
                         {viewMode === 'TABLE' ? (
                             <div className="bg-[#121214] border border-white/[0.06] rounded-2xl overflow-hidden shadow-xl">
                                 <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left border-collapse min-w-[900px]">
+                                    <table className="w-full text-left border-collapse min-w-0 w-full">
                                         <thead>
                                             <tr className="border-b border-white/[0.06] bg-[#09090b]/80 text-[11px] font-black uppercase text-zinc-400 tracking-wider h-11">
                                                 <th className="w-12 px-3 text-center">
