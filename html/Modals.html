@@ -2,395 +2,396 @@
     // ==========================================
     // 1. MÀN HÌNH ĐĂNG NHẬP & MỞ KHOÁ (HALLMARK CLEAN DARK MATTE & TACTILE)
     // ==========================================
-    function Login({ onLogin }) {
-        const [pin, setPin] = React.useState("");
-        const [loading, setLoading] = React.useState(false);
-        const [errorShake, setErrorShake] = React.useState(false);
-        const [faceIdScanning, setFaceIdScanning] = React.useState(false);
-        const [faceIdStatus, setFaceIdStatus] = React.useState(''); // 'scanning', 'success', 'not_found'
-        const [hasSavedPin, setHasSavedPin] = React.useState(false);
+    function Login({onLogin}){
+  const[pin,setPin]=React.useState("");
+  const[loading,setLoading]=React.useState(false);
+  const[errorShake,setErrorShake]=React.useState(false);
+  const[faceIdStatus,setFaceIdStatus]=React.useState("");
+  const[faceIdMessage,setFaceIdMessage]=React.useState("");
+  const[hasSavedPasskey,setHasSavedPasskey]=React.useState(false);
+  const[savedUser,setSavedUser]=React.useState("");
+  const[isWebAuthnSupported,setIsWebAuthnSupported]=React.useState(false);
 
-        // Kiểm tra xem máy này đã từng lưu mã PIN chưa để hiển thị huy hiệu Face ID sẵn sàng
-        React.useEffect(() => {
-            try {
-                const saved = localStorage.getItem('rf_pin');
-                if (saved && saved.length >= 4) {
-                    setHasSavedPin(true);
-                }
-            } catch(e) {}
-        }, []);
+  const submittingRef=React.useRef(false);
+  const loadingRef=React.useRef(loading);
+  loadingRef.current=loading;
+  const pinRef=React.useRef(pin);
+  pinRef.current=pin;
 
-        const triggerHaptic = React.useCallback((pattern = 15) => {
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate(pattern); } catch(e) {}
-            }
-        }, []);
-
-        const submitPin = React.useCallback(async (value) => {
-            if (!value || value.length < 4 || loading) return;
-            setLoading(true);
-            try {
-                const result = await runGAS('validatePin', value);
-                if (result && result.valid && result.user) {
-                    localStorage.setItem('rf_pin', value);
-                    localStorage.setItem('rf_face_id_ready', 'true');
-                    setHasSavedPin(true);
-                    document.cookie = `rf_pin=${value}; max-age=31536000; path=/`;
-
-                    if (result.isAdmin) {
-                        localStorage.setItem('rf_admin', 'true');
-                        document.cookie = `rf_admin=true; max-age=31536000; path=/`;
-                    }
-                    if (result.isBoss) {
-                        localStorage.setItem('rf_boss', 'true');
-                        document.cookie = `rf_boss=true; max-age=31536000; path=/`;
-                    }
-                    if (result.role) {
-                        localStorage.setItem('rf_role', result.role);
-                        document.cookie = `rf_role=${result.role}; max-age=31536000; path=/`;
-                    }
-
-                    triggerHaptic([20, 50, 20]);
-                    onLogin(result.user, result.isAdmin || false, result.isBoss || false, result.role || '');
-                } else {
-                    if (result && (result.error || result.message)) {
-                        alert(result.error || result.message);
-                    }
-                    triggerHaptic([60, 40, 60]);
-                    setErrorShake(true);
-                    setTimeout(() => setErrorShake(false), 500);
-                    setPin('');
-                }
-            } catch (err) {
-                triggerHaptic([60, 40, 60]);
-                setErrorShake(true);
-                setTimeout(() => setErrorShake(false), 500);
-                setPin('');
-            }
-            setLoading(false);
-        }, [loading, onLogin, triggerHaptic]);
-
-        const handleKeyClick = React.useCallback((digit) => {
-            if (loading) return;
-            triggerHaptic(12);
-            setPin(prev => {
-                if (prev.length >= 6) return prev;
-                const nextPin = prev + digit;
-                if (nextPin.length === 6) {
-                    setTimeout(() => submitPin(nextPin), 60);
-                }
-                return nextPin;
-            });
-        }, [loading, submitPin, triggerHaptic]);
-
-        const handleBackspace = React.useCallback(() => {
-            if (loading) return;
-            triggerHaptic(15);
-            setPin(prev => prev.slice(0, -1));
-        }, [loading, triggerHaptic]);
-
-        const handleClear = React.useCallback(() => {
-            if (loading) return;
-            triggerHaptic([10, 20]);
-            setPin('');
-        }, [loading, triggerHaptic]);
-
-        // XỬ LÝ FACE ID / SINH TRẮC HỌC 1 CHẠM
-        const handleFaceId = React.useCallback(async () => {
-            if (loading || faceIdScanning) return;
-            triggerHaptic(20);
-
-            let savedPin = '';
-            try { savedPin = localStorage.getItem('rf_pin') || ''; } catch(e) {}
-
-            if (!savedPin || savedPin.length < 4) {
-                setFaceIdStatus('not_found');
-                setTimeout(() => setFaceIdStatus(''), 3500);
-                return;
-            }
-
-            setFaceIdScanning(true);
-            setFaceIdStatus('scanning');
-
-            // Thử gọi WebAuthn / Face ID hệ thống nếu hỗ trợ
-            if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-                try {
-                    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
-                        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                        if (available && window.crypto && window.crypto.getRandomValues) {
-                            const challenge = new Uint8Array(32);
-                            window.crypto.getRandomValues(challenge);
-                            try {
-                                await navigator.credentials.get({
-                                    publicKey: {
-                                        challenge: challenge,
-                                        timeout: 10000,
-                                        userVerification: "preferred"
-                                    }
-                                });
-                            } catch(credErr) {
-                                // Bỏ qua nếu người dùng hủy hoặc sandbox chặn
-                            }
-                        }
-                    }
-                } catch(e) {
-                    console.warn('Biometric check skipped:', e);
-                }
-            }
-
-            // Quét mượt mà 380ms theo chuẩn iOS Dynamic Face ID
-            setTimeout(() => {
-                setFaceIdStatus('success');
-                triggerHaptic([20, 40, 20]);
-                setTimeout(() => {
-                    setFaceIdScanning(false);
-                    setFaceIdStatus('');
-                    submitPin(savedPin);
-                }, 350);
-            }, 400);
-        }, [loading, faceIdScanning, submitPin, triggerHaptic]);
-
-        // LẮNG NGHE BÀN PHÍM VẬT LÝ MÁY TÍNH
-        React.useEffect(() => {
-            const onKeyDown = (e) => {
-                if (loading) return;
-                if (/^[0-9]$/.test(e.key)) {
-                    e.preventDefault();
-                    handleKeyClick(e.key);
-                } else if (e.key === 'Backspace') {
-                    e.preventDefault();
-                    handleBackspace();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    handleClear();
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (pin.length >= 4) {
-                        submitPin(pin);
-                    } else if (hasSavedPin) {
-                        handleFaceId();
-                    }
-                }
-            };
-            window.addEventListener('keydown', onKeyDown);
-            return () => window.removeEventListener('keydown', onKeyDown);
-        }, [loading, handleKeyClick, handleBackspace, handleClear, submitPin, pin, hasSavedPin, handleFaceId]);
-
-        const keypadLetters = {
-            '1': '', '2': 'ABC', '3': 'DEF',
-            '4': 'GHI', '5': 'JKL', '6': 'MNO',
-            '7': 'PQRS', '8': 'TUV', '9': 'WXYZ'
-        };
-
-        const canSubmit = pin.length >= 4 && !loading;
-
-        const submitBtnText = React.useMemo(() => {
-            if (loading) return 'ĐANG XÁC THỰC...';
-            if (canSubmit) return 'MỞ KHÓA HỆ THỐNG (ENTER)';
-            if (pin.length > 0) return 'ĐÃ NHẬP ' + pin.length + '/6 SỐ';
-            if (hasSavedPin) return 'CHẠM FACE ID HOẶC NHẬP MÃ PIN';
-            return 'NHẬP MÃ PIN ĐỂ MỞ KHÓA';
-        }, [loading, canSubmit, pin.length, hasSavedPin]);
-
-        return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#08080a] text-white select-none overflow-hidden overscroll-none touch-none">
-                {/* Subtle Ambient Background Glow */}
-                <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_18%,_rgba(212,175,55,0.08)_0%,_transparent_65%)]"></div>
-
-                {/* MODAL IPHONE PASSCODE CONTAINER */}
-                <div 
-                    className={'w-full max-w-[360px] sm:max-w-[390px] bg-[#121216]/95 backdrop-blur-2xl px-5 py-6 sm:px-7 sm:py-7 rounded-[36px] sm:rounded-[40px] border border-white/[0.12] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.95)] flex flex-col items-center relative z-10 box-border ' + (errorShake ? 'animate-shake' : '')}
-                >
-                    {/* Header: Biểu tượng Khóa & Thương hiệu */}
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-900/90 border border-white/[0.1] flex items-center justify-center mb-2 shadow-inner shrink-0">
-                        <i className={'fas text-lg transition-colors duration-200 ' + (canSubmit ? 'fa-unlock-alt text-[#d4af37]' : 'fa-lock text-zinc-300')}></i>
-                    </div>
-
-                    <h1 className="text-white font-extrabold text-[19px] sm:text-[21px] tracking-tight text-center leading-tight">
-                        RF Workspace Pro
-                    </h1>
-                    <p className="text-zinc-400 text-[12px] font-medium mb-3 text-center">
-                        Nhập mật mã hoặc xác thực Face ID
-                    </p>
-
-                    {/* Thông báo Face ID chưa lưu nếu có */}
-                    {faceIdStatus === 'not_found' && (
-                        <div className="w-full mb-3 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] text-center leading-tight animate-fade-in">
-                            💡 Chưa lưu Face ID trên máy này. Hãy nhập mã PIN 1 lần để tự động kích hoạt!
-                        </div>
-                    )}
-
-                    {/* PIN Visual Dots: 6 vòng tròn rỗng/đặc chuẩn iPhone iOS */}
-                    <div className="flex items-center justify-center gap-3.5 mb-5 py-1 shrink-0">
-                        {[0, 1, 2, 3, 4, 5].map(idx => {
-                            const isFilled = idx < pin.length;
-                            return (
-                                <div 
-                                    key={idx}
-                                    className={`rounded-full transition-all duration-150 ${
-                                        errorShake 
-                                            ? 'bg-rose-500 border-2 border-rose-500 scale-110 shadow-[0_0_10px_rgba(244,63,94,0.7)]' 
-                                            : isFilled 
-                                                ? 'bg-white border-2 border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.7)]' 
-                                                : 'bg-transparent border-2 border-white/35'
-                                    }`}
-                                    style={{ width: '14px', height: '14px', minWidth: '14px', minHeight: '14px' }}
-                                ></div>
-                            );
-                        })}
-                    </div>
-
-                    {/* BÀN PHÍM TRÒN CHUẨN IPHONE (iOS PASSCODE KEYPAD) */}
-                    <div 
-                        className="grid grid-cols-3 gap-x-5 gap-y-3.5 sm:gap-x-6 sm:gap-y-4 w-full max-w-[290px] sm:max-w-[310px] mb-4 select-none justify-items-center" 
-                        style={{ touchAction: 'manipulation' }}
-                    >
-                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-                            <button
-                                key={num}
-                                type="button"
-                                onClick={() => handleKeyClick(num)}
-                                disabled={loading}
-                                style={{ touchAction: 'manipulation' }}
-                                className="w-[72px] h-[72px] sm:w-[78px] sm:h-[78px] rounded-full bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.35] active:scale-95 border border-white/[0.12] text-white flex flex-col items-center justify-center transition-all duration-75 cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] disabled:opacity-50 select-none group"
-                            >
-                                <span className="font-light text-[30px] sm:text-[34px] leading-none text-white tracking-tight">{num}</span>
-                                {keypadLetters[num] ? (
-                                    <span className="text-[9.5px] sm:text-[10px] font-semibold tracking-[0.2em] text-zinc-400 group-hover:text-zinc-200 leading-none mt-1 uppercase">
-                                        {keypadLetters[num]}
-                                    </span>
-                                ) : (
-                                    <span className="h-[10px] mt-1"></span>
-                                )}
-                            </button>
-                        ))}
-
-                        {/* HÀNG 4: [NÚT FACE ID] - [SỐ 0] - [NÚT XOÁ] */}
-                        <button
-                            type="button"
-                            onClick={handleFaceId}
-                            disabled={loading}
-                            style={{ touchAction: 'manipulation' }}
-                            className="w-[72px] h-[72px] sm:w-[78px] sm:h-[78px] rounded-full bg-amber-500/15 hover:bg-amber-500/25 active:bg-amber-500/40 active:scale-95 border border-amber-500/35 text-amber-400 flex flex-col items-center justify-center transition-all duration-75 cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] select-none group relative"
-                            title="Xác thực nhanh bằng Face ID / Vân tay"
-                        >
-                            {hasSavedPin && (
-                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#121216]"></span>
-                            )}
-                            <svg className="w-7 h-7 sm:w-8 sm:h-8 text-amber-400 group-hover:scale-105 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                                <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                                <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                                <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                                <circle cx="9" cy="9" r="1.2" fill="currentColor" />
-                                <circle cx="15" cy="9" r="1.2" fill="currentColor" />
-                                <path d="M9 16c.8.6 1.8 1 3 1s2.2-.4 3-1" />
-                                <path d="M12 11v2.5" />
-                            </svg>
-                            <span className="text-[9.5px] font-extrabold tracking-wider text-amber-400 uppercase mt-0.5 leading-none">
-                                Face ID
-                            </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => handleKeyClick('0')}
-                            disabled={loading}
-                            style={{ touchAction: 'manipulation' }}
-                            className="w-[72px] h-[72px] sm:w-[78px] sm:h-[78px] rounded-full bg-white/[0.08] hover:bg-white/[0.18] active:bg-white/[0.35] active:scale-95 border border-white/[0.12] text-white flex flex-col items-center justify-center transition-all duration-75 cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] disabled:opacity-50 select-none"
-                        >
-                            <span className="font-light text-[30px] sm:text-[34px] leading-none text-white tracking-tight">0</span>
-                            <span className="h-[10px] mt-1"></span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={handleBackspace}
-                            disabled={loading || pin.length === 0}
-                            style={{ touchAction: 'manipulation' }}
-                            className="w-[72px] h-[72px] sm:w-[78px] sm:h-[78px] rounded-full bg-white/[0.06] hover:bg-white/[0.14] active:bg-white/[0.3] active:scale-95 border border-white/[0.1] text-zinc-300 hover:text-white flex flex-col items-center justify-center transition-all duration-75 cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.3)] disabled:opacity-20 disabled:pointer-events-none select-none"
-                            title="Xóa 1 số (Backspace)"
-                        >
-                            <i className="fas fa-delete-left text-xl sm:text-2xl"></i>
-                            <span className="text-[9.5px] font-bold tracking-wider text-zinc-400 mt-1 uppercase leading-none">Xoá</span>
-                        </button>
-                    </div>
-
-                    {/* NÚT XÓA HẾT KHI ĐANG NHẬP SỐ */}
-                    {pin.length > 0 && (
-                        <div className="w-full flex justify-end max-w-[290px] sm:max-w-[310px] -mt-1 mb-2">
-                            <button
-                                type="button"
-                                onClick={handleClear}
-                                className="text-[11px] text-zinc-400 hover:text-rose-400 underline font-medium cursor-pointer transition-colors"
-                            >
-                                Xóa toàn bộ
-                            </button>
-                        </div>
-                    )}
-
-                    {/* NÚT MỞ KHÓA HOẶC TRẠNG THÁI */}
-                    <button
-                        type="button"
-                        onClick={() => canSubmit ? submitPin(pin) : (hasSavedPin ? handleFaceId() : null)}
-                        disabled={!canSubmit && !hasSavedPin}
-                        style={{ height: '48px', touchAction: 'manipulation' }}
-                        className={`w-full max-w-[290px] sm:max-w-[310px] rounded-2xl font-black text-[12.5px] tracking-wider uppercase transition-all duration-150 flex items-center justify-center gap-2 box-border border select-none ${
-                            canSubmit 
-                                ? 'bg-gradient-to-r from-amber-400 via-[#d4af37] to-amber-500 text-zinc-950 border-amber-400 shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:brightness-110 active:scale-98 cursor-pointer' 
-                                : loading 
-                                    ? 'bg-zinc-800 text-[#d4af37] border-[#d4af37]/30 cursor-wait' 
-                                    : hasSavedPin 
-                                        ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20 active:scale-98 cursor-pointer' 
-                                        : 'bg-zinc-800/40 text-zinc-500 border-white/[0.06] cursor-not-allowed opacity-75'
-                        }`}
-                    >
-                        <i className={`fas text-xs ${loading ? 'fa-spinner fa-spin text-[#d4af37]' : (canSubmit ? 'fa-unlock-alt' : (hasSavedPin ? 'fa-face-smile' : 'fa-lock'))}`}></i>
-                        <span>{submitBtnText}</span>
-                    </button>
-
-                    <div className="mt-3.5 text-[10px] text-zinc-500 font-semibold tracking-wider uppercase text-center shrink-0">
-                        Bảo mật nội bộ • Rich Fish Aquarium
-                    </div>
-                </div>
-
-                {/* MODAL FACE ID SCANNING ANIMATION (CHUẨN APPLE DYNAMIC) */}
-                {faceIdScanning && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in p-4">
-                        <div className="w-[280px] p-6 rounded-[36px] bg-[#141418] border border-amber-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95)] flex flex-col items-center text-center space-y-4">
-                            <div className="relative w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner">
-                                <svg className={`w-12 h-12 transition-all duration-300 ${faceIdStatus === 'success' ? 'text-emerald-400 scale-110' : 'text-amber-400 animate-pulse'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                                    <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                                    <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                                    <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                                    <circle cx="9" cy="9" r="1.2" fill="currentColor" />
-                                    <circle cx="15" cy="9" r="1.2" fill="currentColor" />
-                                    <path d="M9 16c.8.6 1.8 1 3 1s2.2-.4 3-1" />
-                                    <path d="M12 11v2.5" />
-                                </svg>
-                                {faceIdStatus === 'scanning' && (
-                                    <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-300 to-transparent animate-pulse" style={{ animationDuration: '0.8s' }}></div>
-                                )}
-                            </div>
-                            <div>
-                                <div className="text-white font-bold text-base tracking-tight">
-                                    {faceIdStatus === 'success' ? 'Xác Thực Thành Công!' : 'Đang Nhận Diện Face ID...'}
-                                </div>
-                                <div className="text-zinc-400 text-[11.5px] mt-1 font-medium">
-                                    {faceIdStatus === 'success' ? 'Đang mở khóa ứng dụng...' : 'Giữ yên khuôn mặt trước màn hình'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
+  const triggerHaptic=React.useCallback((pattern=15)=>{
+    if(typeof navigator!=='undefined'&&navigator.vibrate){
+      try{navigator.vibrate(pattern);}catch(e){}
     }
+  },[]);
 
-    // ==========================================
-    // 2. CÁC MODAL THÔNG BÁO HỆ THỐNG
-    // ==========================================
+  const submitPin=React.useCallback(async(value)=>{
+    if(!value||value.length<4||submittingRef.current)return;
+    submittingRef.current=true;
+    setLoading(true);
+    setFaceIdMessage("");
+    try{
+      const result=await runGAS('validatePin',value);
+      if(result&&result.valid&&result.user){
+        localStorage.setItem('rf_pin',value);
+        localStorage.setItem('rf_last_valid_pin',value);
+        localStorage.setItem('rf_last_valid_user',result.user);
+        document.cookie=`rf_pin=${value}; max-age=31536000; path=/`;
+        if(result.isAdmin){
+          localStorage.setItem('rf_admin','true');
+          document.cookie=`rf_admin=true; max-age=31536000; path=/`;
+        }
+        if(result.isBoss){
+          localStorage.setItem('rf_boss','true');
+          document.cookie=`rf_boss=true; max-age=31536000; path=/`;
+        }
+        if(result.role){
+          localStorage.setItem('rf_role',result.role);
+          document.cookie=`rf_role=${result.role}; max-age=31536000; path=/`;
+        }
+        triggerHaptic([20,50,20]);
+        onLogin(result.user,result.isAdmin||false,result.isBoss||false,result.role||'');
+      }else{
+        triggerHaptic([60,40,60]);
+        setErrorShake(true);
+        setFaceIdMessage(result?.error||result?.message||"Mã PIN không đúng!");
+        setTimeout(()=>{setErrorShake(false);setPin('');},600);
+      }
+    }catch(err){
+      triggerHaptic([60,40,60]);
+      setErrorShake(true);
+      setFaceIdMessage("Lỗi xác thực mã PIN.");
+      setTimeout(()=>{setErrorShake(false);setPin('');},600);
+    }finally{
+      submittingRef.current=false;
+      setLoading(false);
+    }
+  },[onLogin,triggerHaptic]);
+
+  React.useEffect(()=>{
+    let mounted=true;
+    try{
+      const supported=Boolean(typeof window!=='undefined'&&window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.get);
+      setIsWebAuthnSupported(supported);
+      const raw=localStorage.getItem('rf_passkey_cred');
+      if(raw){
+        const cred=JSON.parse(raw);
+        if(cred&&cred.credId){
+          setHasSavedPasskey(true);
+          setSavedUser(cred.userName||'');
+          const timer=setTimeout(()=>{
+            if(mounted&&!submittingRef.current&&pinRef.current.length===0){
+              handleFaceIdLogin(true);
+            }
+          },500);
+          return()=>{mounted=false;clearTimeout(timer);};
+        }
+      }
+    }catch(e){
+      console.warn('Lỗi kiểm tra WebAuthn:',e);
+    }
+    return()=>{mounted=false;};
+  },[]);
+
+  const handleFaceIdLogin=React.useCallback(async(isAuto=false)=>{
+    if(loadingRef.current||submittingRef.current)return;
+    if(!window.PublicKeyCredential){
+      if(!isAuto)setFaceIdMessage("Thiết bị không hỗ trợ sinh trắc học.");
+      return;
+    }
+    setFaceIdStatus('scanning');
+    setFaceIdMessage("Đang quét Face ID / Sinh trắc học...");
+    triggerHaptic(15);
+    try{
+      let challengeBytes=new Uint8Array(32);
+      crypto.getRandomValues(challengeBytes);
+      try{
+        const chalRes=await runGAS('getWebAuthnChallenge');
+        if(chalRes&&chalRes.challenge){
+          const binary=atob(chalRes.challenge.replace(/-/g,'+').replace(/_/g,'/'));
+          challengeBytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+        }
+      }catch(e){}
+
+      const raw=localStorage.getItem('rf_passkey_cred');
+      let credId=null;
+      let userName='';
+      if(raw){
+        try{
+          const parsed=JSON.parse(raw);
+          credId=parsed.credId;
+          userName=parsed.userName||'';
+        }catch(e){}
+      }
+
+      const getOptions={
+        challenge:challengeBytes,
+        timeout:60000,
+        userVerification:"required",
+        rpId:window.location.hostname||undefined
+      };
+      if(credId&&Array.isArray(credId)){
+        getOptions.allowCredentials=[{
+          id:new Uint8Array(credId),
+          type:"public-key"
+        }];
+      }
+
+      const assertion=await navigator.credentials.get({publicKey:getOptions});
+      if(assertion){
+        setFaceIdStatus('success');
+        setFaceIdMessage("Nhận diện Face ID thành công!");
+        triggerHaptic([30,50,30]);
+
+        submittingRef.current=true;
+        setLoading(true);
+        const verifyRes=await runGAS('verifyPasskeyLogin',{
+          id:assertion.id,
+          userName:userName
+        });
+        if(verifyRes&&verifyRes.valid&&verifyRes.user){
+          if(verifyRes.isAdmin){
+            localStorage.setItem('rf_admin','true');
+            document.cookie=`rf_admin=true; max-age=31536000; path=/`;
+          }
+          if(verifyRes.isBoss){
+            localStorage.setItem('rf_boss','true');
+            document.cookie=`rf_boss=true; max-age=31536000; path=/`;
+          }
+          if(verifyRes.role){
+            localStorage.setItem('rf_role',verifyRes.role);
+            document.cookie=`rf_role=${verifyRes.role}; max-age=31536000; path=/`;
+          }
+          onLogin(verifyRes.user,verifyRes.isAdmin||false,verifyRes.isBoss||false,verifyRes.role||'');
+        }else{
+          const lastPin=localStorage.getItem('rf_last_valid_pin');
+          if(lastPin){
+            submitPin(lastPin);
+          }else{
+            setFaceIdStatus('error');
+            setFaceIdMessage("Không thể xác thực danh tính. Vui lòng nhập mã PIN.");
+          }
+        }
+      }
+    }catch(err){
+      setFaceIdStatus('');
+      if(err.name==='NotAllowedError'||err.name==='AbortError'){
+        if(!isAuto)setFaceIdMessage("Đã hủy quét sinh trắc học. Vui lòng nhập mã PIN.");
+      }else{
+        if(!isAuto)setFaceIdMessage(err.message||"Không thể xác thực Face ID.");
+      }
+    }finally{
+      submittingRef.current=false;
+      setLoading(false);
+    }
+  },[submitPin,onLogin,triggerHaptic]);
+
+  const handleRegisterPasskey=React.useCallback(async()=>{
+    const currentPin=pinRef.current;
+    if(!currentPin||currentPin.length<4){
+      setFaceIdMessage("Vui lòng nhập mã PIN 6 số trước khi liên kết Face ID.");
+      return;
+    }
+    if(!window.PublicKeyCredential){
+      setFaceIdMessage("Thiết bị này không hỗ trợ Passkeys / WebAuthn.");
+      return;
+    }
+    setLoading(true);
+    setFaceIdMessage("Đang xác thực mã PIN và tạo khóa bảo mật...");
+    try{
+      const check=await runGAS('validatePin',currentPin);
+      if(!check||!check.valid||!check.user){
+        setFaceIdMessage("Mã PIN không đúng, không thể đăng ký Face ID.");
+        setLoading(false);
+        return;
+      }
+      const challenge=new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const userId=new Uint8Array(16);
+      crypto.getRandomValues(userId);
+
+      const createOptions={
+        challenge:challenge,
+        rp:{name:"RF Workspace Pro",id:window.location.hostname||undefined},
+        user:{
+          id:userId,
+          name:check.user.toLowerCase().replace(/[^a-z0-9_]/g,'_'),
+          displayName:check.user
+        },
+        pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+        authenticatorSelection:{
+          authenticatorAttachment:"platform",
+          userVerification:"required",
+          requireResidentKey:false
+        },
+        timeout:60000
+      };
+
+      const credential=await navigator.credentials.create({publicKey:createOptions});
+      if(credential){
+        const rawIdArr=Array.from(new Uint8Array(credential.rawId));
+        localStorage.setItem('rf_passkey_cred',JSON.stringify({
+          credId:rawIdArr,
+          userName:check.user,
+          createdAt:new Date().toISOString()
+        }));
+        setHasSavedPasskey(true);
+        setSavedUser(check.user);
+        setFaceIdStatus('success');
+        setFaceIdMessage(`Đã liên kết Face ID thành công cho ${check.user}!`);
+        triggerHaptic([30,50,30]);
+        setTimeout(()=>{
+          submitPin(currentPin);
+        },500);
+      }
+    }catch(err){
+      if(err.name!=='NotAllowedError'){
+        setFaceIdMessage(err.message||"Lỗi đăng ký Face ID.");
+      }else{
+        setFaceIdMessage("Đã hủy quá trình thiết lập Face ID.");
+      }
+    }finally{
+      setLoading(false);
+    }
+  },[submitPin,triggerHaptic]);
+
+  const handleKeyClick=React.useCallback((digit)=>{
+    if(loadingRef.current)return;
+    triggerHaptic(12);
+    setPin(prev=>{
+      if(prev.length>=6)return prev;
+      const next=prev+digit;
+      if(next.length===6){
+        setTimeout(()=>submitPin(next),80);
+      }
+      return next;
+    });
+  },[submitPin,triggerHaptic]);
+
+  const handleBackspace=React.useCallback(()=>{
+    if(loadingRef.current)return;
+    triggerHaptic(15);
+    setPin(prev=>prev.slice(0,-1));
+  },[triggerHaptic]);
+
+  const handleClear=React.useCallback(()=>{
+    if(loadingRef.current)return;
+    triggerHaptic([10,20]);
+    setPin('');
+  },[triggerHaptic]);
+
+  React.useEffect(()=>{
+    const onKeyDown=(e)=>{
+      if(loadingRef.current)return;
+      if(/^[0-9]$/.test(e.key)){
+        e.preventDefault();
+        handleKeyClick(e.key);
+      }else if(e.key==='Backspace'){
+        e.preventDefault();
+        handleBackspace();
+      }else if(e.key==='Escape'){
+        e.preventDefault();
+        handleClear();
+      }else if(e.key==='Enter'){
+        e.preventDefault();
+        if(pinRef.current.length>=4){
+          submitPin(pinRef.current);
+        }else if(hasSavedPasskey){
+          handleFaceIdLogin();
+        }
+      }
+    };
+    window.addEventListener('keydown',onKeyDown);
+    return()=>window.removeEventListener('keydown',onKeyDown);
+  },[handleKeyClick,handleBackspace,handleClear,submitPin,hasSavedPasskey,handleFaceIdLogin]);
+
+  const keypadLetters={
+    '1':'','2':'ABC','3':'DEF',
+    '4':'GHI','5':'JKL','6':'MNO',
+    '7':'PQRS','8':'TUV','9':'WXYZ',
+    '0':''
+  };
+
+  return React.createElement("div",{
+    className:"fixed inset-0 z-[99999] w-full min-h-[100dvh] h-full bg-[#090909] text-white flex flex-col justify-between items-center select-none overflow-x-hidden overflow-y-auto overscroll-none box-border",
+    style:{
+      paddingTop:"max(env(safe-area-inset-top, 0px), 16px)",
+      paddingBottom:"max(env(safe-area-inset-bottom, 0px), 16px)",
+      paddingLeft:"16px",
+      paddingRight:"16px"
+    }
+  },
+    React.createElement("div",{className:"w-full max-w-sm flex flex-col items-center shrink-0 pt-2 sm:pt-4"},
+      typeof RFLogo!=='undefined'?React.createElement(RFLogo,{className:"w-12 h-12 mb-2 text-white",size:48}):React.createElement("div",{className:"w-12 h-12 rounded-xl bg-[#151515] border border-[#292929] flex items-center justify-center mb-2"},React.createElement("i",{className:"fas fa-shield-halved text-white text-lg"})),
+      React.createElement("h1",{className:"text-white font-black text-lg sm:text-xl tracking-tight text-center leading-tight font-display"},"RF Workspace Pro"),
+      React.createElement("p",{className:"text-[#A1A1AA] text-xs font-medium mt-1 text-center"},hasSavedPasskey?`Chào mừng trở lại, ${savedUser||'Nhân sự'}`:"Mở khóa để tiếp tục"),
+      faceIdMessage&&React.createElement("div",{className:`w-full max-w-[300px] mt-2 px-3 py-1.5 rounded-xl text-[11px] text-center font-medium border leading-tight ${faceIdStatus==='success'?'bg-white/10 border-white/20 text-white':faceIdStatus==='error'?'bg-zinc-900 border-zinc-700 text-zinc-300':'bg-[#151515] border-[#292929] text-[#A1A1AA]'}`},faceIdMessage)
+    ),
+    React.createElement("div",{className:"w-full max-w-[320px] flex flex-col items-center my-auto py-2 shrink-0 space-y-4 sm:space-y-5"},
+      isWebAuthnSupported&&React.createElement("button",{
+        type:"button",
+        onClick:hasSavedPasskey?()=>handleFaceIdLogin(false):handleRegisterPasskey,
+        disabled:loading,
+        className:"w-full min-h-[48px] h-12 px-4 rounded-xl bg-[#151515] hover:bg-[#202020] active:scale-[0.98] border border-[#292929] text-white flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer shadow-sm text-xs font-bold"
+      },
+        React.createElement("i",{className:"fas fa-face-viewfinder text-base text-zinc-300"}),
+        React.createElement("span",null,hasSavedPasskey?"Mở khóa bằng Face ID":(pin.length>=4?"Liên kết Face ID cho mã PIN này":"Đăng ký Face ID / Sinh trắc học"))
+      ),
+      React.createElement("div",{className:`flex items-center justify-center gap-3.5 py-1 ${errorShake?'animate-shake':''}`},
+        [0,1,2,3,4,5].map(idx=>{
+          const isFilled=idx<pin.length;
+          return React.createElement("div",{
+            key:idx,
+            className:`w-3.5 h-3.5 rounded-full transition-all duration-150 ${errorShake?'bg-zinc-600 border border-zinc-500 scale-110':isFilled?'bg-[#FFFFFF] border border-[#FFFFFF] scale-105':'bg-transparent border border-[#292929]'}`
+          });
+        })
+      ),
+      React.createElement("div",{className:"w-full grid grid-cols-3 gap-3 sm:gap-4 place-items-center"},
+        ['1','2','3','4','5','6','7','8','9'].map(digit=>{
+          return React.createElement("button",{
+            key:digit,
+            type:"button",
+            onClick:()=>handleKeyClick(digit),
+            disabled:loading,
+            className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:bg-[#262626] active:scale-95 border border-[#292929] text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none"
+          },
+            React.createElement("span",{className:"text-xl sm:text-2xl font-bold leading-none font-mono"},digit),
+            keypadLetters[digit]&&React.createElement("span",{className:"text-[9px] font-bold text-[#71717A] tracking-widest mt-0.5 leading-none"},keypadLetters[digit])
+          );
+        }),
+        React.createElement("button",{
+          type:"button",
+          onClick:hasSavedPasskey?()=>handleFaceIdLogin(false):handleClear,
+          disabled:loading,
+          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:scale-95 border border-[#292929] text-zinc-300 flex items-center justify-center transition-all duration-150 cursor-pointer",
+          title:hasSavedPasskey?"Quét Face ID":"Xóa toàn bộ"
+        },
+          hasSavedPasskey?React.createElement("i",{className:"fas fa-face-viewfinder text-lg"}):React.createElement("span",{className:"text-[11px] font-bold text-[#A1A1AA]"},"XÓA")
+        ),
+        React.createElement("button",{
+          type:"button",
+          onClick:()=>handleKeyClick('0'),
+          disabled:loading,
+          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:bg-[#262626] active:scale-95 border border-[#292929] text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none"
+        },
+          React.createElement("span",{className:"text-xl sm:text-2xl font-bold leading-none font-mono"},"0")
+        ),
+        React.createElement("button",{
+          type:"button",
+          onClick:handleBackspace,
+          disabled:loading,
+          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:scale-95 border border-[#292929] text-zinc-300 flex items-center justify-center transition-all duration-150 cursor-pointer",
+          title:"Xóa 1 số"
+        },
+          React.createElement("i",{className:"fas fa-delete-left text-lg"})
+        )
+      )
+    ),
+    React.createElement("div",{className:"w-full shrink-0 text-center pb-2"},
+      React.createElement("span",{className:"text-[10px] font-mono tracking-widest text-[#52525B] uppercase"},"BẢO MẬT NỘI BỘ • RICH FISH AQUARIUM")
+    )
+  );
+}
+
     function ConfirmModal({ visible, title, message, onConfirm, onCancel, confirmText = "XÁC NHẬN", cancelText = "HỦY" }) {
         if (!visible) return null;
         const modalContent = (
