@@ -7,6 +7,103 @@
 // Nếu cần thêm hàm mới → thêm vào đây.
 // ==========================================
 
+// =========================================================================
+// 🕒 HỆ THỐNG CHUẨN HOÁ NGÀY THÁNG TOÀN CỤC (ASIA/HO_CHI_MINH - GMT+7)
+// Hỗ trợ YYYY-MM-DD, DD/MM/YYYY, ISO, Timestamp số, Fallback an toàn NULL
+// =========================================================================
+window.normalizeDateVN = function(input) {
+    if (!input) return null;
+    if (input instanceof Date) {
+        if (isNaN(input.getTime())) return null;
+        var y = input.getFullYear();
+        var m = String(input.getMonth() + 1).padStart(2, '0');
+        var d = String(input.getDate()).padStart(2, '0');
+        return { dateObj: input, isoDate: y + '-' + m + '-' + d, monthStr: y + '-' + m, year: y, month: input.getMonth() + 1, day: input.getDate() };
+    }
+
+    var str = String(input).trim();
+    if (!str || str === '0' || str === 'null' || str === 'undefined') return null;
+
+    var rawDatePart = str.split(' ')[0].split('T')[0].trim();
+    var y, m, d;
+
+    // 1. Định dạng DD/MM/YYYY hoặc DD-MM-YYYY
+    if (rawDatePart.indexOf('/') !== -1 || (rawDatePart.indexOf('-') !== -1 && rawDatePart.split('-')[0].length <= 2)) {
+        var sep = rawDatePart.indexOf('/') !== -1 ? '/' : '-';
+        var parts = rawDatePart.split(sep);
+        if (parts.length === 3) {
+            if (parts[0].length === 4) { // YYYY/MM/DD
+                y = parseInt(parts[0], 10);
+                m = parseInt(parts[1], 10);
+                d = parseInt(parts[2], 10);
+            } else { // DD/MM/YYYY
+                d = parseInt(parts[0], 10);
+                m = parseInt(parts[1], 10);
+                y = parseInt(parts[2], 10);
+            }
+        }
+    } else if (rawDatePart.indexOf('-') !== -1) {
+        // 2. Định dạng YYYY-MM-DD (ISO standard)
+        var parts2 = rawDatePart.split('-');
+        if (parts2.length >= 2 && parts2[0].length === 4) {
+            y = parseInt(parts2[0], 10);
+            m = parseInt(parts2[1], 10);
+            d = parts2.length >= 3 ? parseInt(parts2[2], 10) : 1;
+        }
+    }
+
+    if (y && m && d && !isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        var dt = new Date(y, m - 1, d, 12, 0, 0); // Đặt giữa trưa để triệt tiêu lệch múi giờ
+        if (!isNaN(dt.getTime())) {
+            var mStr = String(m).padStart(2, '0');
+            var dStr = String(d).padStart(2, '0');
+            return {
+                dateObj: dt,
+                isoDate: y + '-' + mStr + '-' + dStr,
+                monthStr: y + '-' + mStr,
+                year: y,
+                month: m,
+                day: d
+            };
+        }
+    }
+
+    var fallback = new Date(str);
+    if (!isNaN(fallback.getTime())) {
+        var fy = fallback.getFullYear();
+        var fm = String(fallback.getMonth() + 1).padStart(2, '0');
+        var fd = String(fallback.getDate()).padStart(2, '0');
+        return {
+            dateObj: fallback,
+            isoDate: fy + '-' + fm + '-' + fd,
+            monthStr: fy + '-' + fm,
+            year: fy,
+            month: fallback.getMonth() + 1,
+            day: fallback.getDate()
+        };
+    }
+
+    return null;
+};
+
+// Hàm trích xuất ngày chuẩn cho một đơn hàng (tự động fallback date -> createdAt -> deadline)
+window.resolveOrderDateSafe = function(orderOrDateStr) {
+    if (!orderOrDateStr) return null;
+    if (typeof orderOrDateStr === 'string' || orderOrDateStr instanceof Date) {
+        return window.normalizeDateVN(orderOrDateStr);
+    }
+    // Nếu là object đơn hàng
+    return window.normalizeDateVN(orderOrDateStr.date) || 
+           window.normalizeDateVN(orderOrDateStr.createdAt) || 
+           window.normalizeDateVN(orderOrDateStr.deadline) || 
+           null;
+};
+
+window.parseOrderDateSafe = function(dateInput) {
+    var res = window.resolveOrderDateSafe(dateInput);
+    return res ? res.dateObj : null;
+};
+
 // ==========================================
 // 1. HẰNG SỐ CẤU HÌNH GỐC
 // ==========================================
@@ -172,6 +269,130 @@ function calculateBomItemCost(mat, rawQty, rawBomUnit) {
     const subTotal = qty * convertedPrice;
     return { unitPrice, convertedPrice, subTotal, convertedQty, conversionNote };
 }
+
+/**
+ * Chuẩn hóa Đơn Vị Tính (UOM) cho Nguyên Liệu, Vật Tư và Thành Phẩm
+ * Diệt trừ hoàn toàn lỗi nguyên liệu (đá, cát, lũa, kính, keo) bị hiển thị thành "Cái"
+ * Xác định chính xác: Đơn vị tồn kho chuẩn, Đơn vị nhập hàng, Đơn vị sản xuất (BOM) & Hệ số quy đổi
+ */
+function getStandardMaterialUom(product) {
+    if (!product) return { baseUnit: 'Cái', importUnit: 'Cái', conversionRate: 1, bomUnit: 'Cái' };
+    
+    const sku = String(product.sku || '').toUpperCase();
+    const name = String(product.name || '').toLowerCase();
+    const cat = String(product.category || '').toUpperCase();
+    const rawUnit = String(product.unit || '').trim();
+    const rawImpUnit = String(product.importUnit || '').trim();
+    const rawRate = Number(product.conversionRate) || 0;
+
+    // 1. Nhóm Lũa, Đá, Cát, Rêu, Rễ (Trọng lượng: chuẩn Kg)
+    const isWeightMat = sku.startsWith('NL-LAY-SX-') || cat.includes('NGUYÊN LIỆU') ||
+                        name.includes('cát') || name.includes('đá') || name.includes('lũa') || 
+                        name.includes('rễ') || name.includes('rêu') || name.includes('cuội') || 
+                        name.includes('sỏi') || name.includes('nham') || name.includes('thạch');
+    if (isWeightMat && !name.includes('bột đá') && !name.includes('bột lũa')) {
+        let baseUnit = 'Kg';
+        let importUnit = rawImpUnit || (name.includes('cát') || name.includes('đá') ? 'Bao' : 'Bao');
+        let rate = rawRate > 0 ? rawRate : (name.includes('cát') ? 10 : 20); // 1 bao cát = 10kg, 1 bao lũa/đá = 20kg
+        if (name.includes('rêu')) {
+            baseUnit = 'Kg';
+            importUnit = rawImpUnit || 'Kg';
+            rate = rawRate > 0 ? rawRate : 1;
+        }
+        return {
+            baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : baseUnit,
+            importUnit: importUnit,
+            conversionRate: rate,
+            bomUnit: 'Kg'
+        };
+    }
+
+    // 2. Nhóm Kính (Kính tấm, Kính dải phôi MVT, Terra: chuẩn m²)
+    const isGlassMat = sku.startsWith('NL-BE-K') || name.includes('kính') || name.includes('mvt') || name.includes('terra');
+    if (isGlassMat) {
+        let rate = rawRate;
+        if (rate <= 0) {
+            const m = name.match(/(\d+)\s*[xX*]\s*(\d+)/);
+            if (m) {
+                const wM = Number(m[1]) / 100;
+                const lM = Number(m[2]) / 100;
+                rate = Math.round(wM * lM * 1000) / 1000;
+            } else {
+                rate = 1.0;
+            }
+        }
+        return {
+            baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : 'm²',
+            importUnit: rawImpUnit || 'Tấm',
+            conversionRate: rate,
+            bomUnit: 'm²'
+        };
+    }
+
+    // 3. Nhóm Keo 502
+    if (sku.includes('502') || name.includes('502')) {
+        return {
+            baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : 'Chai',
+            importUnit: rawImpUnit || 'Thùng',
+            conversionRate: rawRate > 0 ? rawRate : 162, // 1 thùng = 162 chai
+            bomUnit: 'Gam'
+        };
+    }
+
+    // 4. Nhóm Keo Silicon & Foam
+    if (name.includes('silicon') || name.includes('a300') || name.includes('a500') || name.includes('foam')) {
+        return {
+            baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : 'Chai',
+            importUnit: rawImpUnit || 'Thùng',
+            conversionRate: rawRate > 0 ? rawRate : 24, // 1 thùng = 24 chai
+            bomUnit: 'Chai'
+        };
+    }
+
+    // 5. Fomex (chuẩn m²)
+    if (name.includes('fomex')) {
+        return {
+            baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : 'm²',
+            importUnit: rawImpUnit || 'Tấm',
+            conversionRate: rawRate > 0 ? rawRate : 2.88,
+            bomUnit: 'm²'
+        };
+    }
+
+    // 6. Thành phẩm Layout / Bể kính
+    if (sku.startsWith('LAY-') || cat.includes('LAYOUT')) {
+        return { baseUnit: 'Bộ', importUnit: 'Bộ', conversionRate: 1, bomUnit: 'Bộ' };
+    }
+    if (sku.startsWith('BE-') || cat.includes('BỂ')) {
+        return { baseUnit: 'Bể', importUnit: 'Bể', conversionRate: 1, bomUnit: 'Bể' };
+    }
+
+    // 7. Vật tư tiêu hao / công cụ phụ trợ
+    let fallbackUnit = 'Cái';
+    if (name.includes('găng tay')) fallbackUnit = 'Đôi';
+    else if (name.includes('màng pe') || name.includes('băng dính')) fallbackUnit = 'Cuộn';
+    else if (name.includes('giấy')) fallbackUnit = 'Bịch';
+    else if (name.includes('dao')) fallbackUnit = 'Hộp';
+    else if (name.includes('ga')) fallbackUnit = 'Bình';
+
+    return {
+        baseUnit: rawUnit && rawUnit.toLowerCase() !== 'cái' ? rawUnit : fallbackUnit,
+        importUnit: rawImpUnit || fallbackUnit,
+        conversionRate: rawRate > 0 ? rawRate : 1,
+        bomUnit: fallbackUnit
+    };
+}
+
+function getProductDisplayUnit(p) {
+    if (!p) return 'Cái';
+    const raw = String(p.unit || '').trim();
+    if (raw && raw.toLowerCase() !== 'cái') return raw;
+    const uom = getStandardMaterialUom(p);
+    return uom.baseUnit || 'Cái';
+}
+
+window.getStandardMaterialUom = getStandardMaterialUom;
+window.getProductDisplayUnit = getProductDisplayUnit;
 
 const CAT_THU = ['Bán Hàng', 'COD Đối Tác Giao Hàng', 'Sàn TMĐT', 'Đầu Tư', 'Thu Khác', 'Bán Phế Liệu'];
 const CAT_CHI = ['Nguyên Liệu Sản Xuất', 'Vật Tư Sản Xuất', 'Quảng Cáo & Marketing', 'Thanh Toán Hoá Đơn', 'Phần Mềm Dịch Vụ', 'Cước Vận Chuyển', 'Bảo Hành Đơn Hàng', 'Lương Nhân Sự', 'Công Cụ Máy Móc', 'Trang Thiết Bị', 'Khác'];
@@ -1438,7 +1659,8 @@ async function sendNtfyUrgentAlert(orderCode, productName, channel) {
 }
 
 // =========================================================================
-// 🖼️ HỆ THỐNG XỬ LÝ ẢNH AN TOÀN CHỐNG CHẶN GOOGLE DRIVE (CORP/COOP/nosniff)
+// 🖼️ HỆ THỐNG XỬ LÝ ẢNH DÙNG CHUNG TOÀN DIỆN CHO TOÀN HỆ THỐNG
+// Hỗ trợ: Shopee Hash / CDN susercontent / Google Drive / URL ngoài / Fallback
 // =========================================================================
 function extractDriveId(url) {
   if (!url || typeof url !== 'string') return '';
@@ -1446,7 +1668,11 @@ function extractDriveId(url) {
   const idMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i) || 
                   clean.match(/\/d\/([a-zA-Z0-9_-]+)/i) ||
                   clean.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i);
-  return idMatch ? idMatch[1] : '';
+  if (idMatch) return idMatch[1];
+  if (clean.length >= 25 && clean.length <= 45 && !clean.includes('/') && !clean.includes('.') && !clean.includes(' ') && !clean.includes('-')) {
+    return clean;
+  }
+  return '';
 }
 
 function getSafeDriveViewUrl(url) {
@@ -1457,13 +1683,58 @@ function getSafeDriveViewUrl(url) {
   return url || '';
 }
 
-function getDirectImageUrl(url, size) {
-  const id = extractDriveId(url);
-  if (id) {
-    const s = size || 'w1600';
-    return 'https:' + '/' + '/lh3.googleusercontent.com/d/' + id + '=' + s;
+function formatProductImageUrl(urlOrCode, size) {
+  if (!urlOrCode || typeof urlOrCode !== 'string') return '';
+  let str = urlOrCode.trim();
+  if (!str) return '';
+
+  // 1. Data URL (Base64)
+  if (str.startsWith('data:image/')) return str;
+
+  // 2. Chuyển đổi link Shopee từ cf.shopee.vn sang CDN down-vn.img.susercontent.com
+  if (str.includes('cf.shopee.vn/file/') || str.includes('susercontent.com/file/')) {
+    const match = str.match(/\/file\/([a-zA-Z0-9_\-@.]+)/);
+    if (match) {
+      const cleanHash = match[1].split('?')[0].split('@')[0];
+      return 'https://down-vn.img.susercontent.com/file/' + cleanHash;
+    }
+    return str.replace(/^https?:\/\/cf\.shopee\.vn\/file\//, 'https://down-vn.img.susercontent.com/file/');
   }
-  return url || '';
+
+  // 3. Shopee hash trần (Media ID: vn-11134207-..., sg-..., my-..., th-..., ph-..., tw-... hoặc 32 hex MD5)
+  if (/^(?:vn|sg|my|th|ph|tw|id|br)-\d+-[a-zA-Z0-9_\-]+$/i.test(str) || /^[a-f0-9]{32}$/i.test(str)) {
+    return 'https://down-vn.img.susercontent.com/file/' + str;
+  }
+
+  // 4. Google Drive ID hoặc Drive URL
+  const driveId = extractDriveId(str);
+  if (driveId) {
+    const sizeMap = {
+      sm: 'w200-h200',
+      md: 'w500-h500',
+      lg: 'w800-h800',
+      full: 'w1600'
+    };
+    const s = sizeMap[size] || (typeof size === 'string' && size.startsWith('w') ? size : 'w500-h500');
+    return 'https:' + '/' + '/lh3.googleusercontent.com/d/' + driveId + '=' + s;
+  }
+
+  // 5. URL HTTP / HTTPS hợp lệ khác (Pinterest, Imgur, Supabase, Cloudinary...)
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return str;
+  }
+
+  // 6. Loose match Shopee hash nếu bị dính chuỗi
+  const looseShopee = str.match(/([a-f0-9]{32}|(?:vn|sg|my|th|ph|tw|id|br)-\d+-[a-zA-Z0-9_\-]+)/i);
+  if (looseShopee && looseShopee[1].length >= 20) {
+    return 'https://down-vn.img.susercontent.com/file/' + looseShopee[1];
+  }
+
+  return str;
+}
+
+function getDirectImageUrl(url, size) {
+  return formatProductImageUrl(url, size || 'full');
 }
 
 function openSafeImageTab(url) {
@@ -1472,9 +1743,35 @@ function openSafeImageTab(url) {
   window.open(safeUrl, '_blank', 'noopener,noreferrer');
 }
 
+// Fallback toàn cục khi ảnh lỗi (onError)
+window.handleImageError = function(e, fallbackSrc) {
+  if (!e || !e.target) return;
+  e.target.onerror = null; // Tránh loop đệ quy
+  if (fallbackSrc && typeof fallbackSrc === 'string' && e.target.src !== fallbackSrc) {
+    e.target.src = fallbackSrc;
+  } else {
+    // Ẩn ảnh vỡ và hiển thị khối placeholder
+    e.target.style.display = 'none';
+    const parent = e.target.parentElement;
+    if (parent) {
+      parent.classList.add('img-load-failed');
+      if (!parent.querySelector('.img-fallback-placeholder')) {
+        const ph = document.createElement('div');
+        ph.className = 'img-fallback-placeholder w-full h-full flex items-center justify-center bg-[#141417] text-zinc-600';
+        ph.innerHTML = '<i class="fas fa-image text-xs opacity-50"></i>';
+        parent.appendChild(ph);
+      }
+    }
+  }
+};
+
 window.extractDriveId = extractDriveId;
 window.getSafeDriveViewUrl = getSafeDriveViewUrl;
 window.getDirectImageUrl = getDirectImageUrl;
+window.formatProductImageUrl = formatProductImageUrl;
+window.formatImageUrl = formatProductImageUrl;
+window.rfOptimizeImageUrl = formatProductImageUrl;
+window.formatProductImgUrl = formatProductImageUrl;
 window.openSafeImageTab = openSafeImageTab;
 
 // =========================================================================

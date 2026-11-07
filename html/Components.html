@@ -59,47 +59,49 @@ const getDrivePreviewUrl = (url) => {
     return url;
 };
 
-// PERF: Chuyển đổi Google Drive URL sang thumbnail proxy nhẹ hơn ~10-20x
+// PERF: Chuyển đổi và tối ưu ảnh sản phẩm (Shopee CDN / Google Drive / URL ngoài)
 // size: 'sm' (120px), 'md' (300px), 'lg' (600px), 'full' (ảnh gốc)
 window.rfOptimizeImageUrl = (url, size = 'sm') => {
+    if (typeof window.formatProductImageUrl === 'function') {
+        return window.formatProductImageUrl(url, size);
+    }
     if (!url || typeof url !== 'string') return '';
     const str = url.trim();
-    
-    // Đã là thumbnail proxy rồi thì không cần convert lại
-    if (str.includes('lh3.googleusercontent.com/d/')) return str;
-    
-    // Nếu là postimg, imgur, hoặc URL ngoài thì giữ nguyên
-    if (!str.includes('drive.google.com') && !str.includes('googleusercontent.com')) return str;
-    
-    // Extract Google Drive file ID
-    let fileId = null;
-    const patterns = [
-        /\/d\/([a-zA-Z0-9_-]{20,})/,         // /file/d/ID/...
-        /id=([a-zA-Z0-9_-]{20,})/,            // ?id=ID
-        /[-\w]{25,}/                            // raw ID fallback
-    ];
-    for (const p of patterns) {
-        const m = str.match(p);
-        if (m) { fileId = m[1] || m[0]; break; }
+    if (str.startsWith('data:image/')) return str;
+    if (str.includes('cf.shopee.vn/file/') || str.includes('susercontent.com/file/')) {
+        const match = str.match(/\/file\/([a-zA-Z0-9_\-@.]+)/);
+        if (match) return 'https://down-vn.img.susercontent.com/file/' + match[1].split('?')[0].split('@')[0];
     }
-    if (!fileId) return str;
-    
-    // Chuyển sang lh3 proxy với kích thước nhỏ
-    const sizeMap = { sm: 'w120-h120', md: 'w300-h300', lg: 'w600-h600', full: 'w0' };
-    const sizeParam = sizeMap[size] || sizeMap.sm;
-    return `https:\x2F\x2Flh3.googleusercontent.com/d/${fileId}=${sizeParam}`;
+    if (/^(?:vn|sg|my|th|ph|tw|id|br)-\d+-[a-zA-Z0-9_\-]+$/i.test(str) || /^[a-f0-9]{32}$/i.test(str)) {
+        return 'https://down-vn.img.susercontent.com/file/' + str;
+    }
+    return str;
 };
 
-// PERF: Component ảnh tối ưu — lazy load, skeleton, tự nén URL Drive
-window.RFImage = React.memo(function RFImage({ src, alt = 'img', className = '', size = 'sm', onClick, title, style }) {
+// PERF: Component ảnh tối ưu — lazy load, skeleton, tự nén URL Drive & Shopee, fallback chống vỡ
+window.RFImage = React.memo(function RFImage({ src, alt = 'img', className = '', size = 'sm', onClick, title, style, fallbackSrc }) {
     const [loaded, setLoaded] = React.useState(false);
     const [errored, setErrored] = React.useState(false);
-    const optimizedSrc = React.useMemo(() => window.rfOptimizeImageUrl(src, size), [src, size]);
+    const [currentSrc, setCurrentSrc] = React.useState(() => window.rfOptimizeImageUrl(src, size));
+
+    React.useEffect(() => {
+        setLoaded(false);
+        setErrored(false);
+        setCurrentSrc(window.rfOptimizeImageUrl(src, size));
+    }, [src, size]);
+
+    const handleError = () => {
+        if (fallbackSrc && currentSrc !== fallbackSrc) {
+            setCurrentSrc(fallbackSrc);
+        } else {
+            setErrored(true);
+        }
+    };
     
-    if (!optimizedSrc || errored) {
+    if (!currentSrc || errored) {
         return (
-            <div className={`bg-[#18181c] border border-white/[0.08] flex items-center justify-center text-zinc-600 ${className}`} style={style}>
-                <i className="fas fa-box text-[11px] opacity-60"></i>
+            <div className={`bg-[#18181c] border border-white/[0.08] flex items-center justify-center text-zinc-600 ${className}`} style={style} title={title || alt}>
+                <i className="fas fa-image text-[12px] opacity-40"></i>
             </div>
         );
     }
@@ -108,13 +110,14 @@ window.RFImage = React.memo(function RFImage({ src, alt = 'img', className = '',
         <div className={`relative overflow-hidden ${className}`} style={style}>
             {!loaded && <div className="absolute inset-0 skeleton-loader rounded"></div>}
             <img
-                src={optimizedSrc}
+                src={currentSrc}
                 alt={alt}
                 loading="lazy"
                 decoding="async"
+                referrerPolicy="no-referrer"
                 className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${onClick ? 'cursor-pointer' : ''}`}
                 onLoad={() => setLoaded(true)}
-                onError={() => setErrored(true)}
+                onError={handleError}
                 onClick={onClick}
                 title={title}
             />

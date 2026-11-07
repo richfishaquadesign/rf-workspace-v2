@@ -6,16 +6,18 @@
   // THIẾT KẾ: Chuẩn Royal Workbench Dark (Hallmark Anti-AI-Slop System)
   // =========================================================================
 
-  const formatImageUrl = (url) => {
+  const formatImageUrl = (url, size = 'md') => {
+    if (typeof window.formatProductImageUrl === 'function') {
+      return window.formatProductImageUrl(url, size);
+    }
     if (!url || typeof url !== 'string') return '';
     const str = url.trim();
-    if (str.includes('drive.google.com/file/d/')) {
-      const match = str.match(/\/d\/([^/]+)/);
-      return match ? ('https://drive.google.com/uc?export=view&id=' + match[1]) : str;
+    if (str.includes('cf.shopee.vn/file/') || str.includes('susercontent.com/file/')) {
+      const match = str.match(/\/file\/([a-zA-Z0-9_\-@.]+)/);
+      if (match) return 'https://down-vn.img.susercontent.com/file/' + match[1].split('?')[0].split('@')[0];
     }
-    if (str.includes('drive.google.com/open?id=')) {
-      const match = str.match(/id=([^&]+)/);
-      return match ? ('https://drive.google.com/uc?export=view&id=' + match[1]) : str;
+    if (/^(?:vn|sg|my|th|ph|tw|id|br)-\d+-[a-zA-Z0-9_\-]+$/i.test(str) || /^[a-f0-9]{32}$/i.test(str)) {
+      return 'https://down-vn.img.susercontent.com/file/' + str;
     }
     return str;
   };
@@ -34,6 +36,51 @@
     if (s.includes('CÂY') || s.includes('RÊU')) return 'fa-seedling';
     if (s.includes('ĐÈN') || s.includes('LỌC') || s.includes('PHỤ KIỆN')) return 'fa-plug';
     return 'fa-layer-group';
+  };
+
+  /**
+   * Helper phân giải và ước tính giá vốn định mức khi dữ liệu gốc = 0
+   * Áp dụng thuật toán Barem Kích thước cho Layout & Bể kính (Zero False 0 Cost)
+   */
+  const resolveProductCostPrice = (prod, configGiaLayout = [], kpiConfig = []) => {
+    if (!prod) return { costPrice: 0, isEstimated: false, estimateNote: '' };
+    const rawCost = Number(prod.costPrice || 0);
+    if (rawCost > 0) return { costPrice: rawCost, isEstimated: false, estimateNote: '' };
+
+    const name = String(prod.name || '');
+    const sku = String(prod.sku || '');
+    const cat = String(prod.category || '').toUpperCase();
+    const sub = String(prod.sub_category || '').toUpperCase();
+    const isLayout = cat.includes('LAYOUT') || sub.includes('LAYOUT') || name.toUpperCase().includes('LAYOUT') || sku.startsWith('LAY-') || sku.startsWith('RUN-');
+    const isGlass = cat.includes('BỂ') || cat.includes('BE') || sku.startsWith('BE-');
+
+    const dimMatch = name.match(/(\d+)\s*[xX*]\s*(\d+)\s*[xX*]\s*(\d+)/) || sku.match(/(\d{2})(\d{2})(\d{2})/);
+    if (dimMatch && (isLayout || isGlass)) {
+      const l = Number(dimMatch[1]);
+      const w = Number(dimMatch[2]);
+      const h = Number(dimMatch[3]);
+      if (l > 0 && w > 0 && h > 0) {
+        if (isLayout && typeof calcLayoutPricingAndBOM === 'function') {
+          const est = calcLayoutPricingAndBOM({ l, w, h, configGiaLayout, kpiConfig });
+          if (est && est.suggestedCostPrice > 0) {
+            return { costPrice: est.suggestedCostPrice, isEstimated: true, estimateNote: 'Định mức theo barem kích thước' };
+          }
+        }
+        if (isGlass) {
+          const S = ((l * w + 2 * l * h + 2 * w * h) * 1.1) / 10000;
+          const P = ((l + w) * 2) / 100;
+          const glassCost = Math.round((S * 175000) + (P * 25000) + 50000);
+          return { costPrice: glassCost, isEstimated: true, estimateNote: 'Định mức bể kính' };
+        }
+      }
+    }
+
+    const price = Number(prod.price || 0);
+    if (price > 0 && (isLayout || isGlass)) {
+      return { costPrice: Math.round((price * 0.48) / 1000) * 1000, isEstimated: true, estimateNote: 'Ước tính định mức 48% giá niêm yết' };
+    }
+
+    return { costPrice: 0, isEstimated: false, estimateNote: '' };
   };
 
   // =========================================================================
@@ -87,11 +134,13 @@
             <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 bg-[#09090b] rounded-xl overflow-hidden border border-white/[0.08] flex items-center justify-center relative shadow-sm">
               {currentImg ? (
                 <img
-                  src={typeof rfOptimizeImageUrl === 'function' ? rfOptimizeImageUrl(currentImg, 'sm') : currentImg}
+                  src={typeof rfOptimizeImageUrl === 'function' ? rfOptimizeImageUrl(currentImg, 'sm') : formatImageUrl(currentImg, 'sm')}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover/card:scale-105"
                   alt="product thumbnail"
                   loading="lazy"
                   decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
@@ -142,7 +191,7 @@
                   )}
                   {currentRole !== 'CTV' && (
                     <span className={`font-medium ${isOutOfStock ? 'text-rose-400' : isLowStock ? 'text-amber-400' : 'text-zinc-400'}`}>
-                      Tồn: <b className="font-mono font-bold text-zinc-200">{formatStockQty(qty)}</b> <span className="text-[11px] opacity-75">{selectedVar.unit || ''}</span>
+                      Tồn: <b className="font-mono font-bold text-zinc-200">{formatStockQty(qty)}</b> <span className="text-[11px] opacity-75">{typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedVar) : (selectedVar.unit || '')}</span>
                     </span>
                   )}
                 </div>
@@ -199,16 +248,28 @@
 
               {/* Financials & Stock metrics */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                {currentRole !== 'CTV' && (
-                  <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
-                    <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">
-                      {isMaterialGroup ? 'Giá Nhập (Vốn)' : 'Giá Vốn'}
-                    </span>
-                    <span className={`text-[13px] font-mono font-bold ${isMaterialGroup ? 'text-amber-400' : 'text-zinc-300'}`}>
-                      {canViewCost ? <>{formatMoney(selectedVar.costPrice)}<span className="text-[10px] text-zinc-500">đ</span></> : '******'}
-                    </span>
-                  </div>
-                )}
+                {currentRole !== 'CTV' && (() => {
+                  const resolvedCost = resolveProductCostPrice(selectedVar, data?.configGiaLayout, data?.kpiConfig);
+                  return (
+                    <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">
+                          {isMaterialGroup ? 'Giá Nhập (Vốn)' : 'Giá Vốn'}
+                        </span>
+                        {resolvedCost.isEstimated && (
+                          <span className="text-[8px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1 py-0.2 rounded" title={resolvedCost.estimateNote}>
+                            Định Mức
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-[13px] font-mono font-bold ${isMaterialGroup ? 'text-amber-400' : (resolvedCost.isEstimated ? 'text-amber-300' : 'text-zinc-300')}`}>
+                        {canViewCost ? (
+                          <>{formatMoney(resolvedCost.costPrice)}<span className="text-[10px] text-zinc-500">đ</span></>
+                        ) : '******'}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
                   <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Giá Bán</span>
                   <span className={`text-[14px] font-mono font-black ${isMaterialGroup ? 'text-zinc-400' : 'text-emerald-400'}`}>
@@ -219,14 +280,22 @@
                     )}
                   </span>
                 </div>
-                {!isMaterialGroup && selectedVar.price > 0 && selectedVar.costPrice > 0 && canViewCost && currentRole !== 'CTV' && (
-                  <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
-                    <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Lợi Nhuận Gộp</span>
-                    <span className="text-[13px] font-mono font-black text-[#d4af37]">
-                      {formatMoney(selectedVar.price - selectedVar.costPrice)}đ <span className="text-[10px] text-emerald-400 font-bold">({((selectedVar.price - selectedVar.costPrice) / selectedVar.price * 100).toFixed(0)}%)</span>
-                    </span>
-                  </div>
-                )}
+                {!isMaterialGroup && selectedVar.price > 0 && canViewCost && currentRole !== 'CTV' && (() => {
+                  const resolvedCost = resolveProductCostPrice(selectedVar, data?.configGiaLayout, data?.kpiConfig);
+                  if (resolvedCost.costPrice <= 0) return null;
+                  const profit = selectedVar.price - resolvedCost.costPrice;
+                  const marginPct = ((profit / selectedVar.price) * 100).toFixed(0);
+                  return (
+                    <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
+                      <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">
+                        Lợi Nhuận Gộp {resolvedCost.isEstimated && <span className="text-amber-400/80">(Ước tính)</span>}
+                      </span>
+                      <span className="text-[13px] font-mono font-black text-[#d4af37]">
+                        {formatMoney(profit)}đ <span className="text-[10px] text-emerald-400 font-bold">({marginPct}%)</span>
+                      </span>
+                    </div>
+                  );
+                })()}
                 {currentRole !== 'CTV' && (
                   <div className="bg-[#121215] border border-white/[0.08] rounded-xl p-2.5">
                     <div className="flex justify-between items-center mb-0.5">
@@ -234,7 +303,7 @@
                       <span className="text-[9.5px] text-zinc-500 font-mono">Min {formatStockQty(selectedVar.minStock)} / Max {formatStockQty(selectedVar.maxStock)}</span>
                     </div>
                     <div className={`text-[14px] font-mono font-black leading-none ${isOutOfStock ? 'text-rose-400' : isLowStock ? 'text-amber-400' : 'text-zinc-100'}`}>
-                      {formatStockQty(qty)} <span className="text-[11px] font-normal text-zinc-400 font-sans">{selectedVar.unit || ''}</span>
+                      {formatStockQty(qty)} <span className="text-[11px] font-normal text-zinc-400 font-sans">{typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedVar) : (selectedVar.unit || '')}</span>
                     </div>
                   </div>
                 )}
@@ -1395,13 +1464,21 @@
             finalName = std.fullName;
           }
 
+          // Đối với hàng sản xuất (Layout / Bể kính):
+          // 1. Tồn sàn Shopee (898, 666, 222) KHÔNG gán đè vào tồn xưởng vật lý (mặc định tồn xưởng = 0 khi mới tạo)
+          // 2. Tự động tính giá vốn định mức ước tính nếu Shopee không có giá vốn
+          const isMtoProduct = detectedCat === 'LAYOUT' || detectedCat === 'BỂ KÍNH' || detectedCat.includes('SẢN XUẤT') || String(finalSku).startsWith('LAY-') || String(finalSku).startsWith('BE-');
+          const costInfo = resolveProductCostPrice({ name: finalName, sku: finalSku, price, category: detectedCat, sub_category: detectedSub }, data?.configGiaLayout, data?.kpiConfig);
+
           parsedVariations.push({
             id: 'PROD_' + Date.now() + '_' + parsedVariations.length,
             sku: finalSku,
             rawShopeeSku: vSku,
             name: finalName,
             price: price,
-            quantity: stock,
+            costPrice: costInfo.costPrice || 0,
+            quantity: isMtoProduct ? 0 : stock,
+            shopeeStock: stock,
             unit: detectedUnit,
             category: detectedCat,
             sub_category: detectedSub || 'KHÁC'
@@ -1438,13 +1515,18 @@
           finalName = std.fullName;
         }
 
+        const isMtoProduct = detectedCat === 'LAYOUT' || detectedCat === 'BỂ KÍNH' || detectedCat.includes('SẢN XUẤT') || String(finalSku).startsWith('LAY-') || String(finalSku).startsWith('BE-');
+        const costInfo = resolveProductCostPrice({ name: finalName, sku: finalSku, price, category: detectedCat, sub_category: detectedSub }, data?.configGiaLayout, data?.kpiConfig);
+
         parsedVariations.push({
           id: 'PROD_' + Date.now() + '_0',
           sku: finalSku,
           rawShopeeSku: parentSku,
           name: finalName,
           price: price,
-          quantity: stock,
+          costPrice: costInfo.costPrice || 0,
+          quantity: isMtoProduct ? 0 : stock,
+          shopeeStock: stock,
           unit: detectedUnit,
           category: detectedCat,
           sub_category: detectedSub || 'KHÁC'
@@ -2531,18 +2613,23 @@ Model ID: 287936773312
         return triggerToast('Vui lòng nhập số lượng hợp lệ (> 0)!', 'fa-exclamation-triangle', 'warning');
       }
 
-      let convertedQty = rawNum;
-      let conversionDescription = `${rawNum} ${selectedDrawerItem.unit || 'đơn vị'}`;
+      const uomConfig = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : { baseUnit: 'Cái', importUnit: 'Cái', conversionRate: 1 };
+      const baseUnit = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : (selectedDrawerItem.unit || 'Cái');
 
-      // Quy đổi UOM tự động:
-      // Tấm kính lớn (1.8m x 2.0m = 3.6m²) -> ra m²
-      if (stockAdjUnit === 'LARGE_SHEET') {
+      let convertedQty = rawNum;
+      let conversionDescription = `${rawNum} ${baseUnit}`;
+
+      // Quy đổi UOM tự động & chính xác hệ số:
+      if (stockAdjUnit === 'IMPORT_UNIT' || stockAdjUnit === 'BOX' || stockAdjUnit === 'BAG') {
+        const rate = Number(uomConfig.conversionRate) > 0 ? Number(uomConfig.conversionRate) : 1;
+        convertedQty = Math.round(rawNum * rate * 1000) / 1000;
+        conversionDescription = `${rawNum} ${uomConfig.importUnit} (= ${convertedQty} ${baseUnit})`;
+      } else if (stockAdjUnit === 'LARGE_SHEET') {
         convertedQty = Math.round(rawNum * 3.6 * 100) / 100;
         conversionDescription = `${rawNum} Tấm lớn (= ${convertedQty} m²)`;
-      } else if (stockAdjUnit === 'BOX') {
-        // Thùng keo (24 chai/thùng) -> ra chai
-        convertedQty = rawNum * 24;
-        conversionDescription = `${rawNum} Thùng (= ${convertedQty} Chai)`;
+      } else if (stockAdjUnit === 'BOM_GRAM' || stockAdjUnit === 'GRAM') {
+        convertedQty = Math.round((rawNum / 1000) * 1000) / 1000;
+        conversionDescription = `${rawNum} Gam (= ${convertedQty} Kg)`;
       }
 
       setIsSubmittingAdj(true);
@@ -3056,7 +3143,7 @@ Model ID: 287936773312
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
                               {imgUrl ? (
-                                <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                <img src={imgUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                               ) : (
                                 <i className={`fas ${getSubCategoryIcon(p.name)} text-zinc-600 text-xs`}></i>
                               )}
@@ -3082,7 +3169,7 @@ Model ID: 287936773312
 
                         {/* Đơn vị tính */}
                         <td className="p-3 font-medium text-zinc-300">
-                          {p.unit || 'Cái'}
+                          {typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(p) : (p.unit || 'Cái')}
                         </td>
 
                         {/* Tồn thực tế */}
@@ -3371,6 +3458,8 @@ Model ID: 287936773312
                                 src={formatImageUrl(drawerImgUrl)}
                                 alt={selectedDrawerItem.name}
                                 className="w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
                                 onClick={() => {
                                   if (layout5) {
                                     window.openLayout5AngleViewer(layout5);
@@ -3419,7 +3508,7 @@ Model ID: 287936773312
                       <div>
                         <span className="text-[10.5px] uppercase font-bold text-zinc-400 block mb-1">Tồn Kho Hiện Tại</span>
                         <div className="text-2xl font-mono font-black text-white">
-                          {selectedDrawerItem.quantity} <span className="text-xs font-normal text-zinc-400 font-sans">{selectedDrawerItem.unit || 'Cái'}</span>
+                          {selectedDrawerItem.quantity} <span className="text-xs font-normal text-zinc-400 font-sans">{typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : (selectedDrawerItem.unit || 'Cái')}</span>
                         </div>
                       </div>
                       {canViewCost && (
@@ -3465,9 +3554,29 @@ Model ID: 287936773312
                           onChange={(e) => setStockAdjUnit(e.target.value)}
                           className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white font-bold outline-none"
                         >
-                          <option value="DEFAULT">Đơn vị mặc định ({selectedDrawerItem.unit || 'Cái'})</option>
-                          <option value="LARGE_SHEET">Tấm lớn (180x200cm = 3.6 m² kính)</option>
-                          <option value="BOX">Thùng đóng gói (24 chai/hộp)</option>
+                          <option value="DEFAULT">Đơn vị tồn kho chuẩn ({typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : 'Cái'})</option>
+                          {(() => {
+                            const uom = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : null;
+                            if (!uom) return null;
+                            return (
+                              <React.Fragment>
+                                {uom.importUnit && uom.importUnit !== uom.baseUnit && (
+                                  <option value="IMPORT_UNIT">
+                                    Đơn vị nhập: {uom.importUnit} (x{uom.conversionRate} {uom.baseUnit})
+                                  </option>
+                                )}
+                                {(uom.baseUnit === 'Kg' || String(selectedDrawerItem.name || '').toLowerCase().includes('rêu')) && (
+                                  <option value="BOM_GRAM">Gam sản xuất (1.000 Gam = 1 Kg)</option>
+                                )}
+                                {uom.baseUnit === 'm²' && (
+                                  <option value="LARGE_SHEET">Tấm lớn nguyên khổ (180x200cm = 3.6 m²)</option>
+                                )}
+                                {String(selectedDrawerItem.name || '').toLowerCase().includes('502') && (
+                                  <option value="BOX">Thùng nguyên (162 chai)</option>
+                                )}
+                              </React.Fragment>
+                            );
+                          })()}
                         </select>
                       </div>
 
@@ -3484,16 +3593,25 @@ Model ID: 287936773312
                       </div>
 
                       {/* Xem trước quy đổi */}
-                      {stockAdjQty && parseFloat(stockAdjQty) > 0 && (
-                        <div className="p-2.5 rounded-xl bg-[#09090b] border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-center justify-between">
-                          <span>Hệ thống sẽ {stockAdjType === 'IN' ? 'cộng' : 'trừ'}:</span>
-                          <b className="text-white text-xs">
-                            {stockAdjUnit === 'LARGE_SHEET' ? `${Math.round(parseFloat(stockAdjQty) * 3.6 * 100) / 100} m² kính` :
-                              stockAdjUnit === 'BOX' ? `${parseFloat(stockAdjQty) * 24} Chai` :
-                                `${stockAdjQty} ${selectedDrawerItem.unit || 'Cái'}`}
-                          </b>
-                        </div>
-                      )}
+                      {stockAdjQty && parseFloat(stockAdjQty) > 0 && (() => {
+                        const uom = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : null;
+                        const baseU = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : 'Cái';
+                        let previewStr = `${stockAdjQty} ${baseU}`;
+                        if (stockAdjUnit === 'IMPORT_UNIT' || stockAdjUnit === 'BOX') {
+                          const rate = Number(uom?.conversionRate) > 0 ? Number(uom?.conversionRate) : 1;
+                          previewStr = `${stockAdjQty} ${uom?.importUnit || 'Đơn vị'} = ${(parseFloat(stockAdjQty) * rate).toFixed(2)} ${baseU}`;
+                        } else if (stockAdjUnit === 'LARGE_SHEET') {
+                          previewStr = `${stockAdjQty} Tấm lớn = ${(parseFloat(stockAdjQty) * 3.6).toFixed(2)} m² kính`;
+                        } else if (stockAdjUnit === 'BOM_GRAM') {
+                          previewStr = `${stockAdjQty} Gam = ${(parseFloat(stockAdjQty) / 1000).toFixed(3)} Kg`;
+                        }
+                        return (
+                          <div className="p-2.5 rounded-xl bg-[#09090b] border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-center justify-between">
+                            <span>Hệ thống sẽ {stockAdjType === 'IN' ? 'cộng' : 'trừ'}:</span>
+                            <b className="text-white text-xs">{previewStr}</b>
+                          </div>
+                        );
+                      })()}
 
                       {/* Lý do / Ghi chú */}
                       <div>

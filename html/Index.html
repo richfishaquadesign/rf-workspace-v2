@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
   <title>RF Workspace Pro</title>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#09090b">
@@ -832,8 +833,8 @@
       var pending = null;
       // Cache follows the actual deployed bundle, including changes made outside the local build tool.
       var bundleCacheKey = 'rf_deferred_' + '<?!= Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, include("Compiled_Deferred"), Utilities.Charset.UTF_8)); ?>';
-      var extendedTabs = ['production','apprenticeship','warehouse','import_export','suppliers','cashflow','cashbook','business_report','hr','documents','affiliate','analytics','workspaces'];
-      var exports = ['ProductionTab','ApprenticeshipTab','InventoryTab','ImportExportTab','StockOperationsTab','SuppliersTab','FinanceTab','BusinessReportTab','HRTab','DocumentsTab','TabAffiliate','AnalyticsTab','WorkspaceTab'];
+      var extendedTabs = ['production','apprenticeship','warehouse','import_export','suppliers','finance','cashflow','cashbook','business_report','hr','documents','affiliate','analytics','workspaces'];
+      var exports = ['ProductionTab','ApprenticeshipTab','InventoryTab','ImportExportTab','StockOperationsTab','SuppliersTab','FinanceOverviewTab','CashLedgerTab','FinanceTab','BusinessReportTab','HRTab','DocumentsTab','TabAffiliate','AnalyticsTab','WorkspaceTab'];
       function modulesReady() {
         return Boolean(window.deferredReady || window.ProductionTab);
       }

@@ -744,7 +744,7 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, is
     // 2. New UI State
     const [filterType, setFilterType] = React.useState('TẤT CẢ');
     const [logActionFilter, setLogActionFilter] = React.useState('ALL'); // 'ALL' | 'NHAP' | 'XUAT' | 'DAT_HANG' | 'KIEM_KHO'
-    const [filterMonth, setFilterMonth] = React.useState(new Date().toISOString().slice(0, 7));
+    const [filterMonth, setFilterMonth] = React.useState(''); // Mặc định rỗng: hiển thị toàn bộ lịch sử chứng từ kho, không bị lọc giấu 0 chứng từ
     const [searchTerm, setSearchTerm] = React.useState('');
     const deferredSearchTerm = React.useDeferredValue ? React.useDeferredValue(searchTerm) : searchTerm;
     const [expandedIds, setExpandedIds] = React.useState({});
@@ -1869,13 +1869,26 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, is
                             </button>
                         )}
                     </div>
-                    <div className="relative w-[130px] sm:w-40 shrink-0">
-                        <input 
-                            type="month" 
-                            value={filterMonth}
-                            onChange={(e) => setFilterMonth(e.target.value)}
-                            className="w-full bg-[#09090b] border border-white/[0.08] rounded-xl px-2.5 sm:px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#d4af37] transition-colors"
-                        />
+                    <div className="relative flex items-center gap-1 shrink-0">
+                        <div className="relative w-[120px] sm:w-36">
+                            <input 
+                                type="month" 
+                                value={filterMonth}
+                                onChange={(e) => setFilterMonth(e.target.value)}
+                                title="Lọc theo tháng (Để trống để xem toàn bộ chứng từ)"
+                                className="w-full bg-[#09090b] border border-white/[0.08] rounded-xl px-2.5 sm:px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#d4af37] transition-colors"
+                            />
+                        </div>
+                        {filterMonth ? (
+                            <button
+                                onClick={() => setFilterMonth('')}
+                                className="h-9 px-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white border border-white/[0.08] text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                title="Bỏ lọc tháng để xem tất cả chứng từ"
+                            >
+                                <i className="fas fa-times text-xs text-rose-400"></i>
+                                <span className="hidden sm:inline">Tất Cả</span>
+                            </button>
+                        ) : null}
                     </div>
                     <button
                         onClick={handleExportMonthlyReport}

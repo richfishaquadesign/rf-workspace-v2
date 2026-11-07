@@ -9,7 +9,50 @@
 //    - Số DƯƠNG (+) / MÀU ĐỎ: CTV NỢ XƯỞNG (CTV tự thu trước tiền khách, cước hoàn, phụ phí).
 // 3. Giao diện dạng Bảng (Table Data Grid) trực quan như Google Sheet cũ.
 // 4. Cách ly 100% tài chính CTV, an toàn với Sổ quỹ chính.
+// 5. Chuẩn hóa phân biệt 4 trạng thái: Vận chuyển, Giao thành công, COD đã thu và COD đã đối soát.
 // =========================================================================
+
+/**
+ * Phân biệt chính xác các giai đoạn vận chuyển, giao hàng và đối soát tài chính
+ * Tuyệt đối không nhầm lẫn 'Đã Bàn Giao' (cho bên vận chuyển) với 'Đã Giao' (cho khách hàng)
+ */
+const getOrderDeliveryStage = (order) => {
+    const s = String(order?.status || '').toUpperCase().trim();
+    const isRec = Boolean(order?.isReconciled || order?.reconciledAt || s.includes('ĐỐI SOÁT'));
+    const isRet = s.includes('HOÀN');
+    const isCanc = typeof normalizeStatus === 'function' ? normalizeStatus(order?.status) === 'Đơn Huỷ' : (s.includes('HUỶ') || s.includes('HỦY'));
+
+    if (isCanc) return 'CANCELLED'; // Đơn Huỷ
+    if (isRet) return 'RETURNED';   // Hàng Hoàn
+    if (isRec) return 'RECONCILED'; // Đã đối soát COD thành công
+
+    // 1. Giao thành công (Khách đã nhận hàng)
+    const isDelivered = (
+        s === 'ĐÃ GIAO' || 
+        s === 'GIAO THÀNH CÔNG' || 
+        s === 'ĐÃ NHẬN HÀNG' || 
+        s === 'DELIVERED' || 
+        s === 'COMPLETED' || 
+        s.includes('GIAO THÀNH CÔNG') ||
+        (s.includes('ĐÃ GIAO') && !s.includes('BÀN GIAO') && !s.includes('VẬN CHUYỂN'))
+    );
+    if (isDelivered) return 'DELIVERED';
+
+    // 2. Đang vận chuyển (Đã bàn giao cho bên vận chuyển / Shipper đang đi giao / COD đang đi đường)
+    const isShipping = (
+        s === 'ĐÃ BÀN GIAO' || 
+        s.includes('BÀN GIAO') || 
+        s.includes('VẬN CHUYỂN') || 
+        s.includes('ĐANG GIAO') || 
+        s === 'IN_TRANSIT' || 
+        s === 'DELIVERING' || 
+        s === 'SHIPPING' ||
+        s === 'PICKED'
+    );
+    if (isShipping) return 'SHIPPING';
+
+    return 'PENDING'; // Chờ sản xuất / Đang xử lý
+};
 
 function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrentUser, triggerToast, userRole: propUserRole, hasPerm: propHasPerm, userConfigs, erpData, prodItems, configGiaLayout }) {
   const [selectedCTV, setSelectedCTV] = React.useState('');
@@ -487,16 +530,17 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
               if (!matchQ) return false;
           }
 
-          // Lọc trạng thái
+          // Lọc trạng thái chuẩn hóa
           const s = String(o.status || '').toUpperCase();
           const isRec = o.isReconciled || Boolean(o.reconciledAt) || s.includes('ĐỐI SOÁT');
+          const stage = getOrderDeliveryStage(o);
           
           if (statusFilter === 'DELIVERED') {
-              return s.includes('ĐÃ BÀN GIAO') || s.includes('ĐÃ GIAO');
+              return stage === 'DELIVERED';
           } else if (statusFilter === 'SHIPPING') {
-              return s.includes('ĐANG GIAO') || s.includes('SẴN SÀNG') || s.includes('CHỜ');
+              return stage === 'SHIPPING';
           } else if (statusFilter === 'RETURNED') {
-              return s.includes('HOÀN');
+              return stage === 'RETURNED';
           } else if (statusFilter === 'UNRECONCILED') {
               return !isRec;
           } else if (statusFilter === 'RECONCILED') {
@@ -556,14 +600,36 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
 
   // Toggle trạng thái đối soát đơn hàng (isReconciled)
   const handleToggleReconcileOrder = async (o) => {
+      const nextReconciled = !o.isReconciled;
+      
+      // Nếu là thao tác chốt đối soát (từ chưa đối soát -> đã đối soát)
+      if (nextReconciled) {
+          const stage = getOrderDeliveryStage(o);
+          const cod = Number(o.cod || 0);
+          const rev = Number(o.revenue || 0);
+          const prePaid = Number(o.prePaid || 0);
+
+          // Cảnh báo nếu đơn đang vận chuyển (mới bàn giao cho ĐVVC)
+          if (stage === 'SHIPPING') {
+              if (!confirm(`⚠️ CẢNH BÁO KIỂM SOÁT TÀI CHÍNH:\n\nĐơn hàng ${o.orderCode || o.id} đang ở trạng thái "${o.status || 'Đã Bàn Giao'}" (mới bàn giao cho đơn vị vận chuyển, đang đi đường).\n${cod > 0 ? `Tiền COD ${formatMoney(cod)}đ CHƯA được giao tới khách và chưa được đối soát thanh toán.\n\n` : ''}Bạn có chắc chắn muốn chốt đối soát tất toán đơn này không?`)) {
+                  return;
+              }
+          } else if (cod > 0 && prePaid < rev) {
+              // Đơn có COD: nhắc nhở xác nhận đã nhận tiền
+              if (!confirm(`Xác nhận đối soát đơn ${o.orderCode || o.customer}:\n\nĐơn có số tiền COD: ${formatMoney(cod)}đ.\nBạn xác nhận ĐÃ KIỂM TRA và nhận đủ tiền COD từ đơn vị vận chuyển về tài khoản?`)) {
+                  return;
+              }
+          }
+      }
+
       setIsProcessing(true);
       try {
-          const nextReconciled = !o.isReconciled;
           const todayStr = new Date().toISOString().substring(0, 10);
           const updatedOrder = {
               ...o,
               isReconciled: nextReconciled,
-              reconciledAt: nextReconciled ? todayStr : ''
+              reconciledAt: nextReconciled ? todayStr : '',
+              status: nextReconciled ? 'Đối Soát Thành Công' : (o.status === 'Đối Soát Thành Công' ? 'Đã Giao' : o.status)
           };
           await pushDeltas(
               { orders: [updatedOrder] },
@@ -579,18 +645,30 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
   // Đối soát hàng loạt các đơn đã chọn
   const handleBulkReconcile = async () => {
       if (selectedOrderIds.length === 0) return;
-      if (!confirm(`Xác nhận chốt đối soát ${selectedOrderIds.length} đơn hàng đã chọn?`)) return;
+      
+      const targetOrders = ctvOrders.filter(o => selectedOrderIds.includes(o.id));
+      const shippingOrders = targetOrders.filter(o => getOrderDeliveryStage(o) === 'SHIPPING');
+      const totalCod = targetOrders.reduce((sum, o) => sum + (Number(o.cod) || 0), 0);
+
+      let warningMsg = `Xác nhận chốt đối soát ${selectedOrderIds.length} đơn hàng đã chọn?\n`;
+      if (shippingOrders.length > 0) {
+          warningMsg += `\n⚠️ CẢNH BÁO: Có ${shippingOrders.length} đơn đang ở trạng thái Vận Chuyển / Đã Bàn Giao (chưa xác nhận giao hàng).`;
+      }
+      if (totalCod > 0) {
+          warningMsg += `\n💵 Tổng tiền COD: ${formatMoney(totalCod)}đ. Xác nhận bạn ĐÃ NHẬN ĐỦ thanh toán COD từ đơn vị vận chuyển về tài khoản?`;
+      }
+
+      if (!confirm(warningMsg)) return;
+
       setIsProcessing(true);
       try {
           const todayStr = new Date().toISOString().substring(0, 10);
-          const updatedOrders = ctvOrders
-              .filter(o => selectedOrderIds.includes(o.id))
-              .map(o => ({
-                  ...o,
-                  isReconciled: true,
-                  reconciledAt: todayStr,
-                  status: 'Đối Soát Thành Công'
-              }));
+          const updatedOrders = targetOrders.map(o => ({
+              ...o,
+              isReconciled: true,
+              reconciledAt: todayStr,
+              status: 'Đối Soát Thành Công'
+          }));
 
           await pushDeltas(
               { orders: updatedOrders },
@@ -604,25 +682,84 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
       setIsProcessing(false);
   };
 
-  // 🚀 1-CLICK: Chốt đối soát toàn bộ các đơn ĐÃ GIAO / ĐÃ BÀN GIAO đang chờ
+  // 🚀 Chốt đối soát các đơn ĐÃ GIAO THÀNH CÔNG và đã xác nhận thanh toán COD
   const handleReconcileDeliveredOrders = async () => {
+      // 1. Chỉ lọc đơn đã giao thành công (TUYỆT ĐỐI LOẠI TRỪ 'Đã Bàn Giao' / Đang Vận Chuyển)
       const deliveredOrders = ctvOrders.filter(o => {
-          const s = String(o.status || '').toUpperCase();
-          const isDelivered = s.includes('ĐÃ BÀN GIAO') || s.includes('ĐÃ GIAO');
-          const isRec = o.isReconciled || Boolean(o.reconciledAt) || s.includes('ĐỐI SOÁT');
-          return isDelivered && !isRec;
+          const isRec = o.isReconciled || Boolean(o.reconciledAt) || String(o.status || '').toUpperCase().includes('ĐỐI SOÁT');
+          return getOrderDeliveryStage(o) === 'DELIVERED' && !isRec;
       });
 
       if (deliveredOrders.length === 0) {
-          if (triggerToast) triggerToast('Hiện không có đơn "Đã Bàn Giao" nào đang chờ đối soát!', 'fa-info-circle', 'info');
+          const shippingCount = ctvOrders.filter(o => {
+              const isRec = o.isReconciled || Boolean(o.reconciledAt);
+              return getOrderDeliveryStage(o) === 'SHIPPING' && !isRec;
+          }).length;
+
+          let msg = 'Hiện không có đơn nào ở trạng thái "Đã Giao" thành công đang chờ đối soát!';
+          if (shippingCount > 0) {
+              msg += `\n(Hệ thống phát hiện ${shippingCount} đơn "Đã Bàn Giao/Đang Vận Chuyển" - COD đang đi đường, không tự động tất toán).`;
+          }
+          if (triggerToast) triggerToast('Hiện không có đơn "Đã Giao" thành công nào chờ đối soát!', 'fa-info-circle', 'info');
+          alert(msg);
           return;
       }
 
-      if (!confirm(`Phát hiện ${deliveredOrders.length} đơn đã giao thành công đang chờ đối soát. Xác nhận chốt tất cả?`)) return;
+      // 2. Phân loại đơn: Không có COD treo vs Có COD chờ thanh toán
+      const noCodOrders = [];
+      const pendingCodOrders = [];
+
+      deliveredOrders.forEach(o => {
+          const cod = Number(o.cod || 0);
+          const rev = Number(o.revenue || 0);
+          const prePaid = Number(o.prePaid || 0);
+          const note = String(o.note || '').toLowerCase();
+          const hasConfirm = o.codPaid === true || note.includes('[cod-da-thu]') || note.includes('[da-thanh-toan]') || note.includes('[da-doi-soat]');
+
+          if (cod <= 0 || prePaid >= rev || hasConfirm) {
+              noCodOrders.push(o);
+          } else {
+              pendingCodOrders.push(o);
+          }
+      });
+
+      let ordersToReconcile = [];
+
+      if (pendingCodOrders.length > 0) {
+          const totalPendingCod = pendingCodOrders.reduce((sum, o) => sum + (Number(o.cod) || 0), 0);
+          let confirmPrompt = `Phát hiện ${deliveredOrders.length} đơn đã giao thành công chờ đối soát:\n`;
+          if (noCodOrders.length > 0) {
+              confirmPrompt += `• ${noCodOrders.length} đơn không có COD treo (đã thanh toán trước/COD = 0): Đủ điều kiện đối soát an toàn.\n`;
+          }
+          confirmPrompt += `• ${pendingCodOrders.length} đơn có tiền COD chưa đối soát từ ĐVVC (Tổng COD: ${formatMoney(totalPendingCod)}đ).\n\n`;
+          confirmPrompt += `LƯU Ý QUẢN TRỊ RỦI RO:\nKhông tự động ghi nhận tiền COD khi chưa có xác nhận thanh toán từ đơn vị vận chuyển!\n\n`;
+          confirmPrompt += `Bấm [OK] nếu bạn ĐÃ KIỂM TRA và xác nhận ĐVVC đã chuyển khoản đủ ${formatMoney(totalPendingCod)}đ về tài khoản ngân hàng để chốt toàn bộ ${deliveredOrders.length} đơn.\n`;
+          confirmPrompt += `Bấm [Cancel] để hủy thao tác hoặc chỉ chốt đơn không COD.`;
+
+          if (confirm(confirmPrompt)) {
+              ordersToReconcile = deliveredOrders;
+          } else if (noCodOrders.length > 0) {
+              if (confirm(`Bạn có muốn chốt đối soát ${noCodOrders.length} đơn đã thanh toán trước / không có COD treo không?`)) {
+                  ordersToReconcile = noCodOrders;
+              } else {
+                  return;
+              }
+          } else {
+              return;
+          }
+      } else {
+          if (!confirm(`Phát hiện ${deliveredOrders.length} đơn đã giao thành công (không có COD treo). Xác nhận chốt đối soát tất cả?`)) {
+              return;
+          }
+          ordersToReconcile = deliveredOrders;
+      }
+
+      if (ordersToReconcile.length === 0) return;
+
       setIsProcessing(true);
       try {
           const todayStr = new Date().toISOString().substring(0, 10);
-          const updatedOrders = deliveredOrders.map(o => ({
+          const updatedOrders = ordersToReconcile.map(o => ({
               ...o,
               isReconciled: true,
               reconciledAt: todayStr,
@@ -634,6 +771,7 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
               `Đã chốt đối soát tự động ${updatedOrders.length} đơn đã giao thành công!`,
               'fa-check-double'
           );
+          if (triggerToast) triggerToast(`Đã chốt đối soát ${updatedOrders.length} đơn đã giao thành công!`, 'fa-check-double', 'success');
       } catch(e) {
           if (triggerToast) triggerToast('Lỗi khi chốt đối soát đơn đã giao!', 'fa-times', 'danger');
       }
@@ -1143,8 +1281,8 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
                       <button
                           onClick={handleReconcileDeliveredOrders}
                           disabled={isProcessing}
-                          className="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500 text-sky-300 hover:text-black text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
-                          title="Tự động chốt đối soát tất cả đơn có trạng thái Đã Bàn Giao"
+                          className="px-2.5 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500 text-teal-300 hover:text-black text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+                          title="Chốt đối soát các đơn đã giao thành công và xác nhận thanh toán (loại trừ đơn Đang Vận Chuyển / Đã Bàn Giao)"
                       >
                           <i className="fas fa-check-double text-[9px]"></i>
                           <span>Chốt đơn Đã Giao</span>
@@ -1266,9 +1404,9 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
           <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
               {[
                   { id: 'ALL', label: 'Tất Cả', count: ctvOrders.length },
-                  { id: 'DELIVERED', label: 'Đã Giao', count: ctvOrders.filter(o => String(o.status || '').toUpperCase().includes('ĐÃ')).length },
-                  { id: 'SHIPPING', label: 'Đang Giao/Chờ', count: ctvOrders.filter(o => !String(o.status || '').toUpperCase().includes('ĐÃ') && !String(o.status || '').toUpperCase().includes('HOÀN')).length },
-                  { id: 'RETURNED', label: 'Hàng Hoàn', count: ctvOrders.filter(o => String(o.status || '').toUpperCase().includes('HOÀN')).length },
+                  { id: 'DELIVERED', label: 'Đã Giao', count: ctvOrders.filter(o => getOrderDeliveryStage(o) === 'DELIVERED').length },
+                  { id: 'SHIPPING', label: 'Đang Vận Chuyển', count: ctvOrders.filter(o => getOrderDeliveryStage(o) === 'SHIPPING').length },
+                  { id: 'RETURNED', label: 'Hàng Hoàn', count: ctvOrders.filter(o => getOrderDeliveryStage(o) === 'RETURNED').length },
                   { id: 'UNRECONCILED', label: 'Chờ Đối Soát', count: debtStats.totalUnreconciledOrders },
                   { id: 'RECONCILED', label: 'Đã Đối Soát', count: debtStats.totalReconciledOrders }
               ].map(tab => (
@@ -1361,10 +1499,10 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
                           <button
                               onClick={handleReconcileDeliveredOrders}
                               disabled={isProcessing}
-                              className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-black border border-sky-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                              title="Tự động tìm và chốt đối soát toàn bộ các đơn có trạng thái Đã Bàn Giao"
+                              className="px-2.5 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500 text-teal-300 hover:text-black border border-teal-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                              title="Chốt đối soát các đơn đã giao thành công và xác nhận thanh toán COD (không chốt đơn đang vận chuyển / Đã Bàn Giao)"
                           >
-                              <i className="fas fa-truck-fast text-xs"></i>
+                              <i className="fas fa-clipboard-check text-xs"></i>
                               <span>Chốt Các Đơn Đã Giao</span>
                           </button>
                       )}
@@ -1464,8 +1602,10 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
                                       // Trạng thái
                                       const s = String(o.status || '').toUpperCase().trim();
                                       const isReconciled = o.isReconciled || Boolean(o.reconciledAt) || s.includes('ĐỐI SOÁT');
-                                      const isHandedOver = s === 'ĐÃ BÀN GIAO' || s === 'ĐÃ GIAO';
-                                      const isReturned = s.includes('HOÀN');
+                                      const stage = getOrderDeliveryStage(o);
+                                      const isDelivered = stage === 'DELIVERED';
+                                      const isShipping = stage === 'SHIPPING';
+                                      const isReturned = stage === 'RETURNED';
                                       const isSelected = selectedOrderIds.includes(o.id);
 
                                       return (
@@ -1639,9 +1779,11 @@ function TabAffiliate({ orders, ctvFinance, pushDeltas, currentUser: propCurrent
                                                               ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
                                                               : (isReturned 
                                                                   ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' 
-                                                                  : (isHandedOver ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'))
+                                                                  : (isDelivered 
+                                                                      ? 'bg-teal-500/15 text-teal-300 border-teal-500/30' 
+                                                                      : (isShipping ? 'bg-sky-500/15 text-sky-400 border-sky-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30')))
                                                       }`}>
-                                                          {isReconciled ? 'Đã Đối Soát' : (isReturned ? 'Hàng Hoàn' : (isHandedOver ? 'Đã Giao' : (o.status || 'Chờ SX')))}
+                                                          {isReconciled ? 'Đã Đối Soát' : (isReturned ? 'Hàng Hoàn' : (isDelivered ? 'Đã Giao' : (isShipping ? 'Đã Bàn Giao' : (o.status || 'Chờ SX'))))}
                                                       </span>
 
                                                       {/* Nút bấm chuyển trạng thái đối soát */}
@@ -2384,9 +2526,11 @@ function AffiliateOrderDetailModal({ order, onClose, onEdit, prodItems, packings
     // Chuẩn hóa trạng thái
     const s = String(order.status || '').toUpperCase().trim();
     const isReconciled = order.isReconciled || Boolean(order.reconciledAt) || s.includes('ĐỐI SOÁT');
-    const isHandedOver = s === 'ĐÃ BÀN GIAO' || s === 'ĐÃ GIAO';
-    const isReturned = s.includes('HOÀN');
-    const isCanceled = s.includes('HUỶ') || s.includes('HỦY');
+    const stage = getOrderDeliveryStage(order);
+    const isDelivered = stage === 'DELIVERED';
+    const isShipping = stage === 'SHIPPING';
+    const isReturned = stage === 'RETURNED';
+    const isCanceled = stage === 'CANCELLED';
 
     let badgeClass = 'bg-[#27272a] text-zinc-300 border-white/[0.08]';
     let badgeText = order.status || 'Chờ Sản Xuất';
@@ -2396,9 +2540,13 @@ function AffiliateOrderDetailModal({ order, onClose, onEdit, prodItems, packings
         badgeClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
         badgeText = 'Đối Soát Thành Công';
         badgeIcon = 'fa-check-double';
-    } else if (isHandedOver) {
+    } else if (isDelivered) {
+        badgeClass = 'bg-teal-500/15 text-teal-300 border-teal-500/30';
+        badgeText = 'Đã Giao Thành Công';
+        badgeIcon = 'fa-circle-check';
+    } else if (isShipping) {
         badgeClass = 'bg-sky-500/15 text-sky-400 border-sky-500/30';
-        badgeText = 'Đã Bàn Giao';
+        badgeText = 'Đã Bàn Giao ĐVVC (Đang Vận Chuyển)';
         badgeIcon = 'fa-truck-fast';
     } else if (isReturned) {
         badgeClass = 'bg-rose-500/15 text-rose-400 border-rose-500/30';

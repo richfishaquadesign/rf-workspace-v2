@@ -2602,13 +2602,50 @@
 
                 const finalTotal = (Number(retailTotal) || 0) - (Number(retailDiscount) || 0) + (Number(additionalCost) || 0);
 
+                // Chuẩn hóa phương thức vận chuyển và ghi chú cước vận chuyển chuẩn theo Schema Orders 32 cột
+                let resolvedShippingMethod = isSaleUI ? (shippingMethod || 'Gửi GHN') : (shippingMethod || '');
+                if (typeof shippingCarrier !== 'undefined' && shippingCarrier && !resolvedShippingMethod.includes(shippingCarrier)) {
+                    resolvedShippingMethod = `${resolvedShippingMethod} - ${shippingCarrier}`;
+                }
+
+                let cleanNote = finalNote || '';
+                if (Number(additionalCost) > 0 && !cleanNote.includes('Phí ship:') && !cleanNote.includes('Cước vận chuyển')) {
+                    cleanNote = cleanNote ? `${cleanNote} | Phí ship: ${Number(additionalCost).toLocaleString('vi-VN')}đ` : `Phí ship: ${Number(additionalCost).toLocaleString('vi-VN')}đ`;
+                }
+
                 let payloadOrder = {
-                    id: orderId, orderCode: finalOrderCode, channel, customer: (customer && customer.trim()) ? customer.trim() : (currentUser || 'Khách Lẻ'), phone, address, note: finalNote,
-                    revenue: finalTotal, prePaid: Number(prePaid) || 0, discount: Number(retailDiscount) || 0, shippingFee: Number(additionalCost) || 0,
-                    feeFixed: Number(feeFixed) || 0, feeService: Number(feeService) || 0, feePayment: Number(feePayment) || 0, feeAffiliate: Number(feeAffiliate) || 0, shopVoucher: Number(shopVoucher) || 0, tax: Number(tax) || 0,
-                    deadline, createdAt: editOrder ? editOrder.createdAt : safeDate.replace('T', ' '), date: (editOrder ? editOrder.createdAt : safeDate).split('T')[0],
-                    status: currentStatus, accessories, hasProduction: prods.length > 0,
-                    updatedBy: currentUser, responsibleUser: isUserRoleCTV ? currentUser : (responsibleUser || currentUser), shippingMethod: isSaleUI ? (shippingMethod || 'Gửi GHN') : (shippingMethod || '')
+                    id: orderId,
+                    orderCode: finalOrderCode,
+                    channel,
+                    customer: (customer && customer.trim()) ? customer.trim() : (currentUser || 'Khách Lẻ'),
+                    phone: phone || '',
+                    address: address || '',
+                    note: cleanNote,
+                    revenue: finalTotal,
+                    prePaid: Number(prePaid) || 0,
+                    discount: Number(retailDiscount) || 0,
+                    feeFixed: Number(feeFixed) || 0,
+                    feeService: Number(feeService) || 0,
+                    feePayment: Number(feePayment) || 0,
+                    feeAffiliate: Number(feeAffiliate) || 0,
+                    shopVoucher: Number(shopVoucher) || 0,
+                    tax: Number(tax) || 0,
+                    sizeCoefficient: 1,
+                    cogs: 0,
+                    cod: Number(codAmt) || 0,
+                    costTotal: Number(autoCostTotal) || 0,
+                    deadline,
+                    createdAt: editOrder ? editOrder.createdAt : safeDate.replace('T', ' '),
+                    date: (editOrder ? editOrder.createdAt : safeDate).split('T')[0],
+                    status: currentStatus,
+                    accessories: Array.isArray(accessories) ? accessories : [],
+                    hasProduction: prods.length > 0,
+                    isCarriedToWH: false,
+                    isReconciled: false,
+                    reconciledAt: '',
+                    updatedBy: currentUser,
+                    responsibleUser: isUserRoleCTV ? currentUser : (responsibleUser || currentUser),
+                    shippingMethod: resolvedShippingMethod
                 };
 
                 const ctvOwner = isUserRoleCTV ? currentUser : (isChannelCTV ? responsibleUser : (responsibleUser && ctvOptions.includes(responsibleUser) ? responsibleUser : null));
@@ -2936,7 +2973,7 @@
                                                         <div className="flex justify-between items-center gap-2">
                                                             {pInfo?.image && (
                                                                 <div className="w-9 h-9 rounded-lg shrink-0 bg-black overflow-hidden border border-[#444]">
-                                                                    <img src={pInfo.image} className="w-full h-full object-cover opacity-85" alt="img" />
+                                                                    <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(pInfo.image || pInfo.realImage) : pInfo.image} className="w-full h-full object-cover opacity-85" alt="img" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                                 </div>
                                                             )}
                                                             <div className="flex-1 min-w-0">
@@ -3024,7 +3061,7 @@
                                                     <div key={'acc_' + i} className="flex items-center gap-2 bg-[#141414] p-2.5 rounded-xl border border-[#333]">
                                                         {aInfo?.image && (
                                                             <div className="w-8 h-8 rounded-lg shrink-0 bg-black overflow-hidden border border-[#444]">
-                                                                <img src={aInfo.image} className="w-full h-full object-cover opacity-85" alt="img" />
+                                                                <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(aInfo.image || aInfo.realImage) : aInfo.image} className="w-full h-full object-cover opacity-85" alt="img" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                             </div>
                                                         )}
                                                         <div className="flex-1 min-w-0">
@@ -3318,7 +3355,7 @@
                                                     <div key={p.id} onClick={() => selectProduct(p)} className="bg-[#141414] border border-[#222] p-3 rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer flex items-center justify-between hover:border-[#d4af37] group mb-2.5">
                                                         {p.image && (
                                                             <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-[#444] mr-3 bg-black">
-                                                                <img src={p.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="img" />
+                                                                <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(p.image || p.realImage) : p.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="img" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                             </div>
                                                         )}
                                                         <div className="flex-1 min-w-0 pr-3">
@@ -3360,7 +3397,7 @@
                                                                     <div key={v} onClick={() => { setSelVer(v); setLayoutStep(3); }} className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden cursor-pointer active:scale-95 hover:border-[#10b981] transition-all flex flex-col h-[145px] group relative shadow-md">
                                                                         <div className="w-full flex-1 bg-black relative overflow-hidden border-b border-[#222]">
                                                                             {versionImg ? (
-                                                                                <img src={versionImg} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={v} loading="lazy" />
+                                                                                <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(versionImg) : versionImg} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={v} loading="lazy" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                                             ) : (
                                                                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 gap-1">
                                                                                     <i className="fas fa-image text-lg opacity-40"></i>
@@ -3489,7 +3526,7 @@
                                                                 <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3.5 relative overflow-hidden mb-3 shadow-inner">
                                                                     {templateImg && (
                                                                         <div className="absolute right-0 top-0 w-1/3 h-full opacity-15 pointer-events-none">
-                                                                            <img src={templateImg} className="w-full h-full object-cover" alt="template" />
+                                                                            <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(templateImg) : templateImg} className="w-full h-full object-cover" alt="template" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                                         </div>
                                                                     )}
                                                                     <div className="relative z-10 space-y-2.5">
@@ -3629,7 +3666,7 @@
                                                                 <div key={p.id} onClick={() => selectProduct(p)} className="bg-[#141414] border border-[#222] p-3 rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center justify-between hover:border-[#10b981] transition-colors group mb-2.5">
                                                                     {p.image && (
                                                                         <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-[#444] mr-3 bg-black">
-                                                                            <img src={p.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="img" />
+                                                                            <img src={typeof formatProductImageUrl === 'function' ? formatProductImageUrl(p.image || p.realImage) : p.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="img" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
                                                                         </div>
                                                                     )}
                                                                     <div className="flex flex-col flex-1 min-w-0 pr-3">

@@ -6,45 +6,15 @@
     // =========================================================================
     // -------------------------------------------------------------------------
 
-    // HÀM PARSE NGÀY ĐA NĂNG (HỖ TRỢ DD/MM/YYYY, YYYY-MM-DD, TIMESTAMP, TIẾNG VIỆT)
+    // HÀM PARSE NGÀY ĐA NĂNG TOÀN CỤC (UỶ THÁC CHO window.resolveOrderDateSafe CHUẨN HOÁ GMT+7)
     window.parseOrderDateSafe = function(dateInput) {
+        if (typeof window.resolveOrderDateSafe === 'function') {
+            var res = window.resolveOrderDateSafe(dateInput);
+            return res ? res.dateObj : null;
+        }
         if (!dateInput) return null;
         if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
-
-        var str = String(dateInput).trim();
-        if (!str || str === '0' || str === '') return null;
-
-        // Lấy phần ngày (bỏ phần giờ nếu có)
-        var datePart = str.split(' ')[0].split('T')[0];
-
-        // 1. Xử lý định dạng DD/MM/YYYY hoặc DD-MM-YYYY
-        if (datePart.indexOf('/') !== -1 || (datePart.indexOf('-') !== -1 && datePart.split('-')[0].length !== 4)) {
-            var sep = datePart.indexOf('/') !== -1 ? '/' : '-';
-            var parts = datePart.split(sep);
-            if (parts.length === 3) {
-                var d = parseInt(parts[0], 10);
-                var m = parseInt(parts[1], 10) - 1;
-                var y = parseInt(parts[2], 10);
-                if (parts[0].length === 4) { // Trường hợp YYYY/MM/DD
-                    y = parseInt(parts[0], 10);
-                    m = parseInt(parts[1], 10) - 1;
-                    d = parseInt(parts[2], 10);
-                }
-                var res = new Date(y, m, d);
-                return isNaN(res.getTime()) ? null : res;
-            }
-        }
-
-        // 2. Xử lý định dạng YYYY-MM-DD (ISO standard)
-        if (datePart.indexOf('-') !== -1) {
-            var parts2 = datePart.split('-');
-            if (parts2.length === 3 && parts2[0].length === 4) {
-                var res2 = new Date(parseInt(parts2[0], 10), parseInt(parts2[1], 10) - 1, parseInt(parts2[2], 10));
-                return isNaN(res2.getTime()) ? null : res2;
-            }
-        }
-
-        var fallback = new Date(str);
+        var fallback = new Date(dateInput);
         return isNaN(fallback.getTime()) ? null : fallback;
     };
 
@@ -1550,12 +1520,18 @@
             if (!dateStr) return false;
             if (filterStr === 'Tất Cả') return true;
 
-            const d = typeof window.parseOrderDateSafe === 'function' ? window.parseOrderDateSafe(dateStr) : null;
-            if (!d || isNaN(d.getTime())) return false;
+            const norm = typeof window.resolveOrderDateSafe === 'function' ? window.resolveOrderDateSafe(dateStr) : null;
+            if (!norm || !norm.dateObj) return false;
+            const d = norm.dateObj;
 
             const today = new Date();
-            if (filterStr === 'Hôm Nay') return d.toDateString() === today.toDateString();
-            if (filterStr === 'Hôm Qua') { const y = new Date(today); y.setDate(y.getDate() - 1); return d.toDateString() === y.toDateString(); }
+            if (filterStr === 'Hôm Nay') return norm.isoDate === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            if (filterStr === 'Hôm Qua') {
+                const y = new Date(today);
+                y.setDate(y.getDate() - 1);
+                const yStr = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+                return norm.isoDate === yStr;
+            }
             if (filterStr === 'Tuần Này') {
                 const currentDay = today.getDay();
                 const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
@@ -1563,15 +1539,18 @@
                 const sunday = new Date(today.getFullYear(), today.getMonth(), diff + 6, 23, 59, 59, 999);
                 return d >= monday && d <= sunday;
             }
-            if (filterStr === 'Tháng Này') return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+            if (filterStr === 'Tháng Này') {
+                const curMStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                return norm.monthStr === curMStr;
+            }
             if (filterStr === 'Tháng Trước') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+                const lmMStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+                return norm.monthStr === lmMStr;
             }
             if (filterStr === 'Tuỳ Chỉnh' || filterStr === 'Chọn Tháng') {
                 if (!customM) return true;
-                const [year, month] = customM.split('-');
-                return d.getFullYear() === parseInt(year, 10) && d.getMonth() === (parseInt(month, 10) - 1);
+                return norm.monthStr === customM;
             }
             return true;
         };
@@ -1759,10 +1738,6 @@
             const isRec = isReconciledSafe(order.isReconciled);
             const isReturnOrder = (st === 'HÀNG HOÀN' || st.includes('HOÀN CHỜ XỬ') || st.includes('HOÀN TRẢ') || st === 'KIỂM HÀNG HOÀN');
 
-            if (isReturnOrder && !isRec && (filterTime === 'Tháng Này' || filterTime === 'this_month')) {
-                return true;
-            }
-
             const isClosed = (
                 st === 'HOÀN THÀNH' || 
                 st === 'ĐỐI SOÁT THÀNH CÔNG' || 
@@ -1773,55 +1748,43 @@
                 isRec
             );
 
-            if (!isClosed && (filterTime === 'Tháng Này' || filterTime === 'this_month')) {
-                return true;
-            }
-
-            const dateCandidate = isReturnOrder
-                ? (order.returnedAt || order.reconciledAt || order.date || order.createdAt || order.updatedAt)
-                : (order.date || order.createdAt || order.reconciledAt || order.returnedAt || order.updatedAt);
-            const orderDateObj = (typeof window.parseOrderDateSafe === 'function') 
-                ? window.parseOrderDateSafe(dateCandidate)
-                : null;
+            const norm = typeof window.resolveOrderDateSafe === 'function' 
+                ? window.resolveOrderDateSafe(order)
+                : (typeof window.normalizeDateVN === 'function' ? window.normalizeDateVN(order.date || order.createdAt || order.deadline) : null);
 
             const now = new Date();
             const curY = now.getFullYear();
             const curM = now.getMonth() + 1;
             const curMStr = String(curM).padStart(2, '0');
+            const targetCurrentMonth = `${curY}-${curMStr}`;
+
             const prevM = curM === 1 ? 12 : curM - 1;
             const prevY = curM === 1 ? curY - 1 : curY;
-            const prevMStr = String(prevM).padStart(2, '0');
-
-            if (!orderDateObj) {
-                const rawStr = String(dateCandidate || '');
-                if (filterTime === 'Tháng Này' || filterTime === 'this_month') {
-                    return rawStr.includes(`${curY}-${curMStr}`) || rawStr.includes(`/${curMStr}/${curY}`) || rawStr.includes(`/${curM}/${curY}`) || rawStr.includes(`-${curMStr}-${curY}`) || rawStr.includes(`-${curM}-${curY}`);
-                }
-                if (filterTime === 'Tháng Trước' || filterTime === 'last_month') {
-                    return rawStr.includes(`${prevY}-${prevMStr}`) || rawStr.includes(`/${prevMStr}/${prevY}`) || rawStr.includes(`/${prevM}/${prevY}`) || rawStr.includes(`-${prevMStr}-${prevY}`) || rawStr.includes(`-${prevM}-${prevY}`);
-                }
-                if ((filterTime === 'Tuỳ Chỉnh' || filterTime === 'Chọn Tháng') && customMonth) {
-                    const [y, m] = customMonth.split('-');
-                    return rawStr.includes(`${y}-${m}`) || rawStr.includes(`/${m}/${y}`) || rawStr.includes(`-${m}-${y}`);
-                }
-                return true;
-            }
-
-            const y = orderDateObj.getFullYear();
-            const m = orderDateObj.getMonth() + 1;
+            const targetPrevMonth = `${prevY}-${String(prevM).padStart(2, '0')}`;
 
             if (filterTime === 'Tháng Này' || filterTime === 'this_month') {
-                return y === curY && m === curM;
-            }
-            if (filterTime === 'Tháng Trước' || filterTime === 'last_month') {
-                return y === prevY && m === prevM;
-            }
-            if ((filterTime === 'Tuỳ Chỉnh' || filterTime === 'Chọn Tháng') && customMonth) {
-                const [targetY, targetM] = customMonth.split('-').map(Number);
-                return y === targetY && m === targetM;
+                if (norm && norm.monthStr === targetCurrentMonth) {
+                    order._isCarriedOverFromPast = false;
+                    return true;
+                }
+                // Đơn hàng đang sản xuất/chờ đóng gói tồn đọng từ kỳ trước luân chuyển sang
+                if (!isClosed) {
+                    order._isCarriedOverFromPast = true;
+                    return true;
+                }
+                return false;
             }
 
-            return true;
+            if (filterTime === 'Tháng Trước' || filterTime === 'last_month') {
+                return norm ? norm.monthStr === targetPrevMonth : false;
+            }
+
+            if ((filterTime === 'Tuỳ Chỉnh' || filterTime === 'Chọn Tháng') && customMonth) {
+                return norm ? norm.monthStr === customMonth : true;
+            }
+
+            if (!norm || !norm.dateObj) return true;
+            return isDateInRangeLocal(norm.isoDate, filterTime, customMonth);
         }, [filterTime, customMonth]);
 
         const sourceOrders = React.useMemo(() => {

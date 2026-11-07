@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T03:48:57.444Z",
+  "generatedAt": "2026-11-06T07:12:52.582Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -25,21 +25,29 @@
     "Tab_Apprenticeship.html"
   ],
   "hashes": {
-    "Tab_Production.html": "be4e7d4e347a6533c5c1813b249a5ee946beec94b497b0740c0509f6760478c0",
-    "Tab_Inventory.html": "c554aabf3bea8413f528c941ee2376df06e235b341579e28db980709800f7446",
-    "Tab_ImportExport.html": "5c145295a967383e16a0b856aabf51a45e786600de3c88ae0944ef4048565d5f",
-    "Tab_Suppliers.html": "969726d65202d48caa910e1b2715955ee7682035df2d77fb7d375a61ca53cba7",
-    "Tab_Finance.html": "17296dcd4bc39a6f8944ec19dcee2bfdbba9063b96fd8d21a0b6f9b2ff9522e5",
+    "Tab_Production.html": "934c9efff7666210d0e5ecfd62a2576439ca24235d8dd866dbf9e3d9fc2e2609",
+    "Tab_Inventory.html": "b1dd3fa97385de9787d6a915a7bb0c9ff97d424fca7a8b2787746e6e3691bc2c",
+    "Tab_ImportExport.html": "c5f7edcd25f2e4f8b40ca8de079a4ee78a371bcfb7ed3b0835abfc092d8ff74e",
+    "Tab_Suppliers.html": "5d81017a680f23cdf656e94d4453666260562a522e128c74fa8b2ff18dd29c04",
+    "Tab_Finance.html": "7c8a4712a944fb830f2e2d33295f7e1b52840af56700f85edc2f0a119e6af2cb",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
-    "Tab_HR.html": "86ea35d4dda91a4befa245c05cf6f7604045f73a93498c5dc5c85713e629db57",
+    "Tab_HR.html": "6c108c774cd48079e170975617cd4a5eed1a4a5d8d662fc52be09e6402259778",
     "Tab_Documents.html": "57ebce63dd01df39115352a2bc54b47268a97a172dc4b207b3c2377d1dbd242b",
-    "Tab_Affiliate.html": "3f6cf4f4d16304614cd1df8c125b8ee3ed1d4e93e54c73ef752be0b0d044d4a1",
-    "Tab_Analytics.html": "27eb00b1f8b95497a4be7b82aafd95856069135cbdbeaeccc00d69530ba217e1",
-    "Tab_Workspaces.html": "e3c9c0ef686499d1a65743eb54e1653634c53d8d98378435d2c7e1edcd27c23b",
-    "Tab_Apprenticeship.html": "b72e62e01305aea499b5cf79e8de1a9e0ed0c27dcc67327ef966a30f58a96da9"
+    "Tab_Affiliate.html": "f747b998f9dbd84e652cce435d2b9bd451474550c11b3180c6661d7a68f005ca",
+    "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
+    "Tab_Workspaces.html": "71d29d53ce7f942db49bb8dc9bb948d504ac1b6b08c4380ff5e3cf8d3b871104",
+    "Tab_Apprenticeship.html": "b72e62e01305aea499b5cf79e8de1a9e0ed0c27dcc67327ef966a30f58a96da9",
+    "Config.html": "e4dbf1559d6cc6d7b4658f4784c7da9d4e0d5ff57d47a4f3ab0d0ace45843f21",
+    "ReturnClaimRules.js": "b0dad516219b756d8bf632a3d8322b230132110f3a34055965dad8336e425808",
+    "Components.html": "02a97d191185600ef48e3a9394d4934b3a896567dff011bcc8edb9cda8064588",
+    "Modals.html": "c8b29e32e58d91485cd18598c87e936fd3366f246718798afe08d065b1d21c7a",
+    "Modals_Orders.html": "da675bdf1be8241bb54fa7ede2b836566ab45db109339c74718a480d740ca74f",
+    "Tab_Dashboard.html": "6b1d67b3eb38955fad0e46405c62d7f87a6db200c10a6bee452d48710d4c7606",
+    "Tab_Orders.html": "98746ec711fb30f040ffb584cd9357f928281fd21995e513a175505b5fb137bd",
+    "App_Main.html": "a0ffb19ae435bbb9d28eb814eff8cbd0d4da39a5da165134db78ea48849edf5e"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "a2a2ca46ac7f40ff8f65b86ef88d8fd8244c695ac2b280531d0d8ffb491c021c",
-    "Compiled_Deferred.html": "355244d8b9c691455033db1eb773b28a7ff8b965db397249ca5334e205c6d2cb"
+    "Compiled_Core.html": "849a9ddfe4acb929313c703ecfee13996a8c0e37af1c54afd457ff60a6dff448",
+    "Compiled_Deferred.html": "b8ba3b8985eed98cfd1572bf9de45e064bfaee69a2e1d20d278fa58e22aa4a05"
   }
 }

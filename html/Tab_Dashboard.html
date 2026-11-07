@@ -1786,12 +1786,15 @@ const DashboardTab = React.memo(function DashboardTab({ reimbursements = [], ord
   // ==================== CÁC CHỈ SỐ ĐIỀU HÀNH & WORKBENCH SINH TỬ ====================
   const isExecutive = isBoss || canSeeFinance || currentRole === 'TỐI CAO';
 
-  // 1. Dòng tiền lưu động khả dụng xưởng (Tầng 1 Treasury, loại trừ Vault dự trữ)
+  // 1. Dòng tiền lưu động khả dụng xưởng (Tầng 1 Treasury, loại trừ Quỹ dự trữ & Đầu tư)
   const operatingCash = React.useMemo(() => {
     const accs = erpData?.Accounts || [];
     return accs.filter(a => {
       const name = String(a.accountName || a.name || '').toUpperCase();
-      return !name.includes('VAULT') && !name.includes('DỰ TRỮ') && !name.includes('689M') && !name.includes('ĐẦU TƯ');
+      const type = String(a.type || '').toUpperCase();
+      const isReserveOrInv = name.includes('VAULT') || name.includes('DỰ TRỮ') || name.includes('DỰ PHÒNG') || 
+                             name.includes('ĐẦU TƯ') || name.includes('VNDC') || type.includes('DỰ TRỮ') || type.includes('ĐẦU TƯ');
+      return !isReserveOrInv;
     }).reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
   }, [erpData?.Accounts]);
 
@@ -1913,14 +1916,21 @@ const DashboardTab = React.memo(function DashboardTab({ reimbursements = [], ord
   }, [orders, todayStr]);
 
   // 11. Quỹ dự trữ an toàn (Vault)
-  const vaultCash = React.useMemo(() => {
+  const vaultReserveAccount = React.useMemo(() => {
     const accs = erpData?.Accounts || [];
-    const vaultAcc = accs.find(a => {
+    return accs.find(a => {
       const name = String(a.accountName || a.name || '').toUpperCase();
-      return name.includes('VAULT') || name.includes('DỰ TRỮ') || name.includes('689M') || name.includes('ĐẦU TƯ');
+      const type = String(a.type || '').toUpperCase();
+      const isInvestment = name.includes('ĐẦU TƯ') || name.includes('VNDC');
+      if (isInvestment) return false;
+      return name.includes('VAULT') || name.includes('DỰ TRỮ') || name.includes('DỰ PHÒNG') || type.includes('DỰ TRỮ') || type.includes('VAULT');
     });
-    return vaultAcc ? (Number(vaultAcc.balance) || 689000000) : 689000000;
   }, [erpData?.Accounts]);
+
+  const vaultCash = React.useMemo(() => {
+    if (!vaultReserveAccount) return null;
+    return Number(vaultReserveAccount.balance) || 0;
+  }, [vaultReserveAccount]);
 
   // 12. Tổng số sản phẩm/bể toàn xưởng hoàn thành trong ngày
   const prodDoneTodayCount = React.useMemo(() => {
@@ -2224,7 +2234,7 @@ const DashboardTab = React.memo(function DashboardTab({ reimbursements = [], ord
             </div>
 
             <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-400">
-              <span className="truncate">Dự trữ: <strong className="text-zinc-200">{(vaultCash / 1000000).toFixed(0)}M đ</strong></span>
+              <span className="truncate">Dự trữ: <strong className="text-zinc-200">{vaultCash !== null ? `${(vaultCash / 1000000).toLocaleString('vi-VN')}M đ` : 'Chưa thiết lập'}</strong></span>
               <i className="fas fa-arrow-right text-[8px] text-zinc-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all"></i>
             </div>
           </div>

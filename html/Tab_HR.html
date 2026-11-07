@@ -129,6 +129,7 @@
         const [showStaffModal, setShowStaffModal] = React.useState(false);
         const [editingStaff, setEditingStaff] = React.useState(null);
         const [staffForm, setStaffForm] = React.useState({
+            id: '',
             name: '',
             email: '',
             phone: '',
@@ -153,6 +154,21 @@
         const [staffSearchQuery, setStaffSearchQuery] = React.useState('');
         const [viewingAvatarStaff, setViewingAvatarStaff] = React.useState(null);
         const [showStaffFormPin, setShowStaffFormPin] = React.useState(false);
+        const [staffDrawer, setStaffDrawer] = React.useState(null);
+        const [staffRoleFilter, setStaffRoleFilter] = React.useState('ALL');
+        const [activeStaffMenuId, setActiveStaffMenuId] = React.useState(null);
+
+        React.useEffect(() => {
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    if (staffDrawer) setStaffDrawer(null);
+                    if (viewingAvatarStaff) setViewingAvatarStaff(null);
+                    if (activeStaffMenuId) setActiveStaffMenuId(null);
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [staffDrawer, viewingAvatarStaff, activeStaffMenuId]);
 
         const calculateAge = React.useCallback((dobStr) => {
             if (!dobStr) return '';
@@ -171,7 +187,8 @@
         const handleOpenAddStaffModal = React.useCallback((staffToEdit = null) => {
             setShowStaffFormPin(false);
             if (staffToEdit) {
-                setEditingStaff(staffToEdit.name || staffToEdit['Tên Nhân Sự']);
+                const sId = staffToEdit.id || ('staff_' + (staffToEdit['Mã PIN'] || staffToEdit.name || Date.now()));
+                setEditingStaff(sId);
                 const rawTitle = staffToEdit.title || staffToEdit['Chức Danh'] || 'Thợ sản xuất';
                 const rawSubTitle = staffToEdit.subTitle || staffToEdit['Chức Danh Phụ'] || '';
                 let rawRole = staffToEdit.role || staffToEdit['Phân Quyền'] || 'THỢ';
@@ -183,6 +200,7 @@
                     }
                 }
                 setStaffForm({
+                    id: sId,
                     name: staffToEdit.name || staffToEdit['Tên Nhân Sự'] || '',
                     email: staffToEdit.email || staffToEdit['Gmail'] || '',
                     phone: staffToEdit.phone || staffToEdit['Số Điện Thoại'] || '',
@@ -194,15 +212,16 @@
                     subTitle: rawSubTitle,
                     role: rawRole,
                     pin: '', // Tuyệt đối không hiển thị lộ PIN cũ, chỉ nhập khi muốn đổi PIN mới
-                    baseSalary: staffToEdit.baseSalary || '',
-                    funcSalary: staffToEdit.funcSalary || '',
-                    allowance: staffToEdit.allowance || '',
+                    baseSalary: staffToEdit.baseSalary || staffToEdit['Lương Cơ Bản'] || '',
+                    funcSalary: staffToEdit.funcSalary || staffToEdit['Lương Chức Vụ'] || '',
+                    allowance: staffToEdit.allowance || staffToEdit['Phụ Cấp Xăng Xe'] || '',
                     status: staffToEdit.status || staffToEdit['Trạng Thái'] || 'Đang làm việc'
                 });
             } else {
                 setEditingStaff(null);
                 const randomPin = String(Math.floor(100000 + Math.random() * 900000));
                 setStaffForm({
+                    id: 'staff_' + Date.now(),
                     name: '',
                     email: '',
                     phone: '',
@@ -273,8 +292,10 @@
                 staffRole = 'CỘNG TÁC VIÊN';
             }
 
+            const staffId = staffForm.id || (editingStaff ? (staffList.find(s => s.id === editingStaff || matchUser(s.name, editingStaff))?.id || ('staff_' + Date.now())) : ('staff_' + Date.now()));
+
             const staffPayload = {
-                id: editingStaff ? (staffList.find(s => matchUser(s.name, editingStaff))?.id || ('staff_' + Date.now())) : ('staff_' + Date.now()),
+                id: staffId,
                 name: trimmedName,
                 'Tên Nhân Sự': trimmedName,
                 avatar: staffForm.avatar || '',
@@ -308,7 +329,7 @@
             // OPTIMISTIC UI: Cập nhật ngay lập tức vào state local
             setLocalStaffList(prevList => {
                 const current = prevList || staffList || [];
-                const existIdx = current.findIndex(s => matchUser(s.name, trimmedName) || (editingStaff && matchUser(s.name, editingStaff)));
+                const existIdx = current.findIndex(s => s.id === staffId || matchUser(s.name, trimmedName));
                 if (existIdx !== -1) {
                     const next = [...current];
                     next[existIdx] = { ...next[existIdx], ...staffPayload };
@@ -319,22 +340,26 @@
             });
 
             try {
+                if (typeof pushDeltas === 'function') {
+                    await pushDeltas(
+                        { Config_NhanSu: [staffPayload] },
+                        editingStaff ? `Đã cập nhật hồ sơ ${trimmedName}` : `Đã thêm mới nhân sự ${trimmedName}`,
+                        'fa-user-check'
+                    );
+                }
                 if (typeof window.runGAS === 'function') {
                     const res = await window.runGAS('api_addEmployee', staffPayload);
                     if (res && res.success) {
-                        triggerToast(res.message || 'Lưu nhân sự thành công!', 'fa-check', 'success');
-                        window.runGAS('getUserConfig').then(newCfg => {
-                            if (newCfg && typeof setUserConfigs === 'function') setUserConfigs(newCfg);
-                        }).catch(() => {});
-                    } else {
-                        triggerToast(res?.message || 'Có lỗi khi lưu nhân sự!', 'fa-exclamation-triangle', 'warning');
+                        if (triggerToast) triggerToast(res.message || 'Lưu nhân sự thành công!', 'fa-check', 'success');
+                    } else if (res && !res.success) {
+                        if (triggerToast) triggerToast(res?.message || 'Có lỗi khi lưu nhân sự!', 'fa-exclamation-triangle', 'warning');
                     }
-                } else {
-                    triggerToast('Đã lưu hồ sơ nhân sự trên máy!', 'fa-info-circle', 'info');
+                } else if (triggerToast) {
+                    triggerToast(editingStaff ? 'Đã lưu cập nhật hồ sơ!' : 'Đã thêm hồ sơ nhân sự mới!', 'fa-check', 'success');
                 }
             } catch (err) {
                 console.error('Lỗi lưu nhân sự:', err);
-                triggerToast('Lỗi khi lưu nhân sự: ' + err.message, 'fa-times', 'danger');
+                if (triggerToast) triggerToast('Lỗi khi lưu nhân sự: ' + (err.message || err), 'fa-times', 'danger');
             } finally {
                 setIsSavingStaff(false);
                 setShowStaffModal(false);
@@ -463,42 +488,91 @@
         const handleOpenDeleteStaffModal = React.useCallback((staff) => {
             if (!staff) return;
             const staffName = staff.name || staff['Tên Nhân Sự'] || staff.user || '';
+            const staffId = staff.id || ('staff_' + (staff['Mã PIN'] || staffName));
             const status = staff.status || staff['Trạng Thái'] || (isStaffResignedOrInactive(staffName) ? 'Đã nghỉ việc' : 'Đang làm việc');
+
+            // Kiểm tra ràng buộc dữ liệu liên kết (chấm công, sản xuất, gói hàng)
+            const attCount = (Array.isArray(attendance) ? attendance : (erpData?.Attendance || [])).filter(a => matchUser(a.user, staffName)).length;
+            const prodCount = (Array.isArray(prodItems) ? prodItems : (erpData?.Production || [])).filter(p => matchUser(p.p1_user, staffName) || matchUser(p.p2_user, staffName)).length;
+            const packCount = (Array.isArray(packings) ? packings : (erpData?.Packings || [])).filter(pk => matchUser(pk.user, staffName)).length;
+            const hasHistory = (attCount + prodCount + packCount) > 0;
+
             setDeleteStaffModal({
+                id: staffId,
                 name: staffName,
                 status: status,
-                role: staff.role || staff['Phân Quyền'] || 'THỢ'
+                role: staff.role || staff['Phân Quyền'] || 'THỢ',
+                hasHistory: hasHistory,
+                attCount: attCount,
+                prodCount: prodCount,
+                packCount: packCount
             });
-        }, [isStaffResignedOrInactive]);
+        }, [attendance, erpData, prodItems, packings, isStaffResignedOrInactive]);
 
         const handleConfirmDeleteStaff = async () => {
-            if (!deleteStaffModal || !deleteStaffModal.name) return;
+            if (!deleteStaffModal || !deleteStaffModal.id) return;
+            const targetId = deleteStaffModal.id;
             const targetName = deleteStaffModal.name;
+            const hasHistory = Boolean(deleteStaffModal.hasHistory);
+
+            if (!isBoss && !isAdmin && !hasPerm('HR_CONFIG_STAFF')) {
+                alert('Từ chối: Bạn không có quyền Admin để thực hiện thao tác xóa nhân sự!');
+                return;
+            }
+
             setIsDeletingStaff(true);
-
-            // OPTIMISTIC UI: Xoá ngay khỏi local state
-            setLocalStaffList(prevList => {
-                const current = prevList || staffList || [];
-                return current.filter(s => !matchUser(s.name, targetName));
-            });
-
             try {
-                if (typeof window.runGAS === 'function') {
-                    const res = await window.runGAS('api_deleteEmployee', targetName);
-                    if (res && res.success) {
-                        triggerToast(`Đã xoá vĩnh viễn nhân sự ${targetName} khỏi hệ thống!`, 'fa-trash-alt', 'success');
-                        window.runGAS('getUserConfig').then(newCfg => {
-                            if (newCfg && typeof setUserConfigs === 'function') setUserConfigs(newCfg);
-                        }).catch(() => {});
-                    } else {
-                        triggerToast(res?.message || 'Lỗi khi xoá trên server!', 'fa-exclamation-triangle', 'warning');
+                if (hasHistory) {
+                    // CÓ DỮ LIỆU LIÊN KẾT: Soft delete (ngừng hoạt động để bảo toàn lịch sử chấm công, sản xuất, doanh số)
+                    const updatedStaff = {
+                        id: targetId,
+                        name: targetName,
+                        'Tên Nhân Sự': targetName,
+                        status: 'Đã nghỉ việc',
+                        'Trạng Thái': 'Đã nghỉ việc'
+                    };
+
+                    setLocalStaffList(prevList => {
+                        const current = prevList || staffList || [];
+                        return current.map(s => (s.id === targetId || matchUser(s.name, targetName)) ? { ...s, ...updatedStaff } : s);
+                    });
+
+                    if (typeof pushDeltas === 'function') {
+                        await pushDeltas({ Config_NhanSu: [updatedStaff] }, `Đã chuyển nhân sự ${targetName} sang Đã nghỉ việc`, 'fa-user-clock');
+                    }
+                    if (typeof window.runGAS === 'function') {
+                        const res = await window.runGAS('api_deleteEmployee', targetId, targetName);
+                        if (res && res.message && triggerToast) {
+                            triggerToast(res.message, 'fa-info-circle', 'info');
+                        }
+                    } else if (triggerToast) {
+                        triggerToast(`Nhân sự ${targetName} có dữ liệu liên kết nên đã chuyển sang "Đã nghỉ việc"!`, 'fa-user-clock', 'warning');
                     }
                 } else {
-                    triggerToast(`Đã xoá nhân sự ${targetName}!`, 'fa-trash-alt', 'success');
+                    // KHÔNG CÓ DỮ LIỆU LIÊN KẾT: Hard delete (Xoá vĩnh viễn theo ID duy nhất)
+                    setLocalStaffList(prevList => {
+                        const current = prevList || staffList || [];
+                        return current.filter(s => s.id !== targetId && !matchUser(s.name, targetName));
+                    });
+
+                    if (typeof pushDeltas === 'function') {
+                        await pushDeltas({
+                            deletes: { Config_NhanSu: [targetId] }
+                        }, `Đã xoá vĩnh viễn nhân sự ${targetName}!`, 'fa-trash-alt');
+                    }
+                    if (typeof window.runGAS === 'function') {
+                        const res = await window.runGAS('api_deleteEmployee', targetId, targetName);
+                        if (res && !res.success) {
+                            throw new Error(res.message || 'Lỗi từ chối xóa tại backend');
+                        }
+                    }
+                    if (triggerToast) triggerToast(`Đã xoá vĩnh viễn nhân sự ${targetName} khỏi hệ thống!`, 'fa-trash-alt', 'success');
                 }
             } catch (err) {
                 console.error('Lỗi khi xoá nhân sự:', err);
-                triggerToast('Lỗi mạng khi xoá nhân sự!', 'fa-times', 'danger');
+                const errMsg = err.message || 'Lỗi mạng khi xoá nhân sự!';
+                if (triggerToast) triggerToast(errMsg, 'fa-times', 'danger');
+                alert('Không thể xóa nhân sự: ' + errMsg);
             } finally {
                 setIsDeletingStaff(false);
                 setDeleteStaffModal(null);
@@ -509,11 +583,13 @@
             if (e) e.stopPropagation();
             if (!staff) return;
             const staffName = staff.name || staff['Tên Nhân Sự'] || '';
+            const staffId = staff.id || ('staff_' + (staff['Mã PIN'] || staffName));
             const currentStatus = staff.status || staff['Trạng Thái'] || (isStaffResignedOrInactive(staffName) ? 'Đã nghỉ việc' : 'Đang làm việc');
             const newStatus = currentStatus === 'Đã nghỉ việc' ? 'Đang làm việc' : 'Đã nghỉ việc';
 
             const updatedStaff = {
                 ...staff,
+                id: staffId,
                 name: staffName,
                 'Tên Nhân Sự': staffName,
                 status: newStatus,
@@ -522,17 +598,21 @@
 
             setLocalStaffList(prevList => {
                 const current = prevList || staffList || [];
-                return current.map(s => matchUser(s.name, staffName) ? updatedStaff : s);
+                return current.map(s => (s.id === staffId || matchUser(s.name, staffName)) ? { ...s, ...updatedStaff } : s);
             });
 
-            triggerToast(`Đã chuyển ${staffName} sang: ${newStatus}`, newStatus === 'Đang làm việc' ? 'fa-user-check' : 'fa-user-slash', 'info');
+            if (triggerToast) triggerToast(`Đã chuyển ${staffName} sang: ${newStatus}`, newStatus === 'Đang làm việc' ? 'fa-user-check' : 'fa-user-slash', 'info');
 
             try {
+                if (typeof pushDeltas === 'function') {
+                    await pushDeltas({ Config_NhanSu: [updatedStaff] }, `Đổi trạng thái ${staffName}: ${newStatus}`, newStatus === 'Đang làm việc' ? 'fa-user-check' : 'fa-user-clock');
+                }
                 if (typeof window.runGAS === 'function') {
                     await window.runGAS('api_addEmployee', updatedStaff);
                 }
             } catch (err) {
                 console.error('Lỗi đổi trạng thái nhân sự:', err);
+                if (triggerToast) triggerToast('Lỗi khi cập nhật trạng thái: ' + (err.message || err), 'fa-times', 'danger');
             }
         };
 
@@ -732,58 +812,90 @@
 
         // NGUỒN DANH SÁCH NHÂN SỰ TOÀN DIỆN (Hỗ trợ Optimistic UI khi Thêm/Sửa/Xoá)
         const staffList = React.useMemo(() => {
-            if (localStaffList && Array.isArray(localStaffList)) return localStaffList;
-            if (userConfigs?.staffList && Array.isArray(userConfigs.staffList) && userConfigs.staffList.length > 0) {
-                return userConfigs.staffList;
-            }
-            if (userConfigs?.raw && Array.isArray(userConfigs.raw) && userConfigs.raw.length > 0) {
-                return userConfigs.raw;
+            const normalizeStaffItem = (r, idx) => {
+                if (!r) return null;
+                if (typeof r === 'string') {
+                    const detail = userConfigs?.staffDetails?.[r] || {};
+                    return {
+                        id: detail.id || ('staff_' + idx),
+                        name: r,
+                        'Tên Nhân Sự': r,
+                        avatar: userConfigs?.avatars?.[r] || detail['ID Ảnh'] || detail.avatar || '',
+                        'ID Ảnh': userConfigs?.avatars?.[r] || detail['ID Ảnh'] || detail.avatar || '',
+                        title: userConfigs?.titles?.[r] || detail['Chức Danh'] || 'Thợ sản xuất',
+                        'Chức Danh': userConfigs?.titles?.[r] || detail['Chức Danh'] || 'Thợ sản xuất',
+                        subTitle: userConfigs?.subTitles?.[r] || detail['Chức Danh Phụ'] || '',
+                        'Chức Danh Phụ': userConfigs?.subTitles?.[r] || detail['Chức Danh Phụ'] || '',
+                        role: userConfigs?.roles?.[r] || detail['Phân Quyền'] || 'THỢ',
+                        'Phân Quyền': userConfigs?.roles?.[r] || detail['Phân Quyền'] || 'THỢ',
+                        pin: userConfigs?.pins?.[r] || detail['Mã PIN'] || '',
+                        'Mã PIN': userConfigs?.pins?.[r] || detail['Mã PIN'] || '',
+                        email: detail['Gmail'] || detail.email || '',
+                        'Gmail': detail['Gmail'] || detail.email || '',
+                        phone: detail['Số Điện Thoại'] || detail.phone || '',
+                        'Số Điện Thoại': detail['Số Điện Thoại'] || detail.phone || '',
+                        address: detail['Địa Chỉ'] || detail.address || '',
+                        'Địa Chỉ': detail['Địa Chỉ'] || detail.address || '',
+                        dob: detail['Ngày Sinh'] || detail.dob || '',
+                        'Ngày Sinh': detail['Ngày Sinh'] || detail.dob || '',
+                        cccd: detail['Số CCCD'] || detail.cccd || '',
+                        'Số CCCD': detail['Số CCCD'] || detail.cccd || '',
+                        status: detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(r) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                        'Trạng Thái': detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(r) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                        baseSalary: cleanNumber(userConfigs?.salaries?.[r]?.baseSalary || detail['Lương Cơ Bản'] || 0),
+                        funcSalary: cleanNumber(userConfigs?.salaries?.[r]?.funcSalary || detail['Lương Chức Vụ'] || 0),
+                        allowance: cleanNumber(userConfigs?.salaries?.[r]?.allowance || detail['Phụ Cấp Xăng Xe'] || 0),
+                        deduction: cleanNumber(userConfigs?.salaries?.[r]?.deduction || detail['Khoản Trừ Vi Phạm'] || 0)
+                    };
+                }
+                const name = r.name || r['Tên Nhân Sự'] || (typeof r.user === 'string' ? r.user : '');
+                const detail = (name && userConfigs?.staffDetails?.[name]) ? userConfigs.staffDetails[name] : {};
+                return {
+                    id: r.id || detail.id || ('staff_' + (r['Mã PIN'] || idx)),
+                    name: name,
+                    'Tên Nhân Sự': name,
+                    avatar: r.avatar || r['ID Ảnh'] || detail.avatar || detail['ID Ảnh'] || (name ? userConfigs?.avatars?.[name] : '') || '',
+                    'ID Ảnh': r.avatar || r['ID Ảnh'] || detail.avatar || detail['ID Ảnh'] || (name ? userConfigs?.avatars?.[name] : '') || '',
+                    title: r.title || r['Chức Danh'] || detail.title || detail['Chức Danh'] || (name ? userConfigs?.titles?.[name] : '') || 'Thợ sản xuất',
+                    'Chức Danh': r.title || r['Chức Danh'] || detail.title || detail['Chức Danh'] || (name ? userConfigs?.titles?.[name] : '') || 'Thợ sản xuất',
+                    subTitle: r.subTitle || r['Chức Danh Phụ'] || detail.subTitle || detail['Chức Danh Phụ'] || (name ? userConfigs?.subTitles?.[name] : '') || '',
+                    'Chức Danh Phụ': r.subTitle || r['Chức Danh Phụ'] || detail.subTitle || detail['Chức Danh Phụ'] || (name ? userConfigs?.subTitles?.[name] : '') || '',
+                    role: r.role || r['Phân Quyền'] || detail.role || detail['Phân Quyền'] || (name ? userConfigs?.roles?.[name] : '') || 'THỢ',
+                    'Phân Quyền': r.role || r['Phân Quyền'] || detail.role || detail['Phân Quyền'] || (name ? userConfigs?.roles?.[name] : '') || 'THỢ',
+                    pin: r.pin || r['Mã PIN'] || detail.pin || detail['Mã PIN'] || (name ? userConfigs?.pins?.[name] : '') || '',
+                    'Mã PIN': r.pin || r['Mã PIN'] || detail.pin || detail['Mã PIN'] || (name ? userConfigs?.pins?.[name] : '') || '',
+                    email: r.email || r['Gmail'] || detail.email || detail['Gmail'] || '',
+                    'Gmail': r.email || r['Gmail'] || detail.email || detail['Gmail'] || '',
+                    phone: r.phone || r['Số Điện Thoại'] || detail.phone || detail['Số Điện Thoại'] || '',
+                    'Số Điện Thoại': r.phone || r['Số Điện Thoại'] || detail.phone || detail['Số Điện Thoại'] || '',
+                    address: r.address || r['Địa Chỉ'] || detail.address || detail['Địa Chỉ'] || '',
+                    'Địa Chỉ': r.address || r['Địa Chỉ'] || detail.address || detail['Địa Chỉ'] || '',
+                    dob: r.dob || r['Ngày Sinh'] || detail.dob || detail['Ngày Sinh'] || '',
+                    'Ngày Sinh': r.dob || r['Ngày Sinh'] || detail.dob || detail['Ngày Sinh'] || '',
+                    cccd: r.cccd || r['Số CCCD'] || detail.cccd || detail['Số CCCD'] || '',
+                    'Số CCCD': r.cccd || r['Số CCCD'] || detail.cccd || detail['Số CCCD'] || '',
+                    status: r.status || r['Trạng Thái'] || detail.status || detail['Trạng Thái'] || (name && isStaffResignedOrInactive(name) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                    'Trạng Thái': r.status || r['Trạng Thái'] || detail.status || detail['Trạng Thái'] || (name && isStaffResignedOrInactive(name) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                    baseSalary: cleanNumber(r.baseSalary || r['Lương Cơ Bản'] || detail['Lương Cơ Bản'] || 0),
+                    funcSalary: cleanNumber(r.funcSalary || r['Lương Chức Vụ'] || detail['Lương Chức Vụ'] || 0),
+                    allowance: cleanNumber(r.allowance || r['Phụ Cấp Xăng Xe'] || detail['Phụ Cấp Xăng Xe'] || 0),
+                    deduction: cleanNumber(r.deduction || r['Khoản Trừ Vi Phạm'] || detail['Khoản Trừ Vi Phạm'] || 0)
+                };
+            };
+
+            if (localStaffList && Array.isArray(localStaffList)) {
+                return localStaffList.map(normalizeStaffItem).filter(Boolean);
             }
             if (Array.isArray(erpData?.Config_NhanSu) && erpData.Config_NhanSu.length > 0) {
-                return erpData.Config_NhanSu.map((r, idx) => ({
-                    id: r.id || ('staff_' + idx),
-                    name: r['Tên Nhân Sự'] || r.name || '',
-                    'Tên Nhân Sự': r['Tên Nhân Sự'] || r.name || '',
-                    avatar: r['ID Ảnh'] || r.avatar || '',
-                    'ID Ảnh': r['ID Ảnh'] || r.avatar || '',
-                    title: r['Chức Danh'] || r.title || 'Nhân sự',
-                    'Chức Danh': r['Chức Danh'] || r.title || 'Nhân sự',
-                    subTitle: r['Chức Danh Phụ'] || r.subTitle || '',
-                    role: r['Phân Quyền'] || r.role || 'THỢ',
-                    pin: r['Mã PIN'] || r.pin || '',
-                    email: r['Gmail'] || r.email || '',
-                    'Gmail': r['Gmail'] || r.email || '',
-                    phone: r['Số Điện Thoại'] || r.phone || '',
-                    'Số Điện Thoại': r['Số Điện Thoại'] || r.phone || '',
-                    address: r['Địa Chỉ'] || r.address || '',
-                    'Địa Chỉ': r['Địa Chỉ'] || r.address || '',
-                    dob: r['Ngày Sinh'] || r.dob || '',
-                    'Ngày Sinh': r['Ngày Sinh'] || r.dob || '',
-                    cccd: r['Số CCCD'] || r.cccd || '',
-                    'Số CCCD': r['Số CCCD'] || r.cccd || '',
-                    status: r['Trạng Thái'] || r.status || (isStaffResignedOrInactive(r['Tên Nhân Sự'] || r.name) ? 'Đã nghỉ việc' : 'Đang làm việc'),
-                    'Trạng Thái': r['Trạng Thái'] || r.status || (isStaffResignedOrInactive(r['Tên Nhân Sự'] || r.name) ? 'Đã nghỉ việc' : 'Đang làm việc'),
-                    baseSalary: cleanNumber(r['Lương Cơ Bản'] || 0),
-                    funcSalary: cleanNumber(r['Lương Chức Vụ'] || 0),
-                    allowance: cleanNumber(r['Phụ Cấp Xăng Xe'] || 0),
-                    deduction: cleanNumber(r['Khoản Trừ Vi Phạm'] || 0)
-                }));
+                return erpData.Config_NhanSu.map(normalizeStaffItem).filter(Boolean);
             }
-            return (userConfigs?.users || []).map((u, idx) => ({
-                id: 'staff_' + idx,
-                name: u,
-                'Tên Nhân Sự': u,
-                avatar: userConfigs?.avatars?.[u] || '',
-                'ID Ảnh': userConfigs?.avatars?.[u] || '',
-                title: userConfigs?.titles?.[u] || 'Nhân sự',
-                role: userConfigs?.roles?.[u] || 'THỢ',
-                pin: '',
-                status: isStaffResignedOrInactive(u) ? 'Đã nghỉ việc' : 'Đang làm việc',
-                baseSalary: userConfigs?.salaries?.[u]?.baseSalary || 0,
-                funcSalary: userConfigs?.salaries?.[u]?.funcSalary || 0,
-                allowance: userConfigs?.salaries?.[u]?.allowance || 0,
-                deduction: userConfigs?.salaries?.[u]?.deduction || 0
-            }));
+            if (userConfigs?.raw && Array.isArray(userConfigs.raw) && userConfigs.raw.length > 0) {
+                return userConfigs.raw.map(normalizeStaffItem).filter(Boolean);
+            }
+            if (userConfigs?.staffList && Array.isArray(userConfigs.staffList) && userConfigs.staffList.length > 0) {
+                return userConfigs.staffList.map(normalizeStaffItem).filter(Boolean);
+            }
+            return (userConfigs?.users || []).map(normalizeStaffItem).filter(Boolean);
         }, [localStaffList, userConfigs, erpData?.Config_NhanSu, isStaffResignedOrInactive]);
 
         const users = React.useMemo(() => {
@@ -4401,196 +4513,194 @@
         return (
             <div className={"w-full space-y-4 pb-6 md:pb-6 animate-fade-in relative"}>
 
-                {/* 1. SEGMENTED CONTROL (FOUR SEASONS SOLID MATTE) */}
-                <div className="flex justify-center mb-3">
-                    <div className="inline-flex bg-[#202228] p-1 rounded-2xl gap-1 border-0 shadow-md">
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('ATTENDANCE')}
-                            className={`px-4 py-2 rounded-xl text-[12px] font-bold uppercase transition-all flex items-center gap-2 cursor-pointer border-0 ${
-                                subTab === 'ATTENDANCE'
-                                    ? 'bg-[#282b33] text-white font-black shadow-none'
-                                    : 'text-zinc-400 hover:text-white bg-transparent'
-                            }`}
-                        >
-                            <i className="fas fa-clock text-[12px] text-[#2E9599]"></i>
-                            <span>Chấm Công</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('KPI')}
-                            className={`px-4 py-2 rounded-xl text-[12px] font-bold uppercase transition-all flex items-center gap-2 cursor-pointer border-0 ${
-                                subTab === 'KPI'
-                                    ? 'bg-[#282b33] text-white font-black shadow-none'
-                                    : 'text-zinc-400 hover:text-white bg-transparent'
-                            }`}
-                        >
-                            <i className="fas fa-bullseye text-[12px] text-[#F7DC68]"></i>
-                            <span>Nhiệm Vụ</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('PAYROLL')}
-                            className={`px-4 py-2 rounded-xl text-[12px] font-bold uppercase transition-all flex items-center gap-2 cursor-pointer border-0 ${
-                                subTab === 'PAYROLL'
-                                    ? 'bg-[#282b33] text-white font-black shadow-none'
-                                    : 'text-zinc-400 hover:text-white bg-transparent'
-                            }`}
-                        >
-                            <i className="fas fa-file-invoice-dollar text-[12px] text-[#F46C3F]"></i>
-                            <span>Bảng Lương</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('STAFF')}
-                            className={`px-4 py-2 rounded-xl text-[12px] font-bold uppercase transition-all flex items-center gap-2 cursor-pointer border-0 ${
-                                subTab === 'STAFF'
-                                    ? 'bg-[#282b33] text-white font-black shadow-none'
-                                    : 'text-zinc-400 hover:text-white bg-transparent'
-                            }`}
-                        >
-                            <i className="fas fa-users-cog text-[12px] text-[#A7226F]"></i>
-                            <span>Hồ Sơ Nhân Sự</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* 2. HÀNG PHẲNG NGANG: BỘ LỌC KỲ & CÁC NÚT HÀNH ĐỘNG (FOUR SEASONS SOLID MATTE) */}
-                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#202228] px-3 py-2.5 rounded-2xl border-0 shadow-md mb-4">
-                    {/* BỘ LỌC KỲ */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-400 uppercase tracking-wider pl-1">
-                            <i className="fas fa-calendar-alt text-[#2E9599]"></i>
-                            <span className="hidden sm:inline">Kỳ Báo Cáo:</span>
-                        </div>
-                        <select
-                            value={filter}
-                            onChange={e => { setFilter(e.target.value); if (e.target.value !== 'Chọn Tháng') setCustomMonth(''); }}
-                            className="h-9 px-3 bg-[#18191d] rounded-xl text-[11px] font-bold uppercase tracking-wider outline-none text-white border-0 transition-colors cursor-pointer"
-                        >
-                            <option value="Tháng Này">Tháng Này</option>
-                            <option value="Tháng Trước">Tháng Trước</option>
-                            <option value="Chọn Tháng">Chọn Tháng</option>
-                        </select>
-                        {filter === 'Chọn Tháng' && (
-                            <input
-                                type="month"
-                                value={customMonth}
-                                onChange={e => setCustomMonth(e.target.value)}
-                                className="h-9 px-2.5 bg-[#18191d] rounded-xl text-[11px] font-bold uppercase outline-none text-[#2E9599] border-0 transition-colors"
-                            />
-                        )}
-                        <span className="text-[10px] font-bold text-[#F7DC68] bg-[#18191d] px-2.5 py-1 rounded-xl font-mono border-0">
-                            {periodLabel}
-                        </span>
+                {/* 1. THANH ĐIỀU HƯỚNG 4 TAB CHUẨN RF WORKSPACE PRO (MONOCHROME MINIMAL) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121214] border border-white/[0.08] p-2 sm:p-2.5 rounded-2xl shadow-sm mb-3">
+                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar p-0.5">
+                        {[
+                            { id: 'STAFF', label: 'Nhân Sự', icon: 'fa-id-card-clip', count: staffList.length },
+                            { id: 'ATTENDANCE', label: 'Chấm Công', icon: 'fa-calendar-check' },
+                            { id: 'KPI', label: 'Công Việc & KPI', icon: 'fa-list-check' },
+                            { id: 'PAYROLL', label: 'Bảng Lương', icon: 'fa-receipt' }
+                        ].map(tab => {
+                            const isActive = subTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setSubTab(tab.id)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer border ${
+                                        isActive
+                                            ? 'bg-white text-black font-black border-white shadow-sm'
+                                            : 'bg-transparent text-zinc-400 hover:text-white border-transparent hover:bg-white/[0.04]'
+                                    }`}
+                                >
+                                    <i className={`fas ${tab.icon} text-xs ${isActive ? 'text-black' : 'text-zinc-400'}`}></i>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (
+                                        <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                                            isActive ? 'bg-black/15 text-black' : 'bg-white/10 text-zinc-300'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {/* CÁC NÚT HÀNH ĐỘNG PHẲNG */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {subTab === 'ATTENDANCE' && (
-                            <button
-                                type="button"
-                                onClick={handlePrintAttendanceMatrix}
-                                className="h-9 px-3 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-[#2E9599] text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                                title="In Bảng Chấm Công Ma Trận Lịch Tháng (A4 Ngang)"
-                            >
-                                <i className="fas fa-print text-xs"></i>
-                                <span className="hidden md:inline">In Ma Trận</span>
-                            </button>
-                        )}
-                        {subTab === 'KPI' && (
-                            <button
-                                type="button"
-                                onClick={handlePrintKpiTaskReport}
-                                className="h-9 px-3 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-[#F7DC68] text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                                title="In Báo Cáo Nhiệm Vụ & Tiến Độ KPI Toàn Xưởng (A4 Dọc)"
-                            >
-                                <i className="fas fa-print text-xs"></i>
-                                <span className="hidden md:inline">In Báo Cáo</span>
-                            </button>
-                        )}
-                        {subTab === 'PAYROLL' && (
-                            <button
-                                type="button"
-                                onClick={handleExportPayrollExcel}
-                                className="h-9 px-3 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-[#2E9599] text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                                title="Xuất bảng lương ra Excel (.csv)"
-                            >
-                                <i className="fas fa-file-excel text-xs"></i>
-                                <span className="hidden md:inline">Xuất Excel</span>
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => setShowLeaveModal(true)}
-                            className="h-9 px-3 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-[#A7226F] text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                            title="Báo Nghỉ Phép"
-                        >
-                            <i className="fas fa-calendar-minus text-xs"></i>
-                            <span>+ Báo Nghỉ</span>
-                        </button>
-                        {(isBoss || isAdmin || canConfigStaff) && (
+                    {/* HÀNH ĐỘNG PRIMARY CTA DUY NHẤT THEO MÀN HÌNH */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                        {subTab === 'STAFF' && (isBoss || isAdmin || canConfigStaff) && (
                             <button
                                 type="button"
                                 onClick={() => handleOpenAddStaffModal()}
-                                className="h-9 px-3.5 rounded-xl bg-[#2E9599] hover:bg-[#38a8ac] text-white text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
+                                className="h-9 px-3.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-black uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
                                 title="Thêm Hồ Sơ Nhân Sự Mới"
                             >
-                                <i className="fas fa-user-plus text-xs"></i>
-                                <span>+ Thêm Nhân Sự</span>
+                                <i className="fas fa-plus text-xs"></i>
+                                <span>Thêm Nhân Sự</span>
                             </button>
                         )}
-                        {isBoss && (
-                            <>
+
+                        {subTab === 'ATTENDANCE' && (
+                            <div className="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => typeof openTaskModalStandalone === 'function' ? openTaskModalStandalone() : (window.openTaskModalStandalone && window.openTaskModalStandalone())}
-                                    className="h-9 px-3.5 rounded-xl bg-[#F46C3F] hover:bg-[#ff7d52] text-white text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                                    title="Giao Việc Mới"
+                                    onClick={handlePrintAttendanceMatrix}
+                                    className="h-9 px-3 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-300 text-xs font-bold flex items-center gap-1.5 transition-all border border-white/[0.08] cursor-pointer"
+                                    title="In Bảng Chấm Công Ma Trận Lịch Tháng (A4 Ngang)"
                                 >
-                                    <i className="fas fa-plus text-xs"></i>
-                                    <span>+ Giao Việc</span>
+                                    <i className="fas fa-print text-xs"></i>
+                                    <span className="hidden md:inline">In Ma Trận</span>
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setEditKPI(null);
-                                        const now = new Date();
-                                        const y = now.getFullYear();
-                                        const m = String(now.getMonth() + 1).padStart(2, '0');
-                                        const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
-                                        setKpiForm({
-                                            user: users[0] || '',
-                                            kpiName: '',
-                                            target: '',
-                                            unit: 'SP',
-                                            startTime: `${y}-${m}-01`,
-                                            endTime: `${y}-${m}-${lastDay}`,
-                                            reward: '',
-                                            penalty: '',
-                                            note: ''
-                                        });
-                                        setKpiCycle('MONTH');
-                                        setShowKPIModal(true);
-                                    }}
-                                    className="h-9 px-3 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-[#F7DC68] text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
-                                    title="Tạo KPI Mới"
+                                    onClick={() => setShowLeaveModal(true)}
+                                    className="h-9 px-3.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-black uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
+                                    title="Ghi nhận ngày nghỉ phép hoặc chấm công"
                                 >
-                                    <i className="fas fa-fire text-xs"></i>
-                                    <span>+ Tạo KPI</span>
+                                    <i className="fas fa-calendar-plus text-xs"></i>
+                                    <span>Báo Nghỉ Phép</span>
                                 </button>
-                            </>
+                            </div>
                         )}
+
+                        {subTab === 'KPI' && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handlePrintKpiTaskReport}
+                                    className="h-9 px-3 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-300 text-xs font-bold flex items-center gap-1.5 transition-all border border-white/[0.08] cursor-pointer"
+                                    title="In Báo Cáo Nhiệm Vụ & Tiến Độ KPI Toàn Xưởng (A4 Dọc)"
+                                >
+                                    <i className="fas fa-print text-xs"></i>
+                                    <span className="hidden md:inline">In Báo Cáo</span>
+                                </button>
+                                {(isBoss || isAdmin || canEditKpi) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const now = new Date();
+                                            const y = now.getFullYear();
+                                            const m = String(now.getMonth() + 1).padStart(2, '0');
+                                            const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+                                            setEditKPI(null);
+                                            setKpiForm({
+                                                user: users[0] || '',
+                                                kpiName: '',
+                                                target: '',
+                                                unit: 'SP',
+                                                startTime: `${y}-${m}-01`,
+                                                endTime: `${y}-${m}-${lastDay}`,
+                                                reward: '',
+                                                penalty: '',
+                                                note: ''
+                                            });
+                                            setKpiCycle('MONTH');
+                                            setShowKPIModal(true);
+                                        }}
+                                        className="h-9 px-3.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-black uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0"
+                                        title="Giao nhiệm vụ mới cho nhân sự"
+                                    >
+                                        <i className="fas fa-plus text-xs"></i>
+                                        <span>Giao Việc</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {subTab === 'PAYROLL' && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleExportPayrollExcel}
+                                    className="h-9 px-3 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-300 text-xs font-bold flex items-center gap-1.5 transition-all border border-white/[0.08] cursor-pointer"
+                                    title="Xuất Bảng Lương Tổng Hợp ra Excel (.csv)"
+                                >
+                                    <i className="fas fa-file-excel text-xs"></i>
+                                    <span className="hidden md:inline">Xuất Excel</span>
+                                </button>
+                                {isBoss && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCloseMonth}
+                                        disabled={closingMonth}
+                                        className="h-9 px-3.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-black uppercase flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm border-0 disabled:opacity-50"
+                                        title="Chốt Sổ Kỳ Lương Cuối Tháng"
+                                    >
+                                        {closingMonth ? <i className="fas fa-spinner fa-spin text-xs"></i> : <i className="fas fa-lock text-xs"></i>}
+                                        <span>{closingMonth ? 'Đang Chốt...' : 'Chốt Sổ Tháng'}</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
                         <button
                             type="button"
                             onClick={() => setShowQuickNotes(prev => !prev)}
-                            className={`h-9 px-2.5 rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer border-0 ${showQuickNotes ? 'bg-[#F7DC68] text-zinc-950' : 'bg-[#18191d] hover:bg-[#282b33] text-zinc-400 hover:text-white'}`}
-                            title="Ghi chú & nhắc việc nhân sự"
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
+                                showQuickNotes 
+                                    ? 'bg-[#d4af37] text-black border-[#d4af37]' 
+                                    : 'bg-[#18181b] hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/[0.08]'
+                            }`}
+                            title="Ghi chú nhanh nhân sự"
                         >
                             <i className="fas fa-sticky-note text-xs"></i>
                         </button>
                     </div>
                 </div>
+
+                {/* 2. THANH BỘ LỌC KỲ BÁO CÁO (DÙNG CHO ATTENDANCE, KPI, PAYROLL) */}
+                {subTab !== 'STAFF' && (
+                    <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#121214] border border-white/[0.08] px-3.5 py-2.5 rounded-2xl shadow-sm mb-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-zinc-400 text-xs font-bold uppercase flex items-center gap-1.5 pl-1">
+                                <i className="fas fa-calendar-alt text-[#d4af37]"></i>
+                                <span>Kỳ Báo Cáo:</span>
+                            </span>
+                            <select
+                                value={filter}
+                                onChange={e => { setFilter(e.target.value); if (e.target.value !== 'Chọn Tháng') setCustomMonth(''); }}
+                                className="h-8 px-3 bg-[#18181b] rounded-xl text-xs font-bold text-white border border-white/[0.08] outline-none cursor-pointer"
+                            >
+                                <option value="Tháng Này">Tháng Này</option>
+                                <option value="Tháng Trước">Tháng Trước</option>
+                                <option value="Chọn Tháng">Chọn Tháng</option>
+                            </select>
+                            {filter === 'Chọn Tháng' && (
+                                <input
+                                    type="month"
+                                    value={customMonth}
+                                    onChange={e => setCustomMonth(e.target.value)}
+                                    className="h-8 px-2.5 bg-[#18181b] rounded-xl text-xs font-bold outline-none text-[#d4af37] border border-white/[0.08]"
+                                />
+                            )}
+                            <span className="text-[11px] font-bold text-[#d4af37] bg-[#18181b] border border-white/[0.06] px-2.5 py-1 rounded-xl font-mono">
+                                {periodLabel}
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* KHUNG GHI CHÚ NHANH NHÂN SỰ */}
                 {showQuickNotes && (
@@ -4610,43 +4720,97 @@
                     const matrixDaysCount = new Date(matrixYear, matrixMonthNum, 0).getDate();
                     const matrixDayList = Array.from({ length: matrixDaysCount }, (_, i) => String(i + 1).padStart(2, '0'));
 
+                    const activePayrollList = payroll.filter(p => !hideResigned || !isStaffResignedOrInactive(p.user));
+                    const totalWorkHours = activePayrollList.reduce((sum, p) => sum + (Number(p.totalGateHours) || 0), 0);
+                    const totalWorkDays = (totalWorkHours / 8).toFixed(1);
+                    const totalLeaveDays = activePayrollList.reduce((sum, p) => sum + (Number(p.soNgayNghi) || 0), 0);
+                    const totalLateAndPenalty = activePayrollList.reduce((sum, p) => sum + ((Number(p.soLanDiMuon) || 0) + (Number(p.soLanPhat) || 0)), 0);
+                    const activeWorkersCount = activePayrollList.filter(p => (Number(p.totalGateHours) || 0) > 0).length;
+
                     return (
-                        <div className="space-y-4">
+                        <div className="space-y-4 animate-fade-in pb-12">
+                            {/* 4 CARDS THỐNG KÊ CHẤM CÔNG THEO RF DESIGN SYSTEM */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="p-3.5 rounded-2xl bg-[#121214] border border-white/[0.08] shadow-sm">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Tổng Ngày Công</span>
+                                        <i className="fas fa-calendar-check text-xs text-zinc-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{totalWorkDays} <span className="text-xs text-zinc-500 font-normal">công</span></div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">{Math.floor(totalWorkHours)} giờ làm việc thực tế</div>
+                                </div>
+
+                                <div className="p-3.5 rounded-2xl bg-[#121214] border border-white/[0.08] shadow-sm">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Nhân Sự Đi Làm</span>
+                                        <i className="fas fa-user-check text-xs text-emerald-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{activeWorkersCount} <span className="text-xs text-zinc-500 font-normal">/ {activePayrollList.length}</span></div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Có phát sinh chấm công</div>
+                                </div>
+
+                                <div className="p-3.5 rounded-2xl bg-[#121214] border border-white/[0.08] shadow-sm">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Nghỉ Phép</span>
+                                        <i className="fas fa-calendar-minus text-xs text-zinc-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{totalLeaveDays} <span className="text-xs text-zinc-500 font-normal">lượt</span></div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Nghỉ có phép & không phép</div>
+                                </div>
+
+                                <div className="p-3.5 rounded-2xl bg-[#121214] border border-white/[0.08] shadow-sm">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Đi Muộn / Phạt</span>
+                                        <i className="fas fa-clock-rotate-left text-xs text-amber-400"></i>
+                                    </div>
+                                    <div className={`text-2xl font-black font-mono ${totalLateAndPenalty > 0 ? 'text-amber-400' : 'text-white'}`}>{totalLateAndPenalty} <span className="text-xs text-zinc-500 font-normal">lượt</span></div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Vi phạm quy chế chấm công</div>
+                                </div>
+                            </div>
+
                             {/* VIEW TOGGLE BAR */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#202228] p-2 rounded-2xl border-0 shadow-md">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#121214] p-2.5 rounded-2xl border border-white/[0.08] shadow-sm">
                                 <div className="flex items-center gap-2 pl-2">
-                                    <i className="fas fa-calendar-check text-[#2E9599]"></i>
-                                    <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">THEO DÕI CHẤM CÔNG & NGHỈ PHÉP:</span>
-                                    <span className="text-[10px] font-bold text-[#F7DC68] bg-[#18191d] px-2 py-0.5 rounded-lg border-0">{periodLabel}</span>
+                                    <i className="fas fa-calendar-days text-zinc-400 text-xs"></i>
+                                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Lịch Chấm Công & Nghỉ Phép:</span>
+                                    <span className="text-[10px] font-mono font-bold text-zinc-300 bg-[#18181b] px-2 py-0.5 rounded-lg border border-white/[0.08]">{periodLabel}</span>
                                 </div>
                                 <div className="flex gap-1.5 w-full sm:w-auto items-center flex-wrap">
                                     <button
                                         type="button"
                                         onClick={toggleHideResigned}
-                                        className={`px-3 py-1.5 rounded-xl border-0 text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0 ${
+                                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0 ${
                                             hideResigned 
-                                                ? 'bg-[#18191d] text-[#F7DC68]' 
-                                                : 'bg-[#18191d] text-zinc-400 hover:text-white'
+                                                ? 'bg-zinc-800 text-zinc-300 border-zinc-700' 
+                                                : 'bg-[#18181b] text-zinc-400 border-white/[0.08] hover:text-white'
                                         }`}
                                         title={hideResigned ? "Đang BẬT bộ lọc ẩn nhân sự đã nghỉ. Bấm để hiển thị toàn bộ." : "Đang TẮT bộ lọc. Bấm để ẩn nhân sự đã nghỉ việc."}
                                     >
-                                        <i className={`fas ${hideResigned ? 'fa-eye-slash text-[#F7DC68]' : 'fa-eye text-zinc-400'} text-[11px]`}></i>
+                                        <i className={`fas ${hideResigned ? 'fa-eye-slash' : 'fa-eye'} text-xs`}></i>
                                         <span>{hideResigned ? 'Đang Ẩn NV Nghỉ' : 'Hiện Tất Cả NV'}</span>
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAttViewMode('CARDS')}
-                                        className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0 ${attViewMode === 'CARDS' ? 'bg-[#282b33] text-white shadow-none' : 'bg-[#18191d] text-zinc-400 hover:text-white'}`}
-                                    >
-                                        <i className="fas fa-th-large"></i> Danh Sách Thẻ
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAttViewMode('MATRIX')}
-                                        className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0 ${attViewMode === 'MATRIX' ? 'bg-[#282b33] text-white shadow-none' : 'bg-[#18191d] text-zinc-400 hover:text-white'}`}
-                                    >
-                                        <i className="fas fa-calendar-alt"></i> Ma Trận Lịch Tháng
-                                    </button>
+                                    <div className="inline-flex bg-[#18181b] p-1 rounded-xl border border-white/[0.08] gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAttViewMode('CARDS')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                                                attViewMode === 'CARDS' ? 'bg-white text-black font-black shadow-sm' : 'bg-transparent text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <i className="fas fa-id-badge text-xs"></i>
+                                            <span>Thẻ Chấm Công</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAttViewMode('MATRIX')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                                                attViewMode === 'MATRIX' ? 'bg-white text-black font-black shadow-sm' : 'bg-transparent text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <i className="fas fa-calendar-alt text-xs"></i>
+                                            <span>Ma Trận Tháng</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -5526,34 +5690,23 @@
                                         </div>
                                     </div>
 
-                                    {/* CỤM NÚT THAO TÁC CỦA SẾP / IN ẤN */}
+                                    {/* CỤM NÚT ĐỒNG BỘ / BỘ LỌC ẨN NV NGHỈ / IN ẤN (NÚT GIAO VIỆC DUY NHẤT TRÊN THANH CÔNG CỤ CHÍNH) */}
                                     <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
                                         {(isBoss || isAdmin) && (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleOpenCreateKpiModal()}
-                                                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-black uppercase flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
-                                                    title="Tạo nhiệm vụ hoặc giao KPI mới cho nhân sự"
-                                                >
-                                                    <i className="fas fa-plus text-[11px]"></i>
-                                                    <span>+ Giao Việc</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleSyncAllKpiProgress}
-                                                    disabled={isSyncingKpi}
-                                                    className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0 ${
-                                                        isSyncingKpi
-                                                            ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
-                                                            : 'bg-emerald-500/15 hover:bg-emerald-500 hover:text-black text-emerald-300 border-emerald-500/30'
-                                                    }`}
-                                                    title="Đồng bộ lại tiến độ từ đơn hàng, sản xuất và chấm công"
-                                                >
-                                                    <i className={`fas ${isSyncingKpi ? 'fa-spinner fa-spin' : 'fa-bolt text-yellow-400'} text-[11px]`}></i>
-                                                    <span>{isSyncingKpi ? 'Đang Tính...' : 'Đồng Bộ KPI'}</span>
-                                                </button>
-                                            </>
+                                            <button
+                                                type="button"
+                                                onClick={handleSyncAllKpiProgress}
+                                                disabled={isSyncingKpi}
+                                                className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0 ${
+                                                    isSyncingKpi
+                                                        ? 'bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed'
+                                                        : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10'
+                                                }`}
+                                                title="Đồng bộ lại tiến độ từ đơn hàng, sản xuất và chấm công"
+                                            >
+                                                <i className={`fas ${isSyncingKpi ? 'fa-spinner fa-spin' : 'fa-bolt'} text-[11px]`}></i>
+                                                <span>{isSyncingKpi ? 'Đang Tính...' : 'Đồng Bộ KPI'}</span>
+                                            </button>
                                         )}
                                         <button
                                             type="button"
@@ -5561,17 +5714,17 @@
                                             className={`px-3 py-1.5 rounded-xl border text-[10.5px] font-bold uppercase flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
                                                 hideResigned 
                                                     ? 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700' 
-                                                    : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300'
+                                                    : 'bg-[#18181b] text-zinc-500 border-white/[0.08] hover:text-zinc-300'
                                             }`}
                                             title="Ẩn hoặc hiện các nhân sự đã nghỉ việc"
                                         >
-                                            <i className={`fas ${hideResigned ? 'fa-eye-slash text-amber-400' : 'fa-eye'} text-[10px]`}></i>
+                                            <i className={`fas ${hideResigned ? 'fa-eye-slash' : 'fa-eye'} text-[10px]`}></i>
                                             <span>{hideResigned ? 'Đang Ẩn NV Nghỉ' : 'Hiện Tất Cả'}</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={handlePrintKpiTaskReport}
-                                            className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 text-[10.5px] font-bold uppercase flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                                            className="px-2.5 py-1.5 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/[0.08] text-[10.5px] font-bold uppercase flex items-center gap-1 transition-all cursor-pointer shrink-0"
                                             title="In báo cáo A4 tổng hợp nhiệm vụ"
                                         >
                                             <i className="fas fa-print text-[10px]"></i>
@@ -5580,67 +5733,16 @@
                                     </div>
                                 </div>
 
-                                {/* HÀNG DƯỚI: BỘ LỌC TRẠNG THÁI 1-CHẠM + TOGGLE "VIỆC CỦA TÔI" */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
-                                    {/* CÁC CHIP LỌC TRẠNG THÁI */}
-                                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => setKpiFilterStatus('ALL')}
-                                            className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all shrink-0 cursor-pointer ${
-                                                kpiFilterStatus === 'ALL'
-                                                    ? 'bg-white text-black shadow-sm'
-                                                    : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                                            }`}
-                                        >
-                                            Tất Cả ({totalTasksCount})
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setKpiFilterStatus('ACTIVE')}
-                                            className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-                                                kpiFilterStatus === 'ACTIVE'
-                                                    ? 'bg-amber-400 text-black shadow-sm'
-                                                    : 'bg-zinc-900 text-amber-300 hover:bg-amber-500/10'
-                                            }`}
-                                        >
-                                            <i className="fas fa-clock text-[9px]"></i>
-                                            <span>Đang Làm ({activeTasksCount})</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setKpiFilterStatus('OVERDUE')}
-                                            className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-                                                kpiFilterStatus === 'OVERDUE'
-                                                    ? 'bg-rose-500 text-white shadow-sm'
-                                                    : 'bg-zinc-900 text-rose-400 hover:bg-rose-500/10'
-                                            }`}
-                                        >
-                                            <i className="fas fa-exclamation-triangle text-[9px]"></i>
-                                            <span>Quá Hạn ({overdueTasksCount})</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setKpiFilterStatus('DONE')}
-                                            className={`px-3 py-1 rounded-xl text-[10.5px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-                                                kpiFilterStatus === 'DONE'
-                                                    ? 'bg-emerald-500 text-black shadow-sm'
-                                                    : 'bg-zinc-900 text-emerald-400 hover:bg-emerald-500/10'
-                                            }`}
-                                        >
-                                            <i className="fas fa-check-circle text-[9px]"></i>
-                                            <span>Đã Xong ({doneTasksCount})</span>
-                                        </button>
-                                    </div>
-
-                                    {/* SWITCH TOGGLE "VIỆC CỦA TÔI" */}
-                                    {currentUser && (
-                                        <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-white/10 shrink-0">
+                                {/* HÀNG DƯỚI: SWITCH TOGGLE "VIỆC CỦA TÔI" */}
+                                {currentUser && (
+                                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+                                        <span className="text-[11px] text-zinc-500 font-medium">Lọc theo phạm vi:</span>
+                                        <div className="flex items-center gap-1 bg-[#18181b] p-1 rounded-xl border border-white/[0.08] shrink-0">
                                             <button
                                                 type="button"
                                                 onClick={() => setKpiOnlyMe(false)}
-                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                                                    !kpiOnlyMe ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                                                className={`px-3 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                                                    !kpiOnlyMe ? 'bg-white text-black shadow-sm font-black' : 'text-zinc-500 hover:text-zinc-300'
                                                 }`}
                                             >
                                                 Toàn Xưởng
@@ -5648,20 +5750,87 @@
                                             <button
                                                 type="button"
                                                 onClick={() => setKpiOnlyMe(true)}
-                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                                    kpiOnlyMe ? 'bg-amber-500 text-black shadow-sm' : 'text-amber-400/80 hover:text-amber-300'
+                                                className={`px-3 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                    kpiOnlyMe ? 'bg-white text-black shadow-sm font-black' : 'text-zinc-400 hover:text-zinc-200'
                                                 }`}
                                             >
                                                 <i className="fas fa-user text-[9px]"></i>
                                                 <span>Việc Của Tôi</span>
                                                 {myActiveTasks.length > 0 && (
-                                                    <span className={`px-1 rounded-full text-[9px] font-black ${kpiOnlyMe ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                                                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${kpiOnlyMe ? 'bg-black/15 text-black' : 'bg-white/10 text-zinc-300'}`}>
                                                         {myActiveTasks.length}
                                                     </span>
                                                 )}
                                             </button>
                                         </div>
-                                    )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 4 KPI CARDS: TỔNG VIỆC, ĐANG LÀM, QUÁ HẠN, HOÀN THÀNH (RF DESIGN SYSTEM) */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div
+                                    onClick={() => setKpiFilterStatus('ALL')}
+                                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                                        kpiFilterStatus === 'ALL'
+                                            ? 'bg-[#18181b] border-white/40 shadow-sm'
+                                            : 'bg-[#121214] border-white/[0.08] hover:border-white/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Tổng Việc</span>
+                                        <i className="fas fa-list-check text-xs text-zinc-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{totalTasksCount}</div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Toàn bộ nhiệm vụ trong kỳ</div>
+                                </div>
+
+                                <div
+                                    onClick={() => setKpiFilterStatus('ACTIVE')}
+                                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                                        kpiFilterStatus === 'ACTIVE'
+                                            ? 'bg-[#18181b] border-white/40 shadow-sm'
+                                            : 'bg-[#121214] border-white/[0.08] hover:border-white/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Đang Làm</span>
+                                        <i className="fas fa-clock text-xs text-zinc-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{activeTasksCount}</div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Đang triển khai thực tế</div>
+                                </div>
+
+                                <div
+                                    onClick={() => setKpiFilterStatus('OVERDUE')}
+                                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                                        kpiFilterStatus === 'OVERDUE'
+                                            ? 'bg-[#18181b] border-white/40 shadow-sm'
+                                            : 'bg-[#121214] border-white/[0.08] hover:border-white/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Quá Hạn</span>
+                                        <i className="fas fa-exclamation-triangle text-xs text-rose-400"></i>
+                                    </div>
+                                    <div className={`text-2xl font-black font-mono ${overdueTasksCount > 0 ? 'text-rose-400' : 'text-white'}`}>{overdueTasksCount}</div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Cần xử lý gấp</div>
+                                </div>
+
+                                <div
+                                    onClick={() => setKpiFilterStatus('DONE')}
+                                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                                        kpiFilterStatus === 'DONE'
+                                            ? 'bg-[#18181b] border-white/40 shadow-sm'
+                                            : 'bg-[#121214] border-white/[0.08] hover:border-white/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider">Hoàn Thành</span>
+                                        <i className="fas fa-check-circle text-xs text-emerald-400"></i>
+                                    </div>
+                                    <div className="text-2xl font-black text-white font-mono">{doneTasksCount}</div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Đã đạt hoặc nhận thưởng</div>
                                 </div>
                             </div>
 
@@ -5869,35 +6038,19 @@
                                                 {/* NỘI DUNG MỞ RỘNG: DANH SÁCH NHIỆM VỤ PHẲNG CỦA NHÂN SỰ */}
                                                 {isExpanded && (
                                                     <div className="p-3 sm:p-4 pt-1 border-t border-white/[0.06] bg-[#0c0c0e]/60 space-y-3 animate-fade-in">
-                                                        {/* THANH GIAO VIỆC NHANH CHO BOSS */}
-                                                        {isBoss && (
-                                                            <div className="flex justify-between items-center bg-[#141418] p-2.5 rounded-xl border border-white/[0.06]">
-                                                                <span className="text-[11px] text-zinc-400 font-medium">Danh sách chỉ tiêu & đầu việc của {u}:</span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleOpenCreateKpiModal(u)}
-                                                                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 hover:text-black text-amber-300 border border-amber-500/30 text-[10.5px] font-bold uppercase flex items-center gap-1 transition-all cursor-pointer"
-                                                                >
-                                                                    <i className="fas fa-plus text-[9px]"></i>
-                                                                    <span>Giao Việc Cho {u.split(' ').pop()}</span>
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                        {/* TIÊU ĐỀ KHỐI CÔNG VIỆC CỦA NHÂN SỰ */}
+                                                        <div className="flex justify-between items-center bg-[#141418] p-2.5 rounded-xl border border-white/[0.06]">
+                                                            <span className="text-[11px] text-zinc-400 font-medium">Danh sách chỉ tiêu & đầu việc của {u}:</span>
+                                                            <span className="text-[10px] text-zinc-500 font-mono font-bold">
+                                                                {filteredTasks.length} nhiệm vụ
+                                                            </span>
+                                                        </div>
 
                                                         {/* DANH SÁCH NHIỆM VỤ */}
                                                         {filteredTasks.length === 0 ? (
-                                                            <div className="text-center py-8 bg-[#111114] rounded-xl border border-white/[0.06] text-zinc-500 space-y-1.5">
-                                                                <i className="fas fa-clipboard-check text-2xl text-zinc-600 block mb-1"></i>
-                                                                <div className="text-[12px] font-bold text-zinc-400">Không có nhiệm vụ nào trong trạng thái này.</div>
-                                                                {isBoss && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleOpenCreateKpiModal(u)}
-                                                                        className="mt-2 text-amber-400 hover:underline text-[11px] font-bold uppercase inline-block cursor-pointer"
-                                                                    >
-                                                                        + Bấm vào đây để giao việc mới
-                                                                    </button>
-                                                                )}
+                                                            <div className="text-center py-6 bg-[#111114] rounded-xl border border-white/[0.06] text-zinc-500 space-y-1">
+                                                                <i className="fas fa-clipboard-check text-xl text-zinc-600 block mb-1"></i>
+                                                                <div className="text-[11.5px] font-bold text-zinc-400">Không có nhiệm vụ nào trong trạng thái này.</div>
                                                             </div>
                                                         ) : (
                                                             <div className="space-y-2">
@@ -6003,31 +6156,136 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={"grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1"}>
-                                        <div className={"bg-[#18191d] p-3.5 rounded-2xl border-0"}>
-                                            <div className={"text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center gap-1.5"}>
-                                                <i className="fas fa-coins text-zinc-500"></i> Lương Lũy Kế Thực Tế
+                                    <div className={"grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1"}>
+                                        <div className={"bg-[#18181b] p-3.5 rounded-2xl border border-white/[0.06]"}>
+                                            <div className={"text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center justify-between"}>
+                                                <span>Tổng Quỹ Lương</span>
+                                                <i className="fas fa-coins text-zinc-500 text-xs"></i>
                                             </div>
-                                            <div className={"text-[22px] font-black text-white font-mono"}>
+                                            <div className={"text-2xl font-black text-white font-mono"}>
                                                 {(isBoss || isAdmin || ['KẾ TOÁN', 'QUẢN LÝ NHÂN SỰ', 'NHÂN SỰ', 'TỐI CAO', 'FOUNDER', 'ADMIN', 'QUẢN LÝ CẤP TRUNG'].includes(String(currentRole).toUpperCase()))
                                                     ? `${formatMoney(filteredPayroll.reduce((sum, p) => sum + cleanNumber(p.tongThuNhap), 0))} đ`
                                                     : '*****'}
                                             </div>
+                                            <div className="text-[10px] text-zinc-500 mt-1">Lương chính + thưởng KPI</div>
                                         </div>
-                                        <div className={"bg-[#18191d] p-3.5 rounded-2xl border-0"}>
-                                            <div className={"text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center gap-1.5"}>
-                                                <i className="fas fa-hand-holding-usd text-zinc-500"></i> Thực Tế Còn Cần Chi Trả
+                                        <div className={"bg-[#18181b] p-3.5 rounded-2xl border border-white/[0.06]"}>
+                                            <div className={"text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center justify-between"}>
+                                                <span>Đã Tạm Ứng</span>
+                                                <i className="fas fa-hand-holding-usd text-zinc-500 text-xs"></i>
                                             </div>
-                                            <div className={"text-[22px] font-black text-white font-mono"}>
+                                            <div className={"text-2xl font-black text-white font-mono"}>
+                                                {(isBoss || isAdmin || ['KẾ TOÁN', 'QUẢN LÝ NHÂN SỰ', 'NHÂN SỰ', 'TỐI CAO', 'FOUNDER', 'ADMIN', 'QUẢN LÝ CẤP TRUNG'].includes(String(currentRole).toUpperCase()))
+                                                    ? `${formatMoney(filteredPayroll.reduce((sum, p) => sum + cleanNumber(p.tamUng), 0))} đ`
+                                                    : '*****'}
+                                            </div>
+                                            <div className="text-[10px] text-zinc-500 mt-1">Đã chi trong kỳ</div>
+                                        </div>
+                                        <div className={"bg-[#18181b] p-3.5 rounded-2xl border border-white/[0.06]"}>
+                                            <div className={"text-[10px] text-zinc-400 uppercase font-bold mb-1 flex items-center justify-between"}>
+                                                <span>Còn Cần Chi Trả</span>
+                                                <i className="fas fa-wallet text-zinc-500 text-xs"></i>
+                                            </div>
+                                            <div className={"text-2xl font-black text-white font-mono"}>
                                                 {(isBoss || isAdmin || ['KẾ TOÁN', 'QUẢN LÝ NHÂN SỰ', 'NHÂN SỰ', 'TỐI CAO', 'FOUNDER', 'ADMIN', 'QUẢN LÝ CẤP TRUNG'].includes(String(currentRole).toUpperCase()))
                                                     ? `${formatMoney(filteredPayroll.reduce((sum, p) => sum + cleanNumber(p.conCanTra), 0))} đ`
                                                     : '*****'}
                                             </div>
+                                            <div className="text-[10px] text-zinc-500 mt-1">Thực lĩnh cần thanh toán</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className={"grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5"}>
+                                {/* BẢNG LƯƠNG CHI TIẾT TRÊN DESKTOP (RF DESIGN SYSTEM) */}
+                                <div className="hidden md:block overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#121214] shadow-sm mb-5">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-white/[0.08] bg-[#18181b] text-zinc-400 font-bold uppercase text-[10px] tracking-wider">
+                                                <th className="py-3 px-4">Nhân Sự</th>
+                                                <th className="py-3 px-3 text-right">Lương Cơ Bản</th>
+                                                <th className="py-3 px-3 text-center">Ngày Công</th>
+                                                <th className="py-3 px-3 text-right">Thưởng / Phụ Cấp</th>
+                                                <th className="py-3 px-3 text-right">Tạm Ứng / Phạt</th>
+                                                <th className="py-3 px-3 text-right">Thực Lĩnh</th>
+                                                <th className="py-3 px-3 text-center">Trạng Thái</th>
+                                                <th className="py-3 px-4 text-right">Thao Tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/[0.04]">
+                                            {filteredPayroll.map(p => {
+                                                const totalWorkDays = ((Number(p.totalGateHours) || 0) / 8).toFixed(1);
+                                                const totalBonus = cleanNumber(p.funcSalary) + (p.kpiSanXuatDetails?.reduce((s, d) => s + d.amount, 0) || 0) + cleanNumber(p.allowanceConfig);
+                                                const totalDeduct = cleanNumber(p.tamUng) + cleanNumber(p.khoanTruViPham);
+
+                                                return (
+                                                    <tr key={p.user} className="hover:bg-white/[0.02] transition-colors">
+                                                        <td className="py-3 px-4">
+                                                            <div className="flex items-center gap-2.5">
+                                                                {renderSafeAvatar(p.user, "w-8 h-8 rounded-full border border-white/10 shrink-0")}
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-white truncate">{p.user}</div>
+                                                                    <div className="text-[10px] text-zinc-500 truncate">{p.role}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-3 text-right font-mono text-zinc-200">
+                                                            {formatMoney(p.baseSalary)} đ
+                                                        </td>
+                                                        <td className="py-3 px-3 text-center font-mono font-bold text-zinc-200">
+                                                            {totalWorkDays} <span className="text-[10px] text-zinc-500 font-normal">công</span>
+                                                        </td>
+                                                        <td className="py-3 px-3 text-right font-mono text-emerald-400 font-bold">
+                                                            +{formatMoney(totalBonus)} đ
+                                                        </td>
+                                                        <td className="py-3 px-3 text-right font-mono text-rose-400">
+                                                            -{formatMoney(totalDeduct)} đ
+                                                        </td>
+                                                        <td className="py-3 px-3 text-right font-mono font-black text-white text-sm">
+                                                            {formatMoney(p.conCanTra)} đ
+                                                        </td>
+                                                        <td className="py-3 px-3 text-center">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                                p.isLocked
+                                                                    ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                            }`}>
+                                                                <i className={`fas ${p.isLocked ? 'fa-lock' : 'fa-clock'} text-[9px]`}></i>
+                                                                <span>{p.isLocked ? 'Đã Khóa' : 'Tạm Tính'}</span>
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-right">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => handleViewPayslipPreview(e, p)}
+                                                                    className="h-7 px-2.5 rounded-lg bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1"
+                                                                    title="Xem phiếu lương chi tiết"
+                                                                >
+                                                                    <i className="fas fa-eye text-[10px] text-zinc-400"></i>
+                                                                    <span>Phiếu</span>
+                                                                </button>
+                                                                {canPrintPayslip && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handlePrintPayslip(p)}
+                                                                        className="h-7 px-2.5 rounded-lg bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1"
+                                                                        title="In phiếu lương A4"
+                                                                    >
+                                                                        <i className="fas fa-print text-[10px] text-zinc-400"></i>
+                                                                        <span>In</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* DANH SÁCH THẺ LƯƠNG TRÊN MOBILE (MD:HIDDEN) */}
+                                <div className={"md:hidden space-y-3"}>
                                     {filteredPayroll.map(p => (
                                     <div key={p.user} className={`bg-[#18191d] border ${expandedPayroll === p.user ? 'border-zinc-700' : 'border-0'} rounded-2xl p-3.5 sm:p-4 relative transition-all duration-200 overflow-hidden flex flex-col`}>
                                         {canManagePayroll && (erpData?.BonusPenalty || []).filter(b => b.user === p.user && b.type === 'Yêu Cầu Tạm Ứng' && b.orderCode === 'Chờ Duyệt').map(req => (
@@ -7257,16 +7515,18 @@
                     })()
                 }
 
-                {/* 4. SUBTAB HỒ SƠ NHÂN SỰ & QUẢN TRỊ (STAFF DIRECTORY) */}
+                {/* 4. SUBTAB HỒ SƠ NHÂN SỰ & QUẢN TRỊ (STAFF DIRECTORY - RF DESIGN SYSTEM) */}
                 {subTab === 'STAFF' && (() => {
                     const totalStaff = staffList.length;
                     const resignedCount = staffList.filter(s => s.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(s.name)).length;
                     const activeCount = totalStaff - resignedCount;
+                    const uniqueRoles = Array.from(new Set(staffList.map(s => s.role || 'THỢ').filter(Boolean)));
 
                     const filteredStaff = staffList.filter(s => {
                         const isResigned = s.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(s.name);
                         if (staffTabFilter === 'ACTIVE' && isResigned) return false;
                         if (staffTabFilter === 'RESIGNED' && !isResigned) return false;
+                        if (staffRoleFilter !== 'ALL' && (s.role || 'THỢ') !== staffRoleFilter) return false;
 
                         if (staffSearchQuery) {
                             const q = staffSearchQuery.toLowerCase().trim();
@@ -7282,40 +7542,60 @@
                     });
 
                     return (
-                        <div className="space-y-4 animate-fade-in">
-                            {/* THANH THỐNG KÊ & BỘ LỌC HỒ SƠ */}
-                            <div className="bg-[#202228] p-4 rounded-2xl shadow-md border-0 space-y-3">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-xl bg-[#2E9599]/20 flex items-center justify-center text-[#2E9599]">
-                                            <i className="fas fa-users-cog text-sm"></i>
+                        <div className="space-y-4 animate-fade-in pb-12">
+                            {/* BỘ LỌC VÀ THANH CÔNG CỤ TÌM KIẾM THEO RF DESIGN SYSTEM */}
+                            <div className="bg-[#121214] p-4 rounded-2xl border border-white/[0.08] shadow-sm space-y-3.5">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300">
+                                            <i className="fas fa-users text-sm"></i>
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-black text-sm uppercase tracking-wider">Hồ Sơ Nhân Sự & Quản Trị</h3>
-                                            <p className="text-zinc-400 text-[11px]">Quản lý thông tin cá nhân, CCCD, liên hệ & trạng thái công tác</p>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-white font-black text-sm uppercase tracking-wider">Danh Sách Nhân Sự</h3>
+                                                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">
+                                                    {filteredStaff.length} / {totalStaff}
+                                                </span>
+                                            </div>
+                                            <p className="text-zinc-500 text-[11px]">Quản lý thông tin hồ sơ, CCCD, vai trò và trạng thái công tác</p>
                                         </div>
                                     </div>
 
-                                    {(isBoss || isAdmin || canConfigStaff) && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenAddStaffModal()}
-                                            className="px-4 py-2.5 rounded-xl bg-[#2E9599] hover:bg-[#38a8ac] text-white font-bold text-xs uppercase flex items-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer border-0"
-                                        >
-                                            <i className="fas fa-user-plus text-xs"></i>
-                                            <span>+ Thêm Nhân Sự Mới</span>
-                                        </button>
-                                    )}
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        {/* Ô TÌM KIẾM NHANH */}
+                                        <div className="relative flex-1 sm:w-64">
+                                            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
+                                            <input
+                                                type="text"
+                                                value={staffSearchQuery}
+                                                onChange={e => setStaffSearchQuery(e.target.value)}
+                                                placeholder="Tìm tên, Gmail, SĐT, CCCD..."
+                                                className="w-full h-9 pl-8 pr-8 bg-[#18181b] border border-white/[0.08] rounded-xl text-xs text-white placeholder:text-zinc-600 outline-none focus:border-white/30 transition-all"
+                                            />
+                                            {staffSearchQuery && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setStaffSearchQuery('')}
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs cursor-pointer border-0 bg-transparent"
+                                                >
+                                                    <i className="fas fa-times-circle"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* BỘ LỌC TAB VÀ TÌM KIẾM */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-white/[0.05]">
-                                    <div className="inline-flex bg-[#18191d] p-1 rounded-xl gap-1">
+                                {/* HÀNG BỘ LỌC TRẠNG THÁI & VAI TRÒ */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-white/[0.06]">
+                                    {/* BỘ LỌC TRẠNG THÁI */}
+                                    <div className="inline-flex bg-[#18181b] p-1 rounded-xl gap-1 border border-white/[0.08] overflow-x-auto">
                                         <button
                                             type="button"
                                             onClick={() => setStaffTabFilter('ALL')}
-                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all cursor-pointer border-0 ${
-                                                staffTabFilter === 'ALL' ? 'bg-[#282b33] text-white' : 'text-zinc-400 hover:text-white bg-transparent'
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border-0 ${
+                                                staffTabFilter === 'ALL'
+                                                    ? 'bg-white text-black shadow-sm font-black'
+                                                    : 'text-zinc-400 hover:text-white bg-transparent'
                                             }`}
                                         >
                                             Tất Cả ({totalStaff})
@@ -7323,8 +7603,10 @@
                                         <button
                                             type="button"
                                             onClick={() => setStaffTabFilter('ACTIVE')}
-                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all cursor-pointer border-0 ${
-                                                staffTabFilter === 'ACTIVE' ? 'bg-[#2E9599] text-white' : 'text-zinc-400 hover:text-white bg-transparent'
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border-0 ${
+                                                staffTabFilter === 'ACTIVE'
+                                                    ? 'bg-white text-black shadow-sm font-black'
+                                                    : 'text-zinc-400 hover:text-white bg-transparent'
                                             }`}
                                         >
                                             Đang Làm Việc ({activeCount})
@@ -7332,237 +7614,647 @@
                                         <button
                                             type="button"
                                             onClick={() => setStaffTabFilter('RESIGNED')}
-                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all cursor-pointer border-0 ${
-                                                staffTabFilter === 'RESIGNED' ? 'bg-rose-600 text-white' : 'text-zinc-400 hover:text-white bg-transparent'
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border-0 ${
+                                                staffTabFilter === 'RESIGNED'
+                                                    ? 'bg-white text-black shadow-sm font-black'
+                                                    : 'text-zinc-400 hover:text-white bg-transparent'
                                             }`}
                                         >
                                             Đã Nghỉ Việc ({resignedCount})
                                         </button>
                                     </div>
 
-                                    <div className="relative flex-1 sm:max-w-xs">
-                                        <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-                                        <input
-                                            type="text"
-                                            value={staffSearchQuery}
-                                            onChange={e => setStaffSearchQuery(e.target.value)}
-                                            placeholder="Tìm tên, Gmail, SĐT, CCCD..."
-                                            className="w-full h-9 pl-8 pr-8 bg-[#18191d] rounded-xl text-xs text-white placeholder:text-zinc-600 outline-none border-0 focus:ring-1 focus:ring-[#2E9599] transition-all"
-                                        />
-                                        {staffSearchQuery && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setStaffSearchQuery('')}
-                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs cursor-pointer border-0 bg-transparent"
-                                            >
-                                                <i className="fas fa-times-circle"></i>
-                                            </button>
-                                        )}
+                                    {/* BỘ LỌC VAI TRÒ DROPDOWN */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-zinc-500 font-medium hidden sm:inline">Vai trò:</span>
+                                        <select
+                                            value={staffRoleFilter}
+                                            onChange={e => setStaffRoleFilter(e.target.value)}
+                                            className="h-8 px-2.5 bg-[#18181b] border border-white/[0.08] rounded-xl text-xs text-zinc-300 outline-none focus:border-white/30 cursor-pointer"
+                                        >
+                                            <option value="ALL">Tất Cả Vai Trò</option>
+                                            {uniqueRoles.map(r => (
+                                                <option key={r} value={r}>{r}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* DANH SÁCH THẺ HỒ SƠ NHÂN SỰ */}
+                            {/* NẾU KHÔNG CÓ DỮ LIỆU */}
                             {filteredStaff.length === 0 ? (
-                                <div className="bg-[#202228] p-12 rounded-2xl text-center space-y-3 shadow-md border-0">
-                                    <div className="w-14 h-14 rounded-full bg-[#18191d] mx-auto flex items-center justify-center text-zinc-500 text-xl">
+                                <div className="bg-[#121214] p-12 rounded-2xl text-center space-y-3 border border-white/[0.08]">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 mx-auto flex items-center justify-center text-zinc-500 text-lg">
                                         <i className="fas fa-user-slash"></i>
                                     </div>
                                     <div className="text-white font-bold text-sm">Không tìm thấy hồ sơ nhân sự nào</div>
-                                    <p className="text-zinc-500 text-xs max-w-sm mx-auto">Thử thay đổi bộ lọc tìm kiếm hoặc thêm nhân sự mới vào hệ thống.</p>
+                                    <p className="text-zinc-500 text-xs max-w-sm mx-auto">Thử xóa bộ lọc tìm kiếm hoặc thêm nhân sự mới vào hệ thống.</p>
                                     {(isBoss || isAdmin || canConfigStaff) && (
                                         <button
                                             type="button"
                                             onClick={() => handleOpenAddStaffModal()}
-                                            className="px-4 py-2 rounded-xl bg-[#2E9599] text-white font-bold text-xs uppercase cursor-pointer border-0"
+                                            className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-black text-xs uppercase cursor-pointer border-0 shadow-sm"
                                         >
                                             + Thêm Nhân Sự Mới
                                         </button>
                                     )}
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {filteredStaff.map(staff => {
-                                        const isResigned = staff.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(staff.name);
-                                        const ageStr = calculateAge(staff.dob);
+                                <>
+                                    {/* ==================== 1. DESKTOP TABLE VIEW (HIỂN THỊ TỪ MD TRỞ LÊN) ==================== */}
+                                    <div className="hidden md:block overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#121214] shadow-sm">
+                                        <table className="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-white/[0.08] bg-[#18181b] text-zinc-400 font-bold uppercase text-[10px] tracking-wider">
+                                                    <th className="py-3 px-4">Nhân Sự</th>
+                                                    <th className="py-3 px-3">Chức Danh & Vai Trò</th>
+                                                    <th className="py-3 px-3">Trạng Thái</th>
+                                                    <th className="py-3 px-3">Liên Hệ</th>
+                                                    <th className="py-3 px-3">CCCD & Ngày Sinh</th>
+                                                    {(isBoss || isAdmin || canConfigStaff) && (
+                                                        <th className="py-3 px-3 text-right">Lương Cơ Bản</th>
+                                                    )}
+                                                    <th className="py-3 px-4 text-right">Thao Tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/[0.04]">
+                                                {filteredStaff.map(staff => {
+                                                    const isResigned = staff.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(staff.name);
+                                                    const ageStr = calculateAge(staff.dob);
+                                                    const isMenuOpen = activeStaffMenuId === (staff.id || staff.name);
 
-                                        return (
-                                            <div
-                                                key={staff.id || staff.name}
-                                                className={`bg-[#202228] rounded-2xl p-4 shadow-md transition-all border-0 relative flex flex-col justify-between ${
-                                                    isResigned ? 'opacity-85' : ''
-                                                }`}
-                                            >
-                                                {/* HEADER THẺ */}
-                                                <div>
-                                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            {/* AVATAR CÓ MẶT */}
-                                                            <div
-                                                                className="relative cursor-pointer shrink-0"
-                                                                onClick={() => staff.avatar && setViewingAvatarStaff(staff)}
-                                                                title={staff.avatar ? "Bấm xem ảnh phóng to" : "Chưa có ảnh đại diện"}
-                                                            >
+                                                    return (
+                                                        <tr
+                                                            key={staff.id || staff.name}
+                                                            className={`hover:bg-white/[0.02] transition-colors ${isResigned ? 'opacity-70' : ''}`}
+                                                        >
+                                                            {/* CỘT NHÂN SỰ: AVATAR + TÊN + ID */}
+                                                            <td className="py-3 px-4">
+                                                                <div
+                                                                    className="flex items-center gap-3 cursor-pointer group"
+                                                                    onClick={() => setStaffDrawer(staff)}
+                                                                    title="Bấm để xem hồ sơ chi tiết"
+                                                                >
+                                                                    <div className="relative shrink-0">
+                                                                        {staff.avatar ? (
+                                                                            <img
+                                                                                src={staff.avatar}
+                                                                                alt={staff.name}
+                                                                                className="w-9 h-9 rounded-xl object-cover border border-white/10"
+                                                                                onError={e => { e.target.style.display = 'none'; }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300 font-black text-xs">
+                                                                                {(staff.name || 'U').charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                        )}
+                                                                        <span
+                                                                            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#121214] ${
+                                                                                isResigned ? 'bg-zinc-500' : 'bg-emerald-500'
+                                                                            }`}
+                                                                        ></span>
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="font-bold text-white group-hover:text-zinc-300 transition-colors flex items-center gap-1.5">
+                                                                            <span>{staff.name}</span>
+                                                                        </div>
+                                                                        <div className="text-[10px] text-zinc-500 font-mono">
+                                                                            ID: {staff.id || 'N/A'}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* CHỨC DANH & VAI TRÒ */}
+                                                            <td className="py-3 px-3">
+                                                                <div className="font-medium text-zinc-200">{staff.title || 'Nhân sự'}</div>
+                                                                <div className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-white/[0.05] border border-white/[0.08] text-[9px] font-mono text-zinc-400 uppercase">
+                                                                    {staff.role || 'THỢ'}
+                                                                </div>
+                                                            </td>
+
+                                                            {/* TRẠNG THÁI */}
+                                                            <td className="py-3 px-3">
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                                    isResigned
+                                                                        ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                                                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${isResigned ? 'bg-zinc-500' : 'bg-emerald-400'}`}></span>
+                                                                    {isResigned ? 'Đã Nghỉ Việc' : 'Đang Làm Việc'}
+                                                                </span>
+                                                            </td>
+
+                                                            {/* LIÊN HỆ */}
+                                                            <td className="py-3 px-3">
+                                                                {staff.phone ? (
+                                                                    <a href={`tel:${staff.phone}`} className="text-zinc-300 hover:text-white font-mono flex items-center gap-1">
+                                                                        <i className="fas fa-phone-alt text-[9px] text-zinc-500"></i>
+                                                                        <span>{staff.phone}</span>
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="text-zinc-600 italic text-[11px]">—</span>
+                                                                )}
+                                                                {staff.email && (
+                                                                    <a href={`mailto:${staff.email}`} className="text-zinc-400 hover:text-white text-[10px] truncate block max-w-[140px] mt-0.5">
+                                                                        {staff.email}
+                                                                    </a>
+                                                                )}
+                                                            </td>
+
+                                                            {/* CCCD & NGÀY SINH */}
+                                                            <td className="py-3 px-3">
+                                                                <div className="font-mono text-zinc-300">{staff.cccd || <span className="text-zinc-600 italic">—</span>}</div>
+                                                                <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                                    {staff.dob ? `${staff.dob}${ageStr ? ` (${ageStr})` : ''}` : ''}
+                                                                </div>
+                                                            </td>
+
+                                                            {/* LƯƠNG CƠ BẢN */}
+                                                            {(isBoss || isAdmin || canConfigStaff) && (
+                                                                <td className="py-3 px-3 text-right font-mono font-bold text-white">
+                                                                    {staff.baseSalary ? `${formatMoney(staff.baseSalary)} đ` : <span className="text-zinc-600 font-normal italic">—</span>}
+                                                                </td>
+                                                            )}
+
+                                                            {/* THAO TÁC */}
+                                                            <td className="py-3 px-4 text-right">
+                                                                <div className="flex items-center justify-end gap-1.5 relative">
+                                                                    {/* NÚT XEM CHI TIẾT DRAWER */}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setStaffDrawer(staff)}
+                                                                        className="h-8 px-2.5 rounded-lg bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-medium transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1"
+                                                                        title="Xem hồ sơ chi tiết"
+                                                                    >
+                                                                        <i className="fas fa-eye text-[11px] text-zinc-400"></i>
+                                                                        <span>Xem</span>
+                                                                    </button>
+
+                                                                    {(isBoss || isAdmin || canConfigStaff) && (
+                                                                        <>
+                                                                            {/* NÚT SỬA */}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleOpenAddStaffModal(staff)}
+                                                                                className="h-8 px-2.5 rounded-lg bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-medium transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1"
+                                                                                title="Chỉnh sửa hồ sơ"
+                                                                            >
+                                                                                <i className="fas fa-pen text-[10px] text-zinc-400"></i>
+                                                                                <span>Sửa</span>
+                                                                            </button>
+
+                                                                            {/* MENU ⋯ */}
+                                                                            <div className="relative">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setActiveStaffMenuId(isMenuOpen ? null : (staff.id || staff.name));
+                                                                                    }}
+                                                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                                                                                        isMenuOpen
+                                                                                            ? 'bg-white text-black border-white'
+                                                                                            : 'bg-[#18181b] hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/[0.08]'
+                                                                                    }`}
+                                                                                    title="Thao tác khác"
+                                                                                >
+                                                                                    <i className="fas fa-ellipsis-v text-xs"></i>
+                                                                                </button>
+
+                                                                                {/* DROPDOWN MENU POPOVER */}
+                                                                                {isMenuOpen && (
+                                                                                    <div
+                                                                                        onClick={e => e.stopPropagation()}
+                                                                                        className="absolute right-0 top-9 w-44 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl p-1 z-50 animate-fade-in text-left"
+                                                                                    >
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                setActiveStaffMenuId(null);
+                                                                                                handleToggleStaffStatus(staff, e);
+                                                                                            }}
+                                                                                            className="w-full px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-0 bg-transparent text-left"
+                                                                                        >
+                                                                                            <i className={`fas ${isResigned ? 'fa-user-check text-emerald-400' : 'fa-user-clock text-amber-400'} text-xs w-4`}></i>
+                                                                                            <span>{isResigned ? 'Đi Làm Lại' : 'Ngừng Làm Việc'}</span>
+                                                                                        </button>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => {
+                                                                                                setActiveStaffMenuId(null);
+                                                                                                handleOpenDeleteStaffModal(staff);
+                                                                                            }}
+                                                                                            className="w-full px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-0 bg-transparent text-left"
+                                                                                        >
+                                                                                            <i className="fas fa-trash-alt text-xs w-4"></i>
+                                                                                            <span>Xóa Hồ Sơ</span>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* ==================== 2. MOBILE CARD VIEW (HIỂN THỊ DƯỚI MD) ==================== */}
+                                    <div className="md:hidden space-y-3">
+                                        {filteredStaff.map(staff => {
+                                            const isResigned = staff.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(staff.name);
+                                            const ageStr = calculateAge(staff.dob);
+                                            const isMenuOpen = activeStaffMenuId === (staff.id || staff.name);
+
+                                            return (
+                                                <div
+                                                    key={staff.id || staff.name}
+                                                    className={`bg-[#121214] border border-white/[0.08] rounded-2xl p-4 shadow-sm space-y-3 ${
+                                                        isResigned ? 'opacity-75' : ''
+                                                    }`}
+                                                >
+                                                    {/* HEADER CARD */}
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div
+                                                            className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
+                                                            onClick={() => setStaffDrawer(staff)}
+                                                        >
+                                                            <div className="relative shrink-0">
                                                                 {staff.avatar ? (
                                                                     <img
                                                                         src={staff.avatar}
                                                                         alt={staff.name}
-                                                                        className="w-12 h-12 rounded-2xl object-cover border border-white/10 shadow-sm"
+                                                                        className="w-11 h-11 rounded-xl object-cover border border-white/10"
                                                                         onError={e => { e.target.style.display = 'none'; }}
                                                                     />
                                                                 ) : (
-                                                                    <div className="w-12 h-12 rounded-2xl bg-[#18191d] flex items-center justify-center text-zinc-400 font-black text-base border border-white/5">
+                                                                    <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300 font-black text-sm">
                                                                         {(staff.name || 'U').charAt(0).toUpperCase()}
                                                                     </div>
                                                                 )}
                                                                 <span
-                                                                    className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#202228] ${
-                                                                        isResigned ? 'bg-rose-500' : 'bg-[#2E9599]'
+                                                                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#121214] ${
+                                                                        isResigned ? 'bg-zinc-500' : 'bg-emerald-500'
                                                                     }`}
-                                                                    title={isResigned ? 'Đã nghỉ việc' : 'Đang làm việc'}
                                                                 ></span>
                                                             </div>
 
-                                                            <div className="min-w-0">
-                                                                <h4 className="text-white font-black text-sm truncate flex items-center gap-1.5" title={staff.name}>
-                                                                    <span className="truncate">{staff.name}</span>
-                                                                </h4>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="font-bold text-white text-sm truncate">{staff.name}</div>
                                                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                                    <span className="px-2 py-0.5 rounded-md bg-[#18191d] text-zinc-300 text-[10px] font-bold">
-                                                                        {staff.title || 'Nhân sự'}
-                                                                    </span>
-                                                                    <span className="px-1.5 py-0.5 rounded-md bg-white/[0.05] text-zinc-400 text-[9px] font-mono">
+                                                                    <span className="text-[11px] text-zinc-400">{staff.title || 'Nhân sự'}</span>
+                                                                    <span className="px-1.5 py-0.2 rounded bg-white/[0.05] text-zinc-400 text-[9px] font-mono uppercase">
                                                                         {staff.role || 'THỢ'}
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* BADGE TRẠNG THÁI */}
-                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase shrink-0 ${
-                                                            isResigned ? 'bg-rose-500/20 text-rose-400' : 'bg-[#2E9599]/20 text-[#2E9599]'
-                                                        }`}>
-                                                            {isResigned ? 'Đã Nghỉ' : 'Đang Làm'}
-                                                        </span>
+                                                        {/* MENU ⋯ TRÊN MOBILE */}
+                                                        {(isBoss || isAdmin || canConfigStaff) && (
+                                                            <div className="relative shrink-0">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActiveStaffMenuId(isMenuOpen ? null : (staff.id || staff.name));
+                                                                    }}
+                                                                    className="w-8 h-8 rounded-lg bg-[#18181b] border border-white/[0.08] text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                                                                >
+                                                                    <i className="fas fa-ellipsis-v text-xs"></i>
+                                                                </button>
+                                                                {isMenuOpen && (
+                                                                    <div
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        className="absolute right-0 top-9 w-44 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl p-1 z-50 animate-fade-in text-left"
+                                                                    >
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                setActiveStaffMenuId(null);
+                                                                                handleToggleStaffStatus(staff, e);
+                                                                            }}
+                                                                            className="w-full px-3 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg flex items-center gap-2 cursor-pointer border-0 bg-transparent text-left"
+                                                                        >
+                                                                            <i className={`fas ${isResigned ? 'fa-user-check text-emerald-400' : 'fa-user-clock text-amber-400'} text-xs w-4`}></i>
+                                                                            <span>{isResigned ? 'Đi Làm Lại' : 'Ngừng Làm Việc'}</span>
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setActiveStaffMenuId(null);
+                                                                                handleOpenDeleteStaffModal(staff);
+                                                                            }}
+                                                                            className="w-full px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg flex items-center gap-2 cursor-pointer border-0 bg-transparent text-left"
+                                                                        >
+                                                                            <i className="fas fa-trash-alt text-xs w-4"></i>
+                                                                            <span>Xóa Hồ Sơ</span>
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
 
-                                                    {/* THÔNG TIN CHI TIẾT 6 TRƯỜNG CỐT LÕI */}
-                                                    <div className="space-y-1.5 bg-[#18191d] p-3 rounded-xl text-[11px] mb-3">
-                                                        {/* GMAIL */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-zinc-500 flex items-center gap-1.5 shrink-0">
-                                                                <i className="fas fa-envelope text-sky-400 text-[10px]"></i> Gmail:
+                                                    {/* BODY THÔNG TIN TRÊN MOBILE */}
+                                                    <div className="bg-[#18181b] rounded-xl p-3 text-xs space-y-1.5 border border-white/[0.04]">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-zinc-500">Trạng thái:</span>
+                                                            <span className={`font-bold ${isResigned ? 'text-zinc-400' : 'text-emerald-400'}`}>
+                                                                {isResigned ? 'Đã Nghỉ Việc' : 'Đang Làm Việc'}
                                                             </span>
-                                                            {staff.email ? (
-                                                                <a
-                                                                    href={`mailto:${staff.email}`}
-                                                                    className="text-zinc-200 hover:text-sky-300 truncate font-mono text-[11px]"
-                                                                    title={staff.email}
-                                                                >
-                                                                    {staff.email}
-                                                                </a>
-                                                            ) : (
-                                                                <span className="text-zinc-600 italic">Chưa cập nhật</span>
-                                                            )}
                                                         </div>
-
-                                                        {/* SĐT */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-zinc-500 flex items-center gap-1.5 shrink-0">
-                                                                <i className="fas fa-phone-alt text-[#2E9599] text-[10px]"></i> SĐT:
-                                                            </span>
-                                                            {staff.phone ? (
-                                                                <a
-                                                                    href={`tel:${staff.phone}`}
-                                                                    className="text-[#2E9599] hover:underline font-mono font-bold"
-                                                                >
+                                                        {staff.phone && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Điện thoại:</span>
+                                                                <a href={`tel:${staff.phone}`} className="text-zinc-200 font-mono font-bold hover:underline">
                                                                     {staff.phone}
                                                                 </a>
-                                                            ) : (
-                                                                <span className="text-zinc-600 italic">Chưa cập nhật</span>
-                                                            )}
-                                                        </div>
+                                                            </div>
+                                                        )}
+                                                        {staff.email && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Email:</span>
+                                                                <span className="text-zinc-300 font-mono text-[11px] truncate max-w-[170px]">{staff.email}</span>
+                                                            </div>
+                                                        )}
+                                                        {staff.cccd && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">CCCD:</span>
+                                                                <span className="text-zinc-300 font-mono">{staff.cccd}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                                        {/* NGÀY THÁNG NĂM SINH */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-zinc-500 flex items-center gap-1.5 shrink-0">
-                                                                <i className="fas fa-birthday-cake text-[#F7DC68] text-[10px]"></i> Ngày sinh:
-                                                            </span>
-                                                            <span className="text-zinc-200 font-mono">
-                                                                {staff.dob ? `${staff.dob} ${ageStr ? `(${ageStr})` : ''}` : <span className="text-zinc-600 italic">Chưa cập nhật</span>}
-                                                            </span>
-                                                        </div>
+                                                    {/* CỤM NÚT ACTION TRÊN MOBILE */}
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setStaffDrawer(staff)}
+                                                            className="flex-1 h-9 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-200 text-xs font-bold transition-all border border-white/[0.08] cursor-pointer flex items-center justify-center gap-1.5"
+                                                        >
+                                                            <i className="fas fa-eye text-xs text-zinc-400"></i>
+                                                            <span>Xem Chi Tiết</span>
+                                                        </button>
+                                                        {(isBoss || isAdmin || canConfigStaff) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenAddStaffModal(staff)}
+                                                                className="h-9 px-3 rounded-xl bg-[#18181b] hover:bg-zinc-800 text-zinc-200 text-xs font-bold transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1"
+                                                            >
+                                                                <i className="fas fa-pen text-xs text-zinc-400"></i>
+                                                                <span>Sửa</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
 
-                                                        {/* SỐ CCCD */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-zinc-500 flex items-center gap-1.5 shrink-0">
-                                                                <i className="fas fa-id-card text-[#A7226F] text-[10px]"></i> Số CCCD:
-                                                            </span>
-                                                            <span className="text-zinc-200 font-mono font-bold">
-                                                                {staff.cccd || <span className="text-zinc-600 italic font-normal">Chưa cập nhật</span>}
-                                                            </span>
-                                                        </div>
+                            {/* ==================== 3. SIDE DRAWER HỒ SƠ CHI TIẾT (SLIDE-OVER FROM RIGHT) ==================== */}
+                            {staffDrawer && (() => {
+                                const isResigned = staffDrawer.status === 'Đã nghỉ việc' || isStaffResignedOrInactive(staffDrawer.name);
+                                const ageStr = calculateAge(staffDrawer.dob);
 
-                                                        {/* ĐỊA CHỈ */}
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <span className="text-zinc-500 flex items-center gap-1.5 shrink-0 mt-0.5">
-                                                                <i className="fas fa-map-marker-alt text-[#F46C3F] text-[10px]"></i> Địa chỉ:
+                                return (
+                                    <div className="fixed inset-0 z-[9999] overflow-hidden animate-fade-in">
+                                        {/* BACKDROP NỀN ĐEN MỜ */}
+                                        <div
+                                            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity cursor-pointer"
+                                            onClick={() => setStaffDrawer(null)}
+                                        ></div>
+
+                                        {/* KHỐI DRAWER TRƯỢT TỪ CẠNH PHẢI */}
+                                        <div className="fixed inset-y-0 right-0 max-w-md w-full bg-[#121214] border-l border-white/[0.08] shadow-2xl flex flex-col z-[10000]">
+                                            {/* DRAWER HEADER */}
+                                            <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between shrink-0 bg-[#18181b]">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300">
+                                                        <i className="fas fa-id-card text-xs"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-white font-black text-sm uppercase tracking-wider">Hồ Sơ Nhân Sự Chi Tiết</h3>
+                                                        <p className="text-zinc-500 text-[10.5px]">Mã định danh: {staffDrawer.id || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setStaffDrawer(null)}
+                                                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer border-0 transition-colors"
+                                                    title="Đóng (Esc)"
+                                                >
+                                                    <i className="fas fa-times text-sm"></i>
+                                                </button>
+                                            </div>
+
+                                            {/* DRAWER BODY (SCROLLABLE) */}
+                                            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
+                                                {/* BANNER THÔNG TIN CHÍNH */}
+                                                <div className="flex items-center gap-4 bg-[#18181b] p-4 rounded-2xl border border-white/[0.06]">
+                                                    <div className="relative shrink-0">
+                                                        {staffDrawer.avatar ? (
+                                                            <img
+                                                                src={staffDrawer.avatar}
+                                                                alt={staffDrawer.name}
+                                                                className="w-16 h-16 rounded-2xl object-cover border border-white/10 shadow-sm"
+                                                                onError={e => { e.target.style.display = 'none'; }}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-300 font-black text-xl">
+                                                                {(staffDrawer.name || 'U').charAt(0).toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                        <span
+                                                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#18181b] ${
+                                                                isResigned ? 'bg-zinc-500' : 'bg-emerald-500'
+                                                            }`}
+                                                        ></span>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="text-white font-black text-base truncate">{staffDrawer.name}</h4>
+                                                        <div className="text-xs text-zinc-400 mt-0.5">{staffDrawer.title || 'Nhân sự'}</div>
+                                                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                                isResigned
+                                                                    ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                            }`}>
+                                                                {isResigned ? 'Đã Nghỉ Việc' : 'Đang Làm Việc'}
                                                             </span>
-                                                            <span className="text-zinc-300 text-right truncate" title={staff.address}>
-                                                                {staff.address || <span className="text-zinc-600 italic">Chưa cập nhật</span>}
+                                                            <span className="px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 text-[10px] font-mono uppercase border border-white/10">
+                                                                {staffDrawer.role || 'THỢ'}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* NÚT HÀNH ĐỘNG THẺ */}
+                                                {/* NÚT THAO TÁC LIÊN LẠC NHANH */}
+                                                <div className="grid grid-cols-2 gap-2.5">
+                                                    {staffDrawer.phone ? (
+                                                        <a
+                                                            href={`tel:${staffDrawer.phone}`}
+                                                            className="h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                                                        >
+                                                            <i className="fas fa-phone-alt text-xs text-zinc-400"></i>
+                                                            <span>Gọi Điện</span>
+                                                        </a>
+                                                    ) : (
+                                                        <div className="h-10 rounded-xl bg-white/[0.02] border border-white/[0.04] text-zinc-600 text-xs flex items-center justify-center">
+                                                            Chưa có SĐT
+                                                        </div>
+                                                    )}
+                                                    {staffDrawer.email ? (
+                                                        <a
+                                                            href={`mailto:${staffDrawer.email}`}
+                                                            className="h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                                                        >
+                                                            <i className="fas fa-envelope text-xs text-zinc-400"></i>
+                                                            <span>Gửi Email</span>
+                                                        </a>
+                                                    ) : (
+                                                        <div className="h-10 rounded-xl bg-white/[0.02] border border-white/[0.04] text-zinc-600 text-xs flex items-center justify-center">
+                                                            Chưa có Email
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* KHỐI 1: THÔNG TIN CÁ NHÂN & ĐỊNH DANH */}
+                                                <div className="bg-[#18181b] rounded-2xl p-4 border border-white/[0.06] space-y-3">
+                                                    <div className="text-[11px] font-black uppercase text-zinc-400 tracking-wider flex items-center gap-2 border-b border-white/[0.06] pb-2">
+                                                        <i className="fas fa-address-card text-zinc-500"></i>
+                                                        <span>Thông Tin Định Danh</span>
+                                                    </div>
+                                                    <div className="space-y-2 text-xs">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-zinc-500">Số CCCD:</span>
+                                                            <span className="text-zinc-200 font-mono font-bold">{staffDrawer.cccd || 'Chưa cập nhật'}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-zinc-500">Ngày sinh:</span>
+                                                            <span className="text-zinc-200 font-mono">
+                                                                {staffDrawer.dob ? `${staffDrawer.dob}${ageStr ? ` (${ageStr})` : ''}` : 'Chưa cập nhật'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <span className="text-zinc-500 shrink-0">Địa chỉ:</span>
+                                                            <span className="text-zinc-300 text-right">{staffDrawer.address || 'Chưa cập nhật'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* KHỐI 2: CHỨC DANH & TÀI KHOẢN HỆ THỐNG */}
+                                                <div className="bg-[#18181b] rounded-2xl p-4 border border-white/[0.06] space-y-3">
+                                                    <div className="text-[11px] font-black uppercase text-zinc-400 tracking-wider flex items-center gap-2 border-b border-white/[0.06] pb-2">
+                                                        <i className="fas fa-briefcase text-zinc-500"></i>
+                                                        <span>Vị Trí & Tài Khoản</span>
+                                                    </div>
+                                                    <div className="space-y-2 text-xs">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-zinc-500">Chức danh chính:</span>
+                                                            <span className="text-zinc-200 font-bold">{staffDrawer.title || 'Nhân sự'}</span>
+                                                        </div>
+                                                        {staffDrawer.subTitle && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Chức danh phụ:</span>
+                                                                <span className="text-zinc-300">{staffDrawer.subTitle}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-zinc-500">Phân quyền:</span>
+                                                            <span className="text-zinc-200 font-mono uppercase">{staffDrawer.role || 'THỢ'}</span>
+                                                        </div>
+                                                        {(isBoss || isAdmin) && staffDrawer.pin && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Mã PIN POS:</span>
+                                                                <span className="text-zinc-300 font-mono tracking-widest">{staffDrawer.pin}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* KHỐI 3: MỨC LƯƠNG & CHẾ ĐỘ ĐÃI NGỘ (NẾU CÓ QUYỀN) */}
                                                 {(isBoss || isAdmin || canConfigStaff) && (
-                                                    <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenAddStaffModal(staff)}
-                                                            className="flex-1 py-1.5 px-2 rounded-xl bg-[#18191d] hover:bg-[#282b33] text-zinc-300 hover:text-white text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border-0"
-                                                            title="Chỉnh sửa thông tin hồ sơ"
-                                                        >
-                                                            <i className="fas fa-edit text-[10px] text-[#2E9599]"></i>
-                                                            <span>Sửa</span>
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => handleToggleStaffStatus(staff, e)}
-                                                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer border-0 ${
-                                                                isResigned
-                                                                    ? 'bg-[#2E9599]/20 hover:bg-[#2E9599] text-[#2E9599] hover:text-white'
-                                                                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200'
-                                                            }`}
-                                                            title={isResigned ? "Đổi sang Đang làm việc" : "Đổi sang Đã nghỉ việc"}
-                                                        >
-                                                            <i className={`fas ${isResigned ? 'fa-user-check' : 'fa-user-clock'} text-[10px]`}></i>
-                                                            <span className="hidden sm:inline">{isResigned ? 'Đi Làm Lại' : 'Đã Nghỉ'}</span>
-                                                        </button>
-
-                                                        {/* NÚT XOÁ NHÂN VIÊN TRỰC TIẾP TRONG APP */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenDeleteStaffModal(staff)}
-                                                            className={`py-1.5 px-3 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border-0 ${
-                                                                isResigned
-                                                                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm'
-                                                                    : 'bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white'
-                                                            }`}
-                                                            title="Xoá vĩnh viễn nhân sự khỏi CSDL"
-                                                        >
-                                                            <i className="fas fa-trash-alt text-[10px]"></i>
-                                                            <span>Xoá</span>
-                                                        </button>
+                                                    <div className="bg-[#18181b] rounded-2xl p-4 border border-white/[0.06] space-y-3">
+                                                        <div className="text-[11px] font-black uppercase text-zinc-400 tracking-wider flex items-center gap-2 border-b border-white/[0.06] pb-2">
+                                                            <i className="fas fa-money-check-dollar text-zinc-500"></i>
+                                                            <span>Chế Độ Lương & Phụ Cấp</span>
+                                                        </div>
+                                                        <div className="space-y-2 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Lương cơ bản:</span>
+                                                                <span className="text-white font-mono font-bold">
+                                                                    {staffDrawer.baseSalary ? `${formatMoney(staffDrawer.baseSalary)} đ` : '0 đ'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Lương chức vụ:</span>
+                                                                <span className="text-white font-mono font-bold">
+                                                                    {staffDrawer.funcSalary ? `${formatMoney(staffDrawer.funcSalary)} đ` : '0 đ'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-zinc-500">Phụ cấp xăng xe:</span>
+                                                                <span className="text-white font-mono font-bold">
+                                                                    {staffDrawer.allowance ? `${formatMoney(staffDrawer.allowance)} đ` : '0 đ'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+
+                                            {/* DRAWER FOOTER: CỤM NÚT THAO TÁC */}
+                                            {(isBoss || isAdmin || canConfigStaff) && (
+                                                <div className="p-4 border-t border-white/[0.08] bg-[#18181b] flex items-center gap-2.5 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const target = staffDrawer;
+                                                            setStaffDrawer(null);
+                                                            handleOpenAddStaffModal(target);
+                                                        }}
+                                                        className="flex-1 h-9 rounded-xl bg-white hover:bg-zinc-200 text-black font-black text-xs uppercase flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer border-0"
+                                                    >
+                                                        <i className="fas fa-edit text-xs"></i>
+                                                        <span>Sửa Hồ Sơ</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            handleToggleStaffStatus(staffDrawer, e);
+                                                            setStaffDrawer(prev => prev ? { ...prev, status: isResigned ? 'Đang làm việc' : 'Đã nghỉ việc' } : null);
+                                                        }}
+                                                        className="h-9 px-3 rounded-xl bg-[#202024] hover:bg-zinc-800 text-zinc-300 text-xs font-bold transition-all border border-white/[0.08] cursor-pointer flex items-center gap-1.5"
+                                                    >
+                                                        <i className={`fas ${isResigned ? 'fa-user-check text-emerald-400' : 'fa-user-clock text-amber-400'} text-xs`}></i>
+                                                        <span>{isResigned ? 'Đi Làm Lại' : 'Ngừng Làm'}</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const target = staffDrawer;
+                                                            setStaffDrawer(null);
+                                                            handleOpenDeleteStaffModal(target);
+                                                        }}
+                                                        className="h-9 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white text-xs font-bold transition-all border border-rose-500/20 cursor-pointer flex items-center gap-1.5"
+                                                        title="Xóa hồ sơ nhân sự"
+                                                    >
+                                                        <i className="fas fa-trash-alt text-xs"></i>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     );
                 })()}
@@ -7933,6 +8625,10 @@
                                     <span className="font-black text-white text-sm">{deleteStaffModal.name}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
+                                    <span className="text-zinc-400">Mã ID nhân sự:</span>
+                                    <span className="font-mono text-zinc-300 text-xs">{deleteStaffModal.id}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
                                     <span className="text-zinc-400">Trạng thái:</span>
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                         deleteStaffModal.status === 'Đã nghỉ việc' ? 'bg-rose-500/20 text-rose-400' : 'bg-[#2E9599]/20 text-[#2E9599]'
@@ -7944,14 +8640,31 @@
                                     <span className="text-zinc-400">Chức vụ:</span>
                                     <span className="text-zinc-300 font-mono">{deleteStaffModal.role}</span>
                                 </div>
+                                {deleteStaffModal.hasHistory && (
+                                    <div className="flex justify-between items-center border-t border-white/5 pt-2 text-[11px]">
+                                        <span className="text-amber-400 font-bold">Dữ liệu liên kết:</span>
+                                        <span className="text-zinc-300 font-mono">
+                                            {deleteStaffModal.attCount} công, {deleteStaffModal.prodCount} sản xuất, {deleteStaffModal.packCount} gói hàng
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="text-[11px] text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 leading-relaxed">
+                            <div className={`text-[11px] p-3 rounded-xl border leading-relaxed ${
+                                deleteStaffModal.hasHistory 
+                                    ? 'text-amber-300 bg-amber-500/10 border-amber-500/30' 
+                                    : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                            }`}>
                                 <i className="fas fa-info-circle mr-1"></i>
-                                {deleteStaffModal.status === 'Đã nghỉ việc' 
-                                    ? `Nhân viên ${deleteStaffModal.name} đã nghỉ việc. Xoá dòng nhân sự này sẽ dọn dẹp sạch sẽ danh sách bảng lương và tài khoản đăng nhập.`
-                                    : `Cảnh báo: Nhân sự ${deleteStaffModal.name} đang ở trạng thái làm việc. Bạn có chắc chắn muốn xoá hoàn toàn khỏi hệ thống?`
-                                }
+                                {deleteStaffModal.hasHistory ? (
+                                    <span>
+                                        <b>BẢO TOÀN DỮ LIỆU:</b> Nhân sự này đã có lịch sử làm việc (chấm công / sản xuất). Để không làm đứt gãy quan hệ dữ liệu bảng lương và báo cáo, hệ thống sẽ chuyển nhân sự sang trạng thái <b>"Đã nghỉ việc"</b> (ngừng hoạt động) thay vì xóa cứng.
+                                    </span>
+                                ) : (
+                                    <span>
+                                        <b>XÓA VĨNH VIỄN:</b> Hồ sơ chưa có dữ liệu lịch sử liên kết nào. Xác nhận xóa vĩnh viễn dòng nhân sự này khỏi CSDL Supabase.
+                                    </span>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-end gap-3 pt-2">
@@ -7967,17 +8680,21 @@
                                     type="button"
                                     onClick={handleConfirmDeleteStaff}
                                     disabled={isDeletingStaff}
-                                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center gap-2 cursor-pointer border-0 disabled:opacity-50"
+                                    className={`px-5 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center gap-2 cursor-pointer border-0 disabled:opacity-50 ${
+                                        deleteStaffModal.hasHistory 
+                                            ? 'bg-amber-600 hover:bg-amber-500' 
+                                            : 'bg-rose-600 hover:bg-rose-500'
+                                    }`}
                                 >
                                     {isDeletingStaff ? (
                                         <>
                                             <i className="fas fa-spinner fa-spin"></i>
-                                            <span>Đang Xoá...</span>
+                                            <span>Đang Xử Lý...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <i className="fas fa-trash-alt"></i>
-                                            <span>Xác Nhận Xoá</span>
+                                            <i className={`fas ${deleteStaffModal.hasHistory ? 'fa-user-slash' : 'fa-trash-alt'}`}></i>
+                                            <span>{deleteStaffModal.hasHistory ? 'Xác Nhận Ngừng Hoạt Động' : 'Xác Nhận Xoá Vĩnh Viễn'}</span>
                                         </>
                                     )}
                                 </button>

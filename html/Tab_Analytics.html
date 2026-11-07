@@ -6,6 +6,84 @@
 // BẢO MẬT: Gatekeeper 100% (Chỉ Boss & Kế Toán) - An toàn tuyệt đối React Hooks
 // =========================================================================
 
+/**
+ * Helper tính toán dòng tiền chi lương và tạm ứng thực tế từ Transactions cho P&L
+ */
+function rfPnlPayrollCash(transactions, startDateStr, endDateStr, filterChannel) {
+    const list = Array.isArray(transactions) ? transactions : [];
+    let total = 0;
+    let txCount = 0;
+    const matched = [];
+
+    const sTime = startDateStr ? new Date(`${startDateStr}T00:00:00`).getTime() : null;
+    const eTime = endDateStr ? new Date(`${endDateStr}T23:59:59.999`).getTime() : null;
+
+    list.forEach(t => {
+        const type = String(t.type || '').toUpperCase().trim();
+        if (type === 'TRANSFER' || type === 'CHUYỂN KHOẢN') return;
+
+        const amt = Math.abs(Number(t.amount || 0));
+        if (amt <= 0) return;
+
+        const tDate = String(t.date || t.createdAt || '').slice(0, 10);
+        if (tDate) {
+            const tTime = new Date(`${tDate}T12:00:00`).getTime();
+            if (!isNaN(tTime)) {
+                if (sTime !== null && tTime < sTime) return;
+                if (eTime !== null && tTime > eTime) return;
+            }
+        }
+
+        const cat = String(t.category || '').toLowerCase().trim();
+        const title = String(t.title || t.note || '').toLowerCase().trim();
+
+        if (cat.includes('nhập hàng') || cat.includes('nhà cung cấp') || cat.includes('trả nợ ncc')) return;
+
+        const isSalary = (
+            cat.includes('lương') || 
+            cat.includes('tạm ứng') || 
+            cat.includes('ứng lương') ||
+            cat.includes('thưởng') ||
+            cat.includes('phụ cấp') ||
+            cat.includes('kpi') ||
+            title.includes('trả lương') ||
+            title.includes('chi lương') ||
+            title.includes('tạm ứng') ||
+            title.includes('ứng lương') ||
+            title.includes('lương tháng') ||
+            title.includes('thưởng kpi')
+        );
+
+        if (isSalary) {
+            total += amt;
+            txCount++;
+            matched.push(t);
+        }
+    });
+
+    return {
+        total,
+        txCount,
+        matched,
+        source: total > 0 ? `${txCount} phiếu chi sổ quỹ` : 'Chưa có phiếu chi lương'
+    };
+}
+
+/**
+ * Helper hiển thị nhãn nguồn chi phí lương trong P&L
+ */
+function rfPnlPayrollSourceLabel(payrollCash) {
+    if (!payrollCash || !payrollCash.total || payrollCash.total <= 0) {
+        return 'Chưa có phiếu chi lương';
+    }
+    return `${payrollCash.txCount || 1} phiếu chi sổ quỹ`;
+}
+
+if (typeof window !== 'undefined') {
+    window.rfPnlPayrollCash = rfPnlPayrollCash;
+    window.rfPnlPayrollSourceLabel = rfPnlPayrollSourceLabel;
+}
+
 const AnalyticsTab = React.memo(function AnalyticsTab({ data, pushData, isAdmin: propIsAdmin, isBoss: propIsBoss, userRole: propUserRole, currentUser: propCurrentUser, hasPerm: propHasPerm, mode, userConfigs }) {
     const currentRole = propUserRole || localStorage.getItem('rf_role') || '';
     const currentUser = propCurrentUser || localStorage.getItem('rf_user') || '';

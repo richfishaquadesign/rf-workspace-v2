@@ -7242,7 +7242,8 @@
             if (!tabId) return 'dashboard';
             const t = String(tabId).toLowerCase().trim();
             if (t === 'inventory' || t === 'kho' || t === 'kho_hang') return 'warehouse';
-            if (t === 'finance' || t === 'tai_chinh' || t === 'so_quy') return 'cashflow';
+            if (t === 'finance' || t === 'tai_chinh' || t === 'financial' || t === 'overview_finance') return 'finance';
+            if (t === 'cashflow' || t === 'so_quy' || t === 'soquy' || t === 'ledger' || t === 'cashbook') return 'cashflow';
             if (t === 'debt' || t === 'so_no' || t === 'cong_no' || t === 'nha_cung_cap') return 'suppliers';
             if (t === 'pnl' || t === 'lai_lo') return 'analytics';
             if (t === 'kqkd') return 'business_report';
@@ -7256,7 +7257,7 @@
 
         const handleNavigateTab = React.useCallback((tabId, tabMode) => {
             const actualTabId = normalizeTabId(tabId);
-            const actualMode = tabMode || (['warehouse', 'cashflow', 'suppliers', 'import_export', 'analytics', 'business_report'].includes(actualTabId) ? 'ERP' : 'WORKSPACE');
+            const actualMode = tabMode || (['warehouse', 'finance', 'cashflow', 'suppliers', 'import_export', 'analytics', 'business_report'].includes(actualTabId) ? 'ERP' : 'WORKSPACE');
             if (activeTab === actualTabId && mode === actualMode) {
                 setIsMenuOpen(false);
                 return;
@@ -7277,6 +7278,13 @@
                 });
             }
         }, [activeTab, mode, normalizeTabId]);
+
+        React.useEffect(() => {
+            if (typeof window !== 'undefined') {
+                window.handleNavigateTab = handleNavigateTab;
+                window.navigateTab = handleNavigateTab;
+            }
+        }, [handleNavigateTab]);
 
         const [currentUser, setCurrentUser] = React.useState(() => {
             const p = safeGet('rf_pin', '');
@@ -8393,10 +8401,11 @@
                 reqAdmin: true,
                 hidden: isCTVRole,
                 items: [
-                    { id: 'analytics', label: 'Phân Tích P&L', icon: 'fa-chart-pie', mode: 'ERP' },
+                    { id: 'finance', label: 'Tài Chính', icon: 'fa-scale-balanced', mode: 'ERP' },
+                    { id: 'cashflow', label: 'Sổ Quỹ', icon: 'fa-wallet', mode: 'ERP' },
                     { id: 'business_report', label: 'Báo Cáo KQKD', icon: 'fa-chart-line', mode: 'ERP' },
+                    { id: 'analytics', label: 'Phân Tích P&L', icon: 'fa-chart-pie', mode: 'ERP' },
                     { id: 'warehouse', label: 'Kho Hàng', icon: 'fa-boxes', mode: 'ERP' },
-                    { id: 'cashflow', label: 'Tài Chính', icon: 'fa-wallet', mode: 'ERP' },
                     { id: 'suppliers', label: 'Đối Tác', icon: 'fa-handshake', mode: 'ERP' }
                 ].filter(item => !item.hidden)
             },
@@ -8879,7 +8888,9 @@
                                 const CompWorkspace = (typeof window !== 'undefined' ? window.WorkspaceTab : null) || (typeof WorkspaceTab !== 'undefined' ? WorkspaceTab : null);
                                 const CompInventory = (typeof window !== 'undefined' ? window.InventoryTab : null) || (typeof InventoryTab !== 'undefined' ? InventoryTab : null);
                                 const CompImportExport = (typeof window !== 'undefined' ? window.ImportExportTab : null) || (typeof ImportExportTab !== 'undefined' ? ImportExportTab : null);
-                                const CompFinance = (typeof window !== 'undefined' ? window.FinanceTab : null) || (typeof FinanceTab !== 'undefined' ? FinanceTab : null);
+                                const CompFinanceOverview = (typeof window !== 'undefined' ? (window.FinanceOverviewTab || window.FinanceTab) : null) || (typeof FinanceOverviewTab !== 'undefined' ? FinanceOverviewTab : null);
+                                const CompCashLedger = (typeof window !== 'undefined' ? (window.CashLedgerTab || window.FinanceTab) : null) || (typeof CashLedgerTab !== 'undefined' ? CashLedgerTab : null);
+                                const CompFinance = CompCashLedger || CompFinanceOverview;
                                 const CompAnalytics = (typeof window !== 'undefined' ? window.AnalyticsTab : null) || (typeof AnalyticsTab !== 'undefined' ? AnalyticsTab : null);
                                 const CompBusinessReport = (typeof window !== 'undefined' ? window.BusinessReportTab : null) || (typeof BusinessReportTab !== 'undefined' ? BusinessReportTab : null);
                                 const CompSuppliers = (typeof window !== 'undefined' ? window.SuppliersTab : null) || (typeof SuppliersTab !== 'undefined' ? SuppliersTab : null);
@@ -8896,7 +8907,8 @@
                                     apprenticeship: CompApprenticeship,
                                     warehouse: CompInventory,
                                     import_export: CompImportExport,
-                                    cashflow: CompFinance,
+                                    finance: CompFinanceOverview,
+                                    cashflow: CompCashLedger,
                                     analytics: CompAnalytics,
                                     business_report: CompBusinessReport,
                                     suppliers: CompSuppliers
@@ -8929,7 +8941,9 @@
                                         
                                         {(activeTab === 'import_export' || mountedTabs.includes('import_export')) && CompImportExport && <div className={`w-full min-h-full ${activeTab === 'import_export' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompImportExport data={erpData} userConfigs={userConfigs} pushData={pushErpData} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} triggerToast={triggerToast} documents={memoizedDocuments} /></ErrorBoundary>}</div>}
                                         
-                                        {(activeTab === 'cashflow' || mountedTabs.includes('cashflow')) && CompFinance && <div className={`w-full min-h-full ${activeTab === 'cashflow' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompFinance orders={memoizedOrders} erpData={erpData || {}} pushDeltas={pushDeltas} documents={memoizedDocuments} triggerToast={triggerToast} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} categories={memoizedFinanceCategories} /></ErrorBoundary>}</div>}
+                                        {(activeTab === 'finance' || mountedTabs.includes('finance')) && CompFinanceOverview && <div className={`w-full min-h-full ${activeTab === 'finance' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompFinanceOverview orders={memoizedOrders} erpData={erpData || {}} pushDeltas={pushDeltas} documents={memoizedDocuments} triggerToast={triggerToast} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} categories={memoizedFinanceCategories} tabMode="OVERVIEW" onNavigateTab={handleNavigateTab} /></ErrorBoundary>}</div>}
+                                        
+                                        {(activeTab === 'cashflow' || mountedTabs.includes('cashflow')) && CompCashLedger && <div className={`w-full min-h-full ${activeTab === 'cashflow' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompCashLedger orders={memoizedOrders} erpData={erpData || {}} pushDeltas={pushDeltas} documents={memoizedDocuments} triggerToast={triggerToast} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} categories={memoizedFinanceCategories} tabMode="LEDGER" onNavigateTab={handleNavigateTab} /></ErrorBoundary>}</div>}
                                         
                                         {(activeTab === 'analytics' || mountedTabs.includes('analytics')) && CompAnalytics && <div className={`w-full min-h-full ${activeTab === 'analytics' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompAnalytics data={memoizedAnalyticsData} pushData={pushErpData} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} mode={mode} userConfigs={userConfigs} /></ErrorBoundary>}</div>}
                                         
@@ -8938,14 +8952,15 @@
                                         {(activeTab === 'suppliers' || mountedTabs.includes('suppliers')) && CompSuppliers && <div className={`w-full min-h-full ${activeTab === 'suppliers' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompSuppliers data={erpData || {}} pushData={pushErpData} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} triggerToast={triggerToast} documents={memoizedDocuments} /></ErrorBoundary>}</div>}
 
                                         {/* LOADING FALLBACK — Hiển thị khi module chưa sẵn sàng */}
-                                        {!isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'cashflow', 'analytics', 'business_report', 'suppliers'].includes(activeTab) && (() => {
+                                        {!isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'analytics', 'business_report', 'suppliers'].includes(activeTab) && (() => {
                                             const TAB_NAMES = {
                                                 dashboard: 'Tổng Quan & Bàn Làm Việc',
                                                 orders: 'Quản Lý Đơn Hàng',
                                                 production: 'Dây Chuyền Sản Xuất',
                                                 warehouse: 'Kho Vận & Vật Tư',
                                                 import_export: 'Xuất Nhập Tồn',
-                                                cashflow: 'Dòng Tiền & Sổ Quỹ',
+                                                finance: 'Tổng Quan Tài Chính',
+                                                cashflow: 'Sổ Quỹ & Ngân Hàng',
                                                 business_report: 'Báo Cáo Tài Chính P&L',
                                                 hr: 'Trung Tâm Nhân Sự & Bảng Lương',
                                                 documents: 'Tài Liệu & Quy Trình SOP',

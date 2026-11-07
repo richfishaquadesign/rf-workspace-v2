@@ -993,6 +993,8 @@ const AccountModal = React.memo(function AccountModal({ initialData, onClose, on
                         >
                             <option value="Ngân hàng">Tài khoản Ngân hàng</option>
                             <option value="Tiền mặt">Quỹ Tiền Mặt (Két sắt xưởng)</option>
+                            <option value="Quỹ dự trữ">Quỹ Dự Trữ (Két sắt an toàn / Vault)</option>
+                            <option value="Đầu tư">Tài khoản Đầu Tư (VNDC, Dài hạn)</option>
                         </select>
                     </div>
 
@@ -3026,7 +3028,21 @@ const TransactionFormModal = React.memo(function TransactionFormModal({ initialD
 // 4. MAIN TAB: FinanceTab (SỔ QUỸ THU CHI DOANH NGHIỆP)
 // -------------------------------------------------------------------------
 
-const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas, triggerToast, isAdmin: propIsAdmin, isBoss: propIsBoss, userRole: propUserRole, currentUser: propCurrentUser, hasPerm: propHasPerm, categories: customCategories, documents }) {
+const FinanceTab = React.memo(function FinanceTab({ 
+    orders, 
+    erpData, 
+    pushDeltas, 
+    triggerToast, 
+    isAdmin: propIsAdmin, 
+    isBoss: propIsBoss, 
+    userRole: propUserRole, 
+    currentUser: propCurrentUser, 
+    hasPerm: propHasPerm, 
+    categories: customCategories, 
+    documents,
+    tabMode: propTabMode,
+    onNavigateTab
+}) {
     const rawRole = propUserRole || localStorage.getItem('rf_role') || '';
     let currentRole = String(rawRole).trim().toUpperCase();
     if (currentRole === 'KETOAN' || currentRole === 'KE TOAN') currentRole = 'KẾ TOÁN';
@@ -3035,6 +3051,18 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
     const isBoss = propIsBoss !== undefined ? propIsBoss : isBossRole;
     const isAdmin = propIsAdmin !== undefined ? propIsAdmin : (localStorage.getItem('rf_admin') === 'true' || isBoss);
     const isAccountant = currentRole === 'KẾ TOÁN' || currentRole === 'KETOAN' || currentRole === 'KE TOAN' || currentUser.includes('Trang');
+
+    // Phân định chế độ hiển thị: OVERVIEW (Tài Chính) hoặc LEDGER (Sổ Quỹ)
+    const effectiveMode = propTabMode || (typeof window !== 'undefined' && window.__rfCurrentActiveTab === 'cashflow' ? 'LEDGER' : 'OVERVIEW');
+    const navigateTo = React.useCallback((tabId, mode) => {
+        if (typeof onNavigateTab === 'function') {
+            onNavigateTab(tabId, mode);
+        } else if (typeof window.handleNavigateTab === 'function') {
+            window.handleNavigateTab(tabId, mode);
+        } else if (typeof window.navigateTab === 'function') {
+            window.navigateTab(tabId, mode);
+        }
+    }, [onNavigateTab]);
 
     const hasPerm = React.useCallback((actionCode) => {
         if (isBoss || currentRole === 'TỐI CAO') return true;
@@ -3068,16 +3096,30 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
         return () => window.removeEventListener('rf_categories_updated', handleUpdate);
     }, []);
 
-    const [activeSubTab, setActiveSubTab] = React.useState('OPERATING'); // OPERATING | VAULT | PARTNERS | LEDGER
+    const [activeSubTab, setActiveSubTab] = React.useState(() => {
+        return effectiveMode === 'LEDGER' ? 'LEDGER' : 'OPERATING';
+    });
+
+    React.useEffect(() => {
+        if (propTabMode === 'LEDGER' && activeSubTab !== 'LEDGER' && activeSubTab !== 'ACCOUNTS' && activeSubTab !== 'ANALYSIS') {
+            setActiveSubTab('LEDGER');
+        } else if (propTabMode === 'OVERVIEW' && activeSubTab !== 'OPERATING' && activeSubTab !== 'VAULT' && activeSubTab !== 'DEBT' && activeSubTab !== 'ANALYSIS') {
+            setActiveSubTab('OPERATING');
+        }
+    }, [propTabMode]);
 
     // Lắng nghe sự kiện mở sổ nợ / đối tác từ Dashboard
     React.useEffect(() => {
         const handleOpenPartners = () => {
-            setActiveSubTab('PARTNERS');
+            if (effectiveMode === 'OVERVIEW') {
+                setActiveSubTab('DEBT');
+            } else {
+                navigateTo('suppliers');
+            }
         };
         window.addEventListener('openPartnersTab', handleOpenPartners);
         return () => window.removeEventListener('openPartnersTab', handleOpenPartners);
-    }, []);
+    }, [effectiveMode, navigateTo]);
     const [ledgerViewMode, setLedgerViewMode] = React.useState('CASHBOOK'); // CASHBOOK | SO_QUY | THONG_KE
     const [selectedPartnerForDrawer, setSelectedPartnerForDrawer] = React.useState(null);
     const [partnerSearch, setPartnerSearch] = React.useState('');
@@ -3120,32 +3162,63 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
         });
     }, [erpData?.Accounts, localAccounts]);
 
-    // Nhận diện tài khoản Vault / Dài hạn
-    const isVaultAccount = React.useCallback((acc) => {
+    // Nhận diện tài khoản Quỹ Dự Trữ Khẩn Cấp (Reserve / Vault) - Không bao gồm tài khoản Đầu Tư VNDC
+    const isReserveAccount = React.useCallback((acc) => {
         if (!acc) return false;
         const name = String(acc.accountName || acc.name || '').toLowerCase();
         const type = String(acc.type || '').toLowerCase();
-        return name.includes('vault') || name.includes('vndc') || name.includes('đầu tư') || 
-               name.includes('dài hạn') || name.includes('dự trữ') || type.includes('đầu tư') || type.includes('vault');
+        const isInvestment = name.includes('đầu tư') || name.includes('vndc') || name.includes('chứng khoán') || type.includes('đầu tư');
+        if (isInvestment) return false;
+        return name.includes('dự trữ') || name.includes('dự phòng') || name.includes('két sắt dự trữ') || name.includes('vault') || type.includes('dự trữ') || type.includes('vault');
     }, []);
 
+    // Nhận diện tài khoản Đầu Tư Dài Hạn / VNDC riêng biệt
+    const isInvestmentAccount = React.useCallback((acc) => {
+        if (!acc) return false;
+        const name = String(acc.accountName || acc.name || '').toLowerCase();
+        const type = String(acc.type || '').toLowerCase();
+        return name.includes('đầu tư') || name.includes('vndc') || name.includes('chứng khoán') || type.includes('đầu tư');
+    }, []);
+
+    // Nhận diện tài khoản phi vận hành (Dự trữ hoặc Đầu tư)
+    const isNonOperatingAccount = React.useCallback((acc) => {
+        return isReserveAccount(acc) || isInvestmentAccount(acc);
+    }, [isReserveAccount, isInvestmentAccount]);
+
+    // Danh sách tài khoản vận hành hàng ngày (Operating Accounts)
     const operatingAccounts = React.useMemo(() => {
-        return accountsData.filter(a => !isVaultAccount(a));
-    }, [accountsData, isVaultAccount]);
+        return accountsData.filter(a => !isNonOperatingAccount(a));
+    }, [accountsData, isNonOperatingAccount]);
 
-    const vaultAccounts = React.useMemo(() => {
-        return accountsData.filter(a => isVaultAccount(a));
-    }, [accountsData, isVaultAccount]);
+    // Danh sách tài khoản Quỹ Dự Trữ Khẩn Cấp
+    const reserveAccounts = React.useMemo(() => {
+        return accountsData.filter(a => isReserveAccount(a));
+    }, [accountsData, isReserveAccount]);
 
+    // Tương thích ngược: vaultAccounts trỏ tới reserveAccounts
+    const vaultAccounts = reserveAccounts;
+
+    // Danh sách tài khoản Đầu Tư (VNDC, ...)
+    const investmentAccounts = React.useMemo(() => {
+        return accountsData.filter(a => isInvestmentAccount(a));
+    }, [accountsData, isInvestmentAccount]);
+
+    // Số dư vận hành
     const operatingCash = React.useMemo(() => {
         return operatingAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
     }, [operatingAccounts]);
 
-    // Quỹ Vault Tầng 2: Nếu có tài khoản trong CSDL thì tính tổng, nếu chưa thì hiển thị mức cam kết sàn 689M VNDC
+    // Quỹ Dự Trữ: Chỉ tính tổng từ các tài khoản dự trữ thực tế trong CSDL, KHÔNG tự tạo giá trị mặc định 689 triệu
+    const hasReserveFund = reserveAccounts.length > 0;
     const vaultReserveTotal = React.useMemo(() => {
-        const fromAccs = vaultAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-        return fromAccs > 0 ? fromAccs : 689000000;
-    }, [vaultAccounts]);
+        if (!hasReserveFund) return null;
+        return reserveAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    }, [reserveAccounts, hasReserveFund]);
+
+    // Tổng số dư Tài Khoản Đầu Tư VNDC riêng biệt
+    const investmentTotal = React.useMemo(() => {
+        return investmentAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    }, [investmentAccounts]);
 
     // Helper kiểm tra giao dịch điều chỉnh số dư kỹ thuật
     const isAdjustmentTx = React.useCallback((t) => {
@@ -3977,90 +4050,110 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
     return (
         <div className="space-y-3.5 pb-12 w-full">
             
-            {/* 1. TOP SUB-TABS (FOUR SEASONS SOLID MATTE) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 bg-[#202228] p-1 rounded-2xl gap-1 border-0 shadow-md">
-                <button 
-                    onClick={() => setActiveSubTab('OPERATING')} 
-                    className={`py-2.5 px-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                        activeSubTab === 'OPERATING' 
-                            ? 'bg-[#282b33] text-white shadow-none font-black' 
-                            : 'bg-transparent text-zinc-400 hover:text-white'
-                    }`}
-                >
-                    <i className="fas fa-wallet text-xs text-[#2E9599]"></i> <span className="truncate">Dòng Tiền & Vốn Khả Dụng</span>
-                </button>
-                <button 
-                    onClick={() => setActiveSubTab('VAULT')} 
-                    className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                        activeSubTab === 'VAULT' 
-                            ? 'bg-[#282b33] text-white shadow-none font-black' 
-                            : 'bg-transparent text-zinc-400 hover:text-white'
-                    }`}
-                >
-                    <i className="fas fa-shield-halved text-xs text-[#F7DC68]"></i> <span className="truncate">Quỹ Dự Trữ Khẩn Cấp</span>
-                </button>
-                <button 
-                    onClick={() => setActiveSubTab('PARTNERS')} 
-                    className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                        activeSubTab === 'PARTNERS' 
-                            ? 'bg-[#282b33] text-white shadow-none font-black' 
-                            : 'bg-transparent text-zinc-400 hover:text-white'
-                    }`}
-                >
-                    <i className="fas fa-building-columns text-xs text-[#F46C3F]"></i> <span className="truncate">Sổ Đối Tác & Công Nợ</span>
-                </button>
-                <button 
-                    onClick={() => setActiveSubTab('LEDGER')} 
-                    className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                        activeSubTab === 'LEDGER' 
-                            ? 'bg-[#282b33] text-white shadow-none font-black' 
-                            : 'bg-transparent text-zinc-400 hover:text-white'
-                    }`}
-                >
-                    <i className="fas fa-book text-xs text-[#A7226F]"></i> <span className="truncate">Sổ Nhật Ký Thu Chi</span>
-                </button>
-            </div>
+            {/* 1. TOP SUB-TABS (TÁCH BIỆT RÕ RÀNG THEO KIẾN TRÚC RF-30) */}
+            {effectiveMode === 'OVERVIEW' ? (
+                /* MENU PHÂN HỆ TÀI CHÍNH (FINANCIAL OVERVIEW): TỔNG HỢP, DỰ TRỮ, CÔNG NỢ, DỰ BÁO */
+                <div className="grid grid-cols-2 sm:grid-cols-4 bg-[#202228] p-1 rounded-2xl gap-1 border-0 shadow-md">
+                    <button 
+                        onClick={() => setActiveSubTab('OPERATING')} 
+                        className={`py-2.5 px-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'OPERATING' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-wallet text-xs text-[#2E9599]"></i> <span className="truncate">Dòng Tiền & Vốn Khả Dụng</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveSubTab('VAULT')} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'VAULT' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-shield-halved text-xs text-[#F7DC68]"></i> <span className="truncate">Quỹ Dự Trữ & Đầu Tư</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveSubTab('DEBT')} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'DEBT' || activeSubTab === 'PARTNERS' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-building-columns text-xs text-[#F46C3F]"></i> <span className="truncate">Công Nợ Tổng Hợp</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveSubTab('ANALYSIS')} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'ANALYSIS' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-chart-pie text-xs text-[#A7226F]"></i> <span className="truncate">Cơ Cấu Chi Phí OPEX</span>
+                    </button>
+                </div>
+            ) : (
+                /* MENU PHÂN HỆ SỔ QUỸ (CASH & BANK LEDGER): GHI CHÉP GIAO DỊCH, QUẢN LÝ QUỸ, BÁO CÁO THU CHI */
+                <div className="grid grid-cols-3 bg-[#202228] p-1 rounded-2xl gap-1 border-0 shadow-md">
+                    <button 
+                        onClick={() => { setActiveSubTab('LEDGER'); setLedgerViewMode('CASHBOOK'); }} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'LEDGER' && ledgerViewMode === 'CASHBOOK' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-book text-xs text-[#F7DC68]"></i> <span className="truncate">Sổ Nhật Ký Thu Chi</span>
+                    </button>
+                    <button 
+                        onClick={() => { setActiveSubTab('LEDGER'); setLedgerViewMode('SO_QUY'); }} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'LEDGER' && ledgerViewMode === 'SO_QUY' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-university text-xs text-[#2E9599]"></i> <span className="truncate">Quản Lý Quỹ & Tài Khoản</span>
+                    </button>
+                    <button 
+                        onClick={() => { setActiveSubTab('LEDGER'); setLedgerViewMode('THONG_KE'); }} 
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                            activeSubTab === 'LEDGER' && ledgerViewMode === 'THONG_KE' 
+                                ? 'bg-[#282b33] text-white shadow-none font-black' 
+                                : 'bg-transparent text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <i className="fas fa-chart-pie text-xs text-[#F46C3F]"></i> <span className="truncate">Báo Cáo Thu Chi Kỳ</span>
+                    </button>
+                </div>
+            )}
 
             {/* 2. ACTION BAR & TIME FILTER (FOUR SEASONS SOLID MATTE) */}
             <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#202228] p-2.5 sm:p-3 rounded-2xl border-0 shadow-md">
                 {/* Cụm nút hành động bên trái */}
                 <div className="flex items-center gap-2 shrink-0">
-                    {canManageFinance && (
+                    {effectiveMode === 'OVERVIEW' ? (
+                        /* TÀI CHÍNH: CHỈ ĐỌC & TỔNG HỢP - CUNG CẤP LIÊN KẾT NHANH SANG SỔ QUỸ & ĐỐI TÁC */
                         <>
                             <button 
-                                onClick={handleOpenAddTx} 
-                                className="h-9 px-3.5 bg-[#F46C3F] hover:bg-[#ff7d52] text-white font-black rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer shrink-0 text-xs tracking-wide border-0"
-                                title="Tạo Phiếu Thu / Chi Mới"
+                                onClick={() => navigateTo('cashflow')} 
+                                className="h-9 px-3.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-300 font-bold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer shrink-0 text-xs tracking-wide border border-amber-500/30"
+                                title="Mở Sổ Quỹ để lập phiếu thu/chi, nhập sao kê ngân hàng và đối soát"
                             >
-                                <i className="fas fa-plus text-xs"></i>
-                                <span>Tạo Phiếu</span>
+                                <i className="fas fa-book-open text-xs"></i>
+                                <span>Mở Sổ Quỹ Thu Chi →</span>
                             </button>
 
                             <button 
-                                onClick={() => setShowImportScanner(true)} 
+                                onClick={() => navigateTo('suppliers')} 
                                 className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
-                                title="Quét Sao Kê Bank Excel/CSV"
+                                title="Mở phân hệ quản lý công nợ Nhà Cung Cấp & Đối Tác"
                             >
-                                <i className="fas fa-file-invoice-dollar text-zinc-400"></i>
-                                <span className="hidden sm:inline">Sao Kê</span>
-                            </button>
-                            
-                            <button 
-                                onClick={() => setShowShopeeWalletScanner(true)} 
-                                className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
-                                title="Quét Báo Cáo Ví Shopee"
-                            >
-                                <i className="fas fa-wallet text-zinc-400"></i>
-                                <span className="hidden sm:inline">Ví Shopee</span>
-                            </button>
-
-                            <button 
-                                onClick={() => setShowReceiptScanner(true)} 
-                                className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
-                                title="Đọc ảnh chụp bill bằng AI OCR"
-                            >
-                                <i className="fas fa-camera text-zinc-400"></i>
-                                <span className="hidden sm:inline">OCR Bill</span>
+                                <i className="fas fa-handshake text-zinc-400"></i>
+                                <span className="hidden sm:inline">Sổ Đối Tác & NCC</span>
                             </button>
 
                             <button 
@@ -4075,6 +4168,68 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
                                 <span className="hidden lg:inline">Ghi Chú</span>
                             </button>
                         </>
+                    ) : (
+                        /* SỔ QUỸ: CHỊU TRÁCH NHIỆM GHI NHẬN - ĐẦY ĐỦ CÔNG CỤ TẠO PHIẾU, SAO KÊ, OCR */
+                        canManageFinance && (
+                            <>
+                                <button 
+                                    onClick={handleOpenAddTx} 
+                                    className="h-9 px-3.5 bg-[#F46C3F] hover:bg-[#ff7d52] text-white font-black rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer shrink-0 text-xs tracking-wide border-0"
+                                    title="Tạo Phiếu Thu / Chi Mới"
+                                >
+                                    <i className="fas fa-plus text-xs"></i>
+                                    <span>Tạo Phiếu</span>
+                                </button>
+
+                                <button 
+                                    onClick={() => setShowImportScanner(true)} 
+                                    className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
+                                    title="Quét Sao Kê Bank Excel/CSV"
+                                >
+                                    <i className="fas fa-file-invoice-dollar text-zinc-400"></i>
+                                    <span className="hidden sm:inline">Sao Kê</span>
+                                </button>
+                                
+                                <button 
+                                    onClick={() => setShowShopeeWalletScanner(true)} 
+                                    className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
+                                    title="Quét Báo Cáo Ví Shopee"
+                                >
+                                    <i className="fas fa-wallet text-zinc-400"></i>
+                                    <span className="hidden sm:inline">Ví Shopee</span>
+                                </button>
+
+                                <button 
+                                    onClick={() => setShowReceiptScanner(true)} 
+                                    className="h-9 px-3 bg-[#18191d] hover:bg-[#282b33] text-zinc-300 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
+                                    title="Đọc ảnh chụp bill bằng AI OCR"
+                                >
+                                    <i className="fas fa-camera text-zinc-400"></i>
+                                    <span className="hidden sm:inline">OCR Bill</span>
+                                </button>
+
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowQuickNotes(prev => !prev)}
+                                    className={`h-9 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 text-xs font-semibold border-0 ${
+                                        showQuickNotes ? 'bg-[#F7DC68] text-zinc-950 font-bold' : 'bg-[#18191d] hover:bg-[#282b33] text-zinc-300'
+                                    }`} 
+                                    title="Ghi chú & nhắc việc tài chính"
+                                >
+                                    <i className={`fas fa-note-sticky ${showQuickNotes ? 'text-zinc-950' : 'text-zinc-400'}`}></i>
+                                    <span className="hidden lg:inline">Ghi Chú</span>
+                                </button>
+
+                                <button 
+                                    onClick={() => navigateTo('finance')} 
+                                    className="h-9 px-2.5 bg-[#18191d] hover:bg-[#282b33] text-zinc-400 hover:text-amber-300 rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 text-xs font-semibold active:scale-95 border-0" 
+                                    title="Chuyển sang Tổng Quan Tài Chính & Vốn Khả Dụng"
+                                >
+                                    <i className="fas fa-chart-pie text-xs"></i>
+                                    <span className="hidden md:inline">Tổng Quan</span>
+                                </button>
+                            </>
+                        )
                     )}
                 </div>
 
@@ -4104,7 +4259,7 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
                 </div>
             </div>
 
-            {/* THANH TAB CUỘN NGANG CÁC TÀI KHOẢN / QUỸ (TỐI GIẢN) */}
+            {/* THANH TAB CUỘN NGANG CÁC TÀI KHOẢN / QUỸ (TỐI GIẢN - HIỂN THỊ Ở SỔ QUỸ HOẶC KHI CẦN LỌC) */}
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-0.5 px-0.5">
                 {/* Nút Tất Cả Quỹ */}
                 <button 
@@ -4248,12 +4403,25 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
                                     <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                                         Quỹ Dự Phòng Khẩn Cấp
                                     </span>
-                                    <span className="text-[10px] font-bold text-amber-200 bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
-                                        Bảo Vệ
+                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                                        hasReserveFund 
+                                            ? 'text-amber-200 bg-amber-500/20 border-amber-500/30' 
+                                            : 'text-zinc-400 bg-zinc-800/60 border-zinc-700/50'
+                                    }`}>
+                                        {hasReserveFund ? 'Bảo Vệ' : 'Chưa Thiết Lập'}
                                     </span>
                                 </div>
-                                <div className="text-2xl font-mono font-bold text-white tracking-tight">
-                                    {formatFinanceMoney(vaultReserveTotal)} <span className="text-xs text-zinc-400 font-normal">VNDC</span>
+                                <div className="tracking-tight">
+                                    {hasReserveFund ? (
+                                        <div className="text-2xl font-mono font-bold text-white">
+                                            {formatFinanceMoney(vaultReserveTotal)} <span className="text-xs text-zinc-400 font-normal">VNĐ</span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm sm:text-base font-bold text-amber-300/90 italic flex items-center gap-1.5 py-1">
+                                            <i className="fas fa-circle-exclamation text-xs text-amber-400"></i>
+                                            <span>Chưa thiết lập số dư</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
@@ -4409,7 +4577,7 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
             )}
 
             {/* ========================================================================= */}
-            {/* 4. SUB-TAB 2: VAULT 689M VNDC (KÉT SẮT DỰ TRỮ CHIẾN LƯỢC TẦNG 2)          */}
+            {/* 4. SUB-TAB 2: KÉT SẮT DỰ TRỮ CHIẾN LƯỢC TẦNG 2                            */}
             {/* ========================================================================= */}
             {activeSubTab === 'VAULT' && (
                 <div className="space-y-4 animate-fade-in w-full">
@@ -4422,23 +4590,39 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                        <h2 className="text-lg font-black text-white uppercase tracking-wider">Két Sắt Dự Trữ & Quỹ Đầu Tư Dài Hạn (Tầng 2)</h2>
-                                        <span className="bg-yellow-950/80 text-yellow-300 border border-yellow-500/50 text-[10px] font-black px-2.5 py-0.5 rounded-full">
-                                            BẢO TOÀN VỐN 100%
+                                        <h2 className="text-lg font-black text-white uppercase tracking-wider">Két Sắt Dự Trữ An Toàn (Tầng 2)</h2>
+                                        <span className={`border text-[10px] font-black px-2.5 py-0.5 rounded-full ${
+                                            hasReserveFund 
+                                                ? 'bg-yellow-950/80 text-yellow-300 border-yellow-500/50' 
+                                                : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/60'
+                                        }`}>
+                                            {hasReserveFund ? 'BẢO TOÀN VỐN 100%' : 'CHƯA THIẾT LẬP'}
                                         </span>
                                     </div>
                                     <p className="text-xs text-zinc-400 max-w-xl leading-relaxed">
-                                        Quỹ dự trữ chiến lược tách biệt tuyệt đối khỏi tài khoản vận hành xưởng. Nghiêm cấm trích chi cho OPEX hàng ngày.
+                                        Quỹ dự trữ chiến lược tách biệt tuyệt đối khỏi tài khoản vận hành xưởng và tách biệt khỏi tài khoản đầu tư. Nghiêm cấm trích chi cho OPEX hàng ngày.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="text-center md:text-right bg-[#09090b] px-6 py-4 rounded-2xl border border-yellow-500/20 shadow-inner">
+                            <div className="text-center md:text-right bg-[#09090b] px-6 py-4 rounded-2xl border border-yellow-500/20 shadow-inner min-w-[240px]">
                                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider block mb-1">Tổng Số Dư Khóa An Toàn</span>
-                                <div className="text-3xl sm:text-4xl font-mono font-black text-yellow-300 tracking-tight">
-                                    {formatFinanceMoney(vaultReserveTotal)} <span className="text-base text-yellow-400">VNDC</span>
-                                </div>
-                                <span className="text-[10px] text-zinc-500 font-mono mt-1 block">Tương đương 689.000.000 VNĐ</span>
+                                {hasReserveFund ? (
+                                    <>
+                                        <div className="text-3xl sm:text-4xl font-mono font-black text-yellow-300 tracking-tight">
+                                            {formatFinanceMoney(vaultReserveTotal)} <span className="text-base text-yellow-400">VNĐ</span>
+                                        </div>
+                                        <span className="text-[10px] text-zinc-500 font-mono mt-1 block">Xác thực từ dữ liệu CSDL</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-xl sm:text-2xl font-bold text-amber-300/90 tracking-tight py-1 flex items-center justify-center md:justify-end gap-2">
+                                            <i className="fas fa-circle-exclamation text-amber-400 text-sm"></i>
+                                            <span>Chưa thiết lập số dư</span>
+                                        </div>
+                                        <span className="text-[10px] text-zinc-500 font-mono mt-0.5 block">Chưa có tài khoản Quỹ Dự Trữ trong CSDL</span>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -4470,182 +4654,269 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {/* ========================================================================= */}
-            {/* 5. SUB-TAB 3: SỔ ĐỐI TÁC & CÔNG NỢ 3 NHÓM (PARTNERS)                       */}
-            {/* ========================================================================= */}
-            {activeSubTab === 'PARTNERS' && (
-                <div className="space-y-3.5 animate-fade-in w-full">
-                    {/* THANH CÔNG CỤ TÌM KIẾM & LỌC NHÓM ĐỐI TÁC */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-[#121214] p-3 rounded-2xl border border-white/[0.06]">
-                        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
-                            {[
-                                { key: 'ALL', label: 'Tất Cả', icon: 'fa-layer-group' },
-                                { key: 'SUPPLIER', label: 'Vật Tư & Xưởng', icon: 'fa-cubes' },
-                                { key: 'CARRIER', label: 'Sàn & Vận Chuyển', icon: 'fa-truck-fast' },
-                                { key: 'CTV', label: 'CTV & Khách Sỉ', icon: 'fa-users' }
-                            ].map(tab => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => setPartnerGroupFilter(tab.key)}
-                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 active:scale-95 ${
-                                        partnerGroupFilter === tab.key
-                                            ? 'bg-sky-500/20 text-sky-300 border border-sky-500/50 shadow-sm font-black'
-                                            : 'bg-[#09090b] text-zinc-400 hover:text-white border border-white/[0.04]'
-                                    }`}
-                                >
-                                    <i className={`fas ${tab.icon} text-xs`}></i>
-                                    <span>{tab.label}</span>
-                                </button>
-                            ))}
-                        </div>
+                    {/* PHÂN ĐỊNH RÕ 2 DANH MỤC TÀI KHOẢN THEO YÊU CẦU RF-29 */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* CỘT 1: TÀI KHOẢN QUỸ DỰ TRỮ (VAULT / RESERVE) */}
+                        <div className="bg-[#121214] border border-white/[0.06] p-4 sm:p-5 rounded-3xl">
+                            <div className="flex items-center justify-between mb-3 border-b border-white/[0.06] pb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm border border-amber-500/20">
+                                        <i className="fas fa-vault"></i>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Tài Khoản Quỹ Dự Trữ Khẩn Cấp</h3>
+                                        <p className="text-[10px] text-zinc-500">Khóa an toàn độc lập bảo vệ xưởng</p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-amber-400 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                                    {reserveAccounts.length} Tài khoản
+                                </span>
+                            </div>
 
-                        <div className="relative min-w-[220px]">
-                            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-                            <input
-                                type="text"
-                                value={partnerSearch}
-                                onChange={e => setPartnerSearch(e.target.value)}
-                                placeholder="Tìm đối tác, SĐT, danh mục..."
-                                className="w-full bg-[#09090b] border border-zinc-800 text-xs text-white pl-8 pr-3 py-2 rounded-xl outline-none focus:border-sky-400/60"
-                            />
-                        </div>
-                    </div>
-
-                    {/* HIGH-DENSITY PARTNERS TABLE (h-14 STANDARD) */}
-                    <div className="bg-[#121214] border border-white/[0.06] rounded-3xl overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto hide-scrollbar">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-white/[0.06] bg-[#09090b]/80 text-[10.5px] text-zinc-400 font-black uppercase tracking-wider h-11">
-                                        <th className="px-4 py-2">Đối Tác</th>
-                                        <th className="px-4 py-2">Phân Nhóm</th>
-                                        <th className="px-4 py-2">Liên Hệ / Kênh</th>
-                                        <th className="px-4 py-2 text-right">Công Nợ Hiện Tại</th>
-                                        <th className="px-4 py-2 text-center">Thao Tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/[0.04] text-xs">
-                                    {partnersList
-                                        .filter(p => {
-                                            if (partnerGroupFilter !== 'ALL' && p.group !== partnerGroupFilter) return false;
-                                            if (partnerSearch) {
-                                                const q = partnerSearch.toLowerCase();
-                                                return p.name.toLowerCase().includes(q) || (p.phone && p.phone.toLowerCase().includes(q)) || (p.category && p.category.toLowerCase().includes(q));
-                                            }
-                                            return true;
-                                        })
-                                        .map(partner => (
-                                            <tr key={partner.id} className="h-14 hover:bg-white/[0.02] transition-colors">
-                                                <td className="px-4 py-2">
-                                                    <div className="font-bold text-white text-xs">{partner.name}</div>
-                                                    <div className="text-[10px] text-zinc-500">{partner.category}</div>
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                                        partner.group === 'SUPPLIER'
-                                                            ? 'bg-amber-950/40 text-amber-300 border-amber-500/30'
-                                                            : partner.group === 'CARRIER'
-                                                            ? 'bg-sky-950/40 text-sky-300 border-sky-500/30'
-                                                            : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
-                                                    }`}>
-                                                        {partner.groupLabel}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2 font-mono text-zinc-400 text-[11px]">
-                                                    {partner.phone}
-                                                </td>
-                                                <td className="px-4 py-2 text-right font-mono font-black">
-                                                    {partner.debt > 0 ? (
-                                                        <span className={partner.isPayable ? 'text-rose-400' : 'text-emerald-400'}>
-                                                            {partner.isPayable ? 'Nợ: ' : 'Thu: '}{formatFinanceMoney(partner.debt)}đ
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-zinc-500">0đ (Đã cân đối)</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <button
-                                                            onClick={() => setSelectedPartnerForDrawer(partner)}
-                                                            className="h-8 px-2.5 bg-zinc-900 hover:bg-sky-950/60 text-zinc-300 hover:text-sky-300 border border-zinc-800 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                                                            title="Xem thẻ công nợ 60 ngày"
-                                                        >
-                                                            <i className="fas fa-file-invoice text-xs text-sky-400"></i>
-                                                            <span>Thẻ 60 Ngày</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingTxData({
-                                                                    type: partner.isPayable ? 'Chi' : 'Thu',
-                                                                    category: partner.group === 'SUPPLIER' ? 'Vật Tư & Xưởng' : 'Đối Tác & CTV',
-                                                                    amount: partner.debt > 0 ? String(partner.debt) : '',
-                                                                    title: partner.name,
-                                                                    note: `Thanh toán đối soát công nợ [${partner.name}]`,
-                                                                    fromAccount: accountsData[0]?.id || '',
-                                                                    toAccount: '',
-                                                                    date: new Date().toISOString().slice(0, 10),
-                                                                    time: formatTime24h()
-                                                                });
-                                                                setShowAddTx(true);
-                                                            }}
-                                                            className="h-8 px-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                                                            title="Lập lệnh thanh toán 1-chạm"
-                                                        >
-                                                            <i className="fas fa-plus text-[10px]"></i>
-                                                            <span>Lập Lệnh</span>
-                                                        </button>
+                            {reserveAccounts.length === 0 ? (
+                                <div className="p-6 text-center bg-[#09090b] rounded-2xl border border-dashed border-zinc-800 text-xs text-zinc-400 space-y-2">
+                                    <i className="fas fa-shield-halved text-2xl text-zinc-600 mb-1 block"></i>
+                                    <p className="font-bold text-zinc-300">Chưa cấu hình Quỹ Dự Trữ trong CSDL</p>
+                                    <p className="text-[11px] text-zinc-500 max-w-sm mx-auto">
+                                        Hệ thống không tự giả định số dư. Bạn có thể thêm tài khoản loại "Quỹ Dự Trữ" tại danh mục Tài Khoản khi cần thiết lập.
+                                    </p>
+                                    {isBoss && (
+                                        <button
+                                            onClick={() => { setEditingAccount({ type: 'Tiền mặt', accountName: 'KÉT SẮT DỰ TRỮ KHẨN CẤP' }); setShowAccountModal(true); }}
+                                            className="mt-2 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold hover:bg-amber-500/30 transition-all cursor-pointer"
+                                        >
+                                            <i className="fas fa-plus mr-1"></i> Thêm Tài Khoản Quỹ Dự Trữ
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {reserveAccounts.map(acc => {
+                                        const parsed = parseAccountInfo(acc);
+                                        return (
+                                            <div key={acc.id} className="p-3 bg-[#09090b] rounded-2xl border border-white/[0.04] flex items-center justify-between">
+                                                <div>
+                                                    <div className="font-bold text-white text-xs">{parsed.name}</div>
+                                                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                        {parsed.type} {parsed.number ? `· STK: ${parsed.number}` : ''}
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                </tbody>
-                            </table>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-mono font-black text-amber-300 text-sm">{secureMoney(parsed.balance)}đ</div>
+                                                    <span className="text-[9px] text-emerald-400 font-semibold">Khóa An Toàn</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* CỘT 2: TÀI KHOẢN ĐẦU TƯ VNDC & TÀI SẢN DÀI HẠN (TÁCH BIỆT HOÀN TOÀN) */}
+                        <div className="bg-[#121214] border border-white/[0.06] p-4 sm:p-5 rounded-3xl">
+                            <div className="flex items-center justify-between mb-3 border-b border-white/[0.06] pb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm border border-emerald-500/20">
+                                        <i className="fas fa-chart-line"></i>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Tài Khoản Đầu Tư & VNDC</h3>
+                                        <p className="text-[10px] text-zinc-500">Tài sản tài chính (tách biệt khỏi quỹ dự trữ)</p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-lg">
+                                    {investmentAccounts.length} Tài khoản
+                                </span>
+                            </div>
+
+                            {investmentAccounts.length === 0 ? (
+                                <div className="p-6 text-center bg-[#09090b] rounded-2xl border border-dashed border-zinc-800 text-xs text-zinc-400">
+                                    <i className="fas fa-coins text-2xl text-zinc-600 mb-1 block"></i>
+                                    <p className="font-bold text-zinc-300">Không có tài khoản đầu tư VNDC nào</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {investmentAccounts.map(acc => {
+                                        const parsed = parseAccountInfo(acc);
+                                        return (
+                                            <div key={acc.id} className="p-3 bg-[#09090b] rounded-2xl border border-white/[0.04] flex items-center justify-between">
+                                                <div>
+                                                    <div className="font-bold text-white text-xs">{parsed.name}</div>
+                                                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                        {parsed.type} {parsed.number ? `· STK: ${parsed.number}` : ''} {parsed.owner ? `· ${parsed.owner}` : ''}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-mono font-black text-emerald-400 text-sm">
+                                                        {secureMoney(parsed.balance)} {parsed.name.toUpperCase().includes('VNDC') ? 'VNDC' : 'đ'}
+                                                    </div>
+                                                    <span className="text-[9px] text-zinc-500 font-semibold">Tài Sản Đầu Tư</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="mt-3 p-2.5 bg-[#09090b]/60 rounded-xl text-[10px] text-zinc-400 flex items-center gap-1.5 border border-white/[0.03]">
+                                        <i className="fas fa-info-circle text-sky-400 shrink-0"></i>
+                                        <span>Tài sản đầu tư được theo dõi độc lập từ CSDL, không gộp vào chỉ số Quỹ Dự Trữ hay Vốn Khả Dụng.</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
 
             {/* ========================================================================= */}
-            {/* 6. SUB-TAB 4: SỔ NHẬT KÝ THU CHI & QUẢN LÝ QUỸ (LEDGER)                    */}
+            {/* 5. SUB-TAB 3: TỔNG HỢP CÔNG NỢ (CHỈ DÀNH CHO PHÂN HỆ TÀI CHÍNH)          */}
             {/* ========================================================================= */}
-            {activeSubTab === 'LEDGER' && (
-                <div className="space-y-3.5 animate-fade-in w-full">
-                    {/* SUB-VIEW TOGGLE (FOUR SEASONS SOLID MATTE) */}
-                    <div className="grid grid-cols-3 bg-[#202228] p-1 rounded-2xl border-0 gap-1 shadow-md">
+            {effectiveMode === 'OVERVIEW' && (activeSubTab === 'DEBT' || activeSubTab === 'PARTNERS') && (
+                <div className="space-y-4 animate-fade-in w-full">
+                    {/* BENTO CARDS: CÔNG NỢ 3 NHÓM CHUẨN KẾ TOÁN */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        {/* Nhóm 1: Nhà cung cấp & Xưởng */}
+                        <div className="vision-card p-4 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                                        Nợ Phải Trả NCC Vật Tư
+                                    </span>
+                                    <span className="text-[10px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-full">
+                                        Phải Trả (AP)
+                                    </span>
+                                </div>
+                                <div className="text-2xl font-mono font-bold text-rose-400 tracking-tight">
+                                    {secureMoney(totalDebtSuppliers)}đ
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+                                <span>{erpData?.Suppliers?.length || 0} Nhà Cung Cấp</span>
+                                <span 
+                                    onClick={() => navigateTo('suppliers')} 
+                                    className="text-amber-300 hover:underline font-bold cursor-pointer"
+                                >
+                                    Xem Chi Tiết →
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Nhóm 2: Sàn TMĐT & Vận chuyển */}
+                        <div className="vision-card p-4 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                                        Sàn TMĐT & Vận Chuyển
+                                    </span>
+                                    <span className="text-[10px] font-bold text-sky-300 bg-sky-500/20 border border-sky-500/30 px-2.5 py-0.5 rounded-full">
+                                        Luân Chuyển
+                                    </span>
+                                </div>
+                                <div className="text-2xl font-mono font-bold text-sky-300 tracking-tight">
+                                    Đang Đối Soát
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+                                <span>Shopee, TikTok, GHN, ViettelPost</span>
+                                <span 
+                                    onClick={() => navigateTo('orders')} 
+                                    className="text-sky-300 hover:underline font-bold cursor-pointer"
+                                >
+                                    Xem Đơn Hàng →
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Nhóm 3: CTV & Khách sỉ */}
+                        <div className="vision-card p-4 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                                        Cộng Tác Viên & Đại Lý
+                                    </span>
+                                    <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                        Hoa Hồng
+                                    </span>
+                                </div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400 tracking-tight">
+                                    {(erpData?.CTV_Finance || []).length} Hồ Sơ
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-white/[0.06] text-[11px] text-zinc-400 flex items-center justify-between">
+                                <span>Kênh phân phối ngoài sàn</span>
+                                <span 
+                                    onClick={() => navigateTo('affiliate')} 
+                                    className="text-emerald-300 hover:underline font-bold cursor-pointer"
+                                >
+                                    Xem CTV →
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BANNER ĐIỀU HƯỚNG TẬP TRUNG SANG PHÂN HỆ ĐỐI TÁC (TUÂN THỦ YÊU CẦU RF-30) */}
+                    <div className="bg-[#121214] border border-amber-500/20 p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl border border-amber-500/20 shrink-0">
+                                <i className="fas fa-handshake"></i>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-white">Sổ Đối Tác & Quản Lý Công Nợ Nhà Cung Cấp</h4>
+                                <p className="text-xs text-zinc-400 mt-0.5 max-w-xl">
+                                    Để giữ tính độc lập và chống phân mảnh dữ liệu, danh bạ đối tác, công nợ chi tiết, thẻ 60 ngày và lịch sử giao dịch từng nhà cung cấp được quản lý tập trung tại phân hệ <strong>Đối Tác</strong>.
+                                </p>
+                            </div>
+                        </div>
                         <button 
-                            onClick={() => setLedgerViewMode('CASHBOOK')} 
-                            className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                                ledgerViewMode === 'CASHBOOK' 
-                                    ? 'bg-[#282b33] text-white font-black shadow-none' 
-                                    : 'bg-transparent text-zinc-400 hover:text-white'
-                            }`}
+                            onClick={() => navigateTo('suppliers')}
+                            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap active:scale-95 shrink-0"
                         >
-                            <i className="fas fa-book-open text-xs text-[#F7DC68]"></i> <span className="truncate">Sổ Quỹ Thu Chi</span>
-                        </button>
-                        <button 
-                            onClick={() => setLedgerViewMode('SO_QUY')} 
-                            className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                                ledgerViewMode === 'SO_QUY' 
-                                    ? 'bg-[#282b33] text-white font-black shadow-none' 
-                                    : 'bg-transparent text-zinc-400 hover:text-white'
-                            }`}
-                        >
-                            <i className="fas fa-university text-xs text-[#2E9599]"></i> <span className="truncate">Danh Sách Quỹ</span>
-                        </button>
-                        <button 
-                            onClick={() => setLedgerViewMode('THONG_KE')} 
-                            className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
-                                ledgerViewMode === 'THONG_KE' 
-                                    ? 'bg-[#282b33] text-white font-black shadow-none' 
-                                    : 'bg-transparent text-zinc-400 hover:text-white'
-                            }`}
-                        >
-                            <i className="fas fa-chart-pie text-xs text-[#F46C3F]"></i> <span className="truncate">Báo Cáo Cơ Cấu</span>
+                            <span>Mở Sổ Đối Tác Chi Tiết</span>
+                            <i className="fas fa-arrow-right text-xs"></i>
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* 6. SUB-TAB 4: SỔ NHẬT KÝ THU CHI & QUẢN LÝ QUỸ (SỔ QUỸ / TỔNG HỢP)         */}
+            {/* ========================================================================= */}
+            {(effectiveMode === 'LEDGER' || activeSubTab === 'LEDGER' || activeSubTab === 'ANALYSIS') && (
+                <div className="space-y-3.5 animate-fade-in w-full">
+                    {/* Chỉ hiển thị sub-view toggle khi đang ở tab Sổ Quỹ */}
+                    {effectiveMode === 'LEDGER' && (
+                        <div className="grid grid-cols-3 bg-[#202228] p-1 rounded-2xl border-0 gap-1 shadow-md">
+                            <button 
+                                onClick={() => setLedgerViewMode('CASHBOOK')} 
+                                className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                                    ledgerViewMode === 'CASHBOOK' 
+                                        ? 'bg-[#282b33] text-white font-black shadow-none' 
+                                        : 'bg-transparent text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <i className="fas fa-book-open text-xs text-[#F7DC68]"></i> <span className="truncate">Sổ Quỹ Thu Chi</span>
+                            </button>
+                            <button 
+                                onClick={() => setLedgerViewMode('SO_QUY')} 
+                                className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                                    ledgerViewMode === 'SO_QUY' 
+                                        ? 'bg-[#282b33] text-white font-black shadow-none' 
+                                        : 'bg-transparent text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <i className="fas fa-university text-xs text-[#2E9599]"></i> <span className="truncate">Danh Sách Quỹ</span>
+                            </button>
+                            <button 
+                                onClick={() => setLedgerViewMode('THONG_KE')} 
+                                className={`py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${
+                                    ledgerViewMode === 'THONG_KE' 
+                                        ? 'bg-[#282b33] text-white font-black shadow-none' 
+                                        : 'bg-transparent text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <i className="fas fa-chart-pie text-xs text-[#F46C3F]"></i> <span className="truncate">Báo Cáo Cơ Cấu</span>
+                            </button>
+                        </div>
+                    )}
 
                     {ledgerViewMode === 'CASHBOOK' && (
                 <div className="space-y-3 animate-fade-in w-full">
@@ -5493,7 +5764,19 @@ const FinanceTab = React.memo(function FinanceTab({ orders, erpData, pushDeltas,
     );
 });
 
+// Component chuyên trách TỔNG QUAN TÀI CHÍNH (Financial Overview)
+const FinanceOverviewTab = React.memo(function FinanceOverviewTab(props) {
+    return <FinanceTab {...props} tabMode="OVERVIEW" />;
+});
+
+// Component chuyên trách SỔ QUỸ & NGÂN HÀNG (Cash & Bank Ledger)
+const CashLedgerTab = React.memo(function CashLedgerTab(props) {
+    return <FinanceTab {...props} tabMode="LEDGER" />;
+});
+
 if (typeof window !== 'undefined') {
+    window.FinanceOverviewTab = FinanceOverviewTab;
+    window.CashLedgerTab = CashLedgerTab;
     window.FinanceTab = FinanceTab;
 }
 </script>
