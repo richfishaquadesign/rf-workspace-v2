@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T18:22:47.743Z",
+  "generatedAt": "2026-11-09T17:20:04.292Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -26,7 +26,7 @@
   ],
   "hashes": {
     "Tab_Production.html": "24d498df3795c3038c696d9a7578fbfe51b213df218d6b496420d340c713a72a",
-    "Tab_Inventory.html": "1f706f128fe114509d82b60ee2708be394403469a956044dcd930a43c7099e33",
+    "Tab_Inventory.html": "26a88a1822b8388e326dcc8ca40e53e92a578445c90b14df30c42207a90dd643",
     "Tab_ImportExport.html": "c5f7edcd25f2e4f8b40ca8de079a4ee78a371bcfb7ed3b0835abfc092d8ff74e",
     "Tab_Suppliers.html": "2cc2262f84ae8958aaa53248ccfce804d51b550f266f58e5e87886366d5e756c",
     "Tab_Finance.html": "a11940ae9a2e4653f95f566cedb4602ba5adab3108ce2ee418a182279e2fbfb0",
@@ -47,7 +47,7 @@
     "App_Main.html": "20d54a3eb9709b7fd498cf22070d1fd9a5b24f9735d7ba9f27c5bd773d841c53"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "94b09653232c984c8db280273ca4fc59fbe320cb8b2db8c5c1e67c8002ddfd5b",
-    "Compiled_Deferred.html": "b3a966fed294971a990d3580ca5ad4aba12193e04197ef765995e195ea32be94"
+    "Compiled_Core.html": "c1e9ac41d63298c6bf6f3ea0c41c64271d08745a0074c5f9c0538cd80e7fdde4",
+    "Compiled_Deferred.html": "fbde6343490893e7c390d0f46eca6a336eab0e7a468260958b3bd977092266e4"
   }
 }

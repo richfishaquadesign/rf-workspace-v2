@@ -1,31 +1,11 @@
 {
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/",
-      "destination": "/index.html"
+      "destination": "/vercel_index.html"
     }
   ],
   "headers": [
-    {
-      "source": "/(index\\.html)?",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate, max-age=0"
-        },
-        {
-          "key": "Pragma",
-          "value": "no-cache"
-        },
-        {
-          "key": "Expires",
-          "value": "0"
-        }
-      ]
-    },
     {
       "source": "/manifest.json",
       "headers": [
