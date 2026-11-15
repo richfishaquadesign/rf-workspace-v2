@@ -3320,9 +3320,12 @@
             isGlass
         };
     }
+    if (typeof window !== 'undefined') {
+        window.getProductBOMAndCosts = getProductBOMAndCosts;
+    }
 
     // -------------------------------------------------------------------------
-    // COMPONENT DROPDOWN DRAWER: ĐỊNH MỨC VẬT TƯ (BOM) & GIÁ VỐN TRONG THẺ
+    // COMPONENT DROPDOWN DRAWER: ĐỊNH MỨC VẬT TƯ (BOM) & GIÁ VỐN TRONG THẺ (CHUẨN TỐI GIẢN RF)
     // -------------------------------------------------------------------------
     const ProductionItemBOMDrawer = React.memo(function ProductionItemBOMDrawer({ item, order, erpProducts = [], kpiConfig = [], erpData = {}, onClose }) {
         const data = React.useMemo(() => {
@@ -3345,9 +3348,7 @@
             packTime,
             packReward,
             totalLaborCost,
-            totalCOGS,
-            sellingPrice,
-            profitMargin
+            totalCOGS
         } = data;
 
         const formatMoney = (m) => Math.round(Number(m || 0)).toLocaleString('vi-VN');
@@ -3356,71 +3357,71 @@
         const isP2Done = p2Status === 'Done' || p2Status === 'Đã Xong';
 
         return (
-            <div className="mt-2.5 pt-2.5 border-t border-[#27272a] flex flex-col gap-2 w-full animate-fade-in text-[11px]" onClick={e => e.stopPropagation()}>
+            <div className="mt-2.5 pt-2.5 border-t border-white/[0.08] flex flex-col gap-2 w-full animate-fade-in text-[11px]" onClick={e => e.stopPropagation()}>
 
-                {/* Header thanh tiêu đề có nút ĐÓNG LẠI nổi bật */}
-                <div className="flex items-center justify-between bg-[#141418] px-2.5 py-1.5 rounded-xl border border-indigo-500/20 shadow-sm">
-                    <div className="flex items-center gap-1.5">
-                        <i className="fas fa-layer-group text-indigo-400 text-xs"></i>
-                        <span className="text-[10.5px] font-black uppercase text-indigo-300 tracking-wider">ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT</span>
+                {/* Header tối giản RF */}
+                <div className="flex items-center justify-between bg-[#121214] px-3 py-2 rounded-xl border border-white/[0.08]">
+                    <div className="flex items-center gap-2">
+                        <i className="fas fa-layer-group text-[#d4af37] text-xs"></i>
+                        <span className="text-[10.5px] font-black uppercase text-zinc-100 tracking-wider">Định Mức & Giá Vốn Sản Xuất</span>
                     </div>
                     <button
                         onClick={(e) => { e.stopPropagation(); onClose && onClose(); }}
-                        className="px-2.5 py-1 bg-zinc-800/90 hover:bg-rose-600 text-zinc-300 hover:text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 shadow-sm border border-zinc-700 hover:border-rose-500 cursor-pointer"
+                        className="px-2.5 py-1 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white rounded-lg text-[9.5px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 border border-white/[0.08] cursor-pointer"
                         title="Đóng bảng định mức"
                     >
                         <i className="fas fa-times text-[9px]"></i>
-                        <span>ĐÓNG</span>
+                        <span>Đóng</span>
                     </button>
                 </div>
 
-                {/* Header Thống Kê Nhanh (Micro Bento Strip) */}
+                {/* 4 Ô Chỉ Số Tối Giản */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full">
-                    <div className="bg-[#141417] border border-[#27272a] px-2 py-1.5 rounded-lg flex flex-col justify-center">
-                        <span className="text-[8.5px] font-bold text-zinc-400 uppercase tracking-wider">🧱 Vật Tư (BOM)</span>
-                        <span className="text-[12px] font-mono font-black text-blue-400 mt-0.5">{formatMoney(totalMaterialCost)}đ</span>
+                    <div className="bg-[#0c0c0f] border border-white/[0.06] px-2.5 py-2 rounded-xl flex flex-col justify-center">
+                        <span className="text-[8.5px] font-bold text-zinc-400 uppercase tracking-wider">Vật Tư (BOM)</span>
+                        <span className="text-[12px] font-mono font-black text-zinc-100 mt-0.5">{formatMoney(totalMaterialCost)}đ</span>
                     </div>
-                    <div className="bg-[#141417] border border-[#27272a] px-2 py-1.5 rounded-lg flex flex-col justify-center">
-                        <span className="text-[8.5px] font-bold text-zinc-400 uppercase tracking-wider">🛠️ Công Thợ</span>
-                        <span className="text-[12px] font-mono font-black text-amber-400 mt-0.5">{formatMoney(totalLaborCost)}đ</span>
+                    <div className="bg-[#0c0c0f] border border-white/[0.06] px-2.5 py-2 rounded-xl flex flex-col justify-center">
+                        <span className="text-[8.5px] font-bold text-zinc-400 uppercase tracking-wider">Công Thợ</span>
+                        <span className="text-[12px] font-mono font-black text-zinc-100 mt-0.5">{formatMoney(totalLaborCost)}đ</span>
                     </div>
-                    <div className="bg-[#121214] border border-emerald-500/30 px-2 py-1.5 rounded-lg flex flex-col justify-center shadow-[0_0_10px_rgba(16,185,129,0.08)]">
-                        <span className="text-[8.5px] font-bold text-emerald-400 uppercase tracking-wider">💰 Giá Vốn COGS</span>
-                        <span className="text-[12.5px] font-mono font-black text-emerald-400 mt-0.5">{formatMoney(totalCOGS)}đ</span>
+                    <div className="bg-[#0c0c0f] border border-[#d4af37]/30 px-2.5 py-2 rounded-xl flex flex-col justify-center">
+                        <span className="text-[8.5px] font-bold text-[#d4af37] uppercase tracking-wider">Giá Vốn COGS</span>
+                        <span className="text-[12.5px] font-mono font-black text-[#d4af37] mt-0.5">{formatMoney(totalCOGS)}đ</span>
                     </div>
-                    <div className="bg-[#141417] border border-purple-500/20 px-2 py-1.5 rounded-lg flex flex-col justify-center shadow-sm">
-                        <span className="text-[8.5px] font-black text-purple-400 uppercase tracking-wider">📦 KPI Đóng Gói</span>
-                        <span className="text-[11.5px] font-mono font-black text-purple-300 mt-0.5 truncate">
+                    <div className="bg-[#0c0c0f] border border-white/[0.06] px-2.5 py-2 rounded-xl flex flex-col justify-center">
+                        <span className="text-[8.5px] font-bold text-zinc-400 uppercase tracking-wider">KPI Đóng Gói</span>
+                        <span className="text-[11.5px] font-mono font-bold text-zinc-200 mt-0.5 truncate">
                             {packTime}p • +{formatMoney(packReward)}đ
                         </span>
                     </div>
                 </div>
 
                 {/* Bảng Định Mức Vật Tư (BOM) */}
-                <div className="bg-[#09090b] border border-[#27272a] rounded-xl overflow-hidden shadow-inner">
-                    <div className="px-2.5 py-1.5 bg-[#141417] border-b border-[#27272a] flex items-center justify-between">
-                        <span className="text-[9.5px] font-black uppercase text-zinc-300 tracking-wider flex items-center gap-1.5">
-                            <i className="fas fa-layer-group text-blue-400 text-[10px]"></i> Bảng Định Mức Vật Tư ({bomItems.length} loại)
+                <div className="bg-[#09090b] border border-white/[0.08] rounded-xl overflow-hidden">
+                    <div className="px-3 py-2 bg-[#121214] border-b border-white/[0.06] flex items-center justify-between">
+                        <span className="text-[9.5px] font-bold uppercase text-zinc-300 tracking-wider flex items-center gap-1.5">
+                            <i className="fas fa-cubes text-zinc-400 text-[10px]"></i> Bảng Định Mức Vật Tư ({bomItems.length} loại)
                         </span>
-                        <span className="text-[9px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                        <span className="text-[10px] font-mono font-bold text-zinc-200 bg-white/[0.05] px-2 py-0.5 rounded-md border border-white/[0.08]">
                             {formatMoney(totalMaterialCost)} đ
                         </span>
                     </div>
 
-                    <div className="divide-y divide-[#1e1e24] max-h-[180px] overflow-y-auto custom-scrollbar">
+                    <div className="divide-y divide-white/[0.04] max-h-[180px] overflow-y-auto custom-scrollbar">
                         {bomItems.length === 0 ? (
                             <div className="p-3 text-center text-zinc-500 text-[10px] font-medium italic">
                                 Chưa có cấu hình định mức cho sản phẩm này
                             </div>
                         ) : (
                             bomItems.map((b, idx) => (
-                                <div key={idx} className="p-2 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition-colors">
+                                <div key={idx} className="p-2.5 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition-colors">
                                     <div className="min-w-0 flex items-center gap-2">
-                                        <span className="w-3.5 text-center text-[8.5px] font-mono text-zinc-500">{idx + 1}</span>
+                                        <span className="w-4 text-center text-[9px] font-mono text-zinc-500">{idx + 1}</span>
                                         <div className="min-w-0">
-                                            <div className="font-bold text-zinc-200 truncate text-[10.5px]">{b.name}</div>
-                                            <div className="text-[9px] font-mono text-zinc-400">
-                                                Định mức: <strong className="text-indigo-300">{b.qty} {b.unit}</strong> × {formatMoney(b.costPrice)}đ/{b.unit}
+                                            <div className="font-bold text-zinc-100 truncate text-[11px]">{b.name}</div>
+                                            <div className="text-[9.5px] font-mono text-zinc-400">
+                                                Định mức: <strong className="text-zinc-200">{b.qty} {b.unit}</strong> × {formatMoney(b.costPrice)}đ/{b.unit}
                                                 {b.conversionNote && <span className="text-zinc-500 ml-1">({b.conversionNote})</span>}
                                             </div>
                                         </div>
@@ -3436,61 +3437,43 @@
 
                 {/* Chi Tiết Tiền Công Thợ (Config_KPI) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full">
-                    {/* Khâu 1: Dựng Khung / Cắt Dán */}
-                    <div className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${isP1Done
-                            ? 'bg-emerald-500/10 border-emerald-500/30'
-                            : 'bg-amber-500/10 border-amber-500/30'
-                        }`}>
+                    {/* Khâu 1 */}
+                    <div className="p-2.5 rounded-xl bg-[#0c0c0f] border border-white/[0.08] flex items-center justify-between">
                         <div className="min-w-0 pr-2">
-                            <div className={`font-black uppercase truncate text-[11px] flex items-center gap-1 ${isP1Done ? 'text-emerald-400' : 'text-amber-400'
-                                }`}>
-                                <i className={`fas ${isP1Done ? 'fa-check-circle' : 'fa-clock'} text-[10px]`}></i>
+                            <div className="font-bold uppercase truncate text-[10.5px] text-zinc-200 flex items-center gap-1.5">
+                                <i className={`fas ${isP1Done ? 'fa-check-circle text-emerald-400' : 'fa-clock text-zinc-400'} text-[10px]`}></i>
                                 <span>{p1Name} ({p1Time}p)</span>
                             </div>
-                            <div className="text-[9.5px] font-bold text-zinc-300 truncate mt-0.5">
-                                Thợ: <span className="text-white font-black">{p1User}</span>
-                            </div>
-                            <div className={`text-[8.5px] font-bold uppercase tracking-wider mt-0.5 ${isP1Done ? 'text-emerald-400 font-black' : 'text-amber-300/90'
-                                }`}>
-                                {isP1Done ? '✅ Đã hoàn thành' : (p1User && p1User !== 'Chưa nhận việc' ? '⏳ Đang làm / Chờ duyệt' : '⏳ Chưa nhận việc')}
+                            <div className="text-[9.5px] text-zinc-400 truncate mt-0.5">
+                                Thợ: <span className="text-zinc-200 font-semibold">{p1User}</span>
                             </div>
                         </div>
                         <div className="text-right shrink-0">
-                            <div className={`text-[13px] font-mono font-black ${isP1Done ? 'text-emerald-400' : 'text-amber-400'
-                                }`}>
+                            <div className="text-[12.5px] font-mono font-black text-zinc-100">
                                 +{formatMoney(p1Reward)}đ
                             </div>
-                            <div className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                            <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-500">
                                 {isP1Done ? 'Đã nghiệm thu' : 'Định mức nhận'}
                             </div>
                         </div>
                     </div>
 
-                    {/* Khâu 2: Gia Cố / Gọt Keo */}
-                    <div className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${isP2Done
-                            ? 'bg-emerald-500/10 border-emerald-500/30'
-                            : 'bg-amber-500/10 border-amber-500/30'
-                        }`}>
+                    {/* Khâu 2 */}
+                    <div className="p-2.5 rounded-xl bg-[#0c0c0f] border border-white/[0.08] flex items-center justify-between">
                         <div className="min-w-0 pr-2">
-                            <div className={`font-black uppercase truncate text-[11px] flex items-center gap-1 ${isP2Done ? 'text-emerald-400' : 'text-amber-400'
-                                }`}>
-                                <i className={`fas ${isP2Done ? 'fa-check-circle' : 'fa-clock'} text-[10px]`}></i>
+                            <div className="font-bold uppercase truncate text-[10.5px] text-zinc-200 flex items-center gap-1.5">
+                                <i className={`fas ${isP2Done ? 'fa-check-circle text-emerald-400' : 'fa-clock text-zinc-400'} text-[10px]`}></i>
                                 <span>{p2Name} ({p2Time}p)</span>
                             </div>
-                            <div className="text-[9.5px] font-bold text-zinc-300 truncate mt-0.5">
-                                Thợ: <span className="text-white font-black">{p2User}</span>
-                            </div>
-                            <div className={`text-[8.5px] font-bold uppercase tracking-wider mt-0.5 ${isP2Done ? 'text-emerald-400 font-black' : 'text-amber-300/90'
-                                }`}>
-                                {isP2Done ? '✅ Đã hoàn thành' : (p2User && p2User !== 'Chưa nhận việc' ? '⏳ Đang làm / Chờ duyệt' : '⏳ Chưa nhận việc')}
+                            <div className="text-[9.5px] text-zinc-400 truncate mt-0.5">
+                                Thợ: <span className="text-zinc-200 font-semibold">{p2User}</span>
                             </div>
                         </div>
                         <div className="text-right shrink-0">
-                            <div className={`text-[13px] font-mono font-black ${isP2Done ? 'text-emerald-400' : 'text-amber-400'
-                                }`}>
+                            <div className="text-[12.5px] font-mono font-black text-zinc-100">
                                 +{formatMoney(p2Reward)}đ
                             </div>
-                            <div className="text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                            <div className="text-[8px] font-bold uppercase tracking-wider text-zinc-500">
                                 {isP2Done ? 'Đã nghiệm thu' : 'Định mức nhận'}
                             </div>
                         </div>
@@ -3498,16 +3481,15 @@
                 </div>
 
                 {packReward > 0 && (
-                    <div className="px-2.5 py-1.5 rounded-lg bg-[#09090b] border border-purple-500/20 flex items-center justify-between text-[10px]">
-                        <span className="text-zinc-400 font-medium">📦 Thưởng Đóng Gói (Khâu 3):</span>
-                        <span className="font-mono font-black text-purple-400">+{formatMoney(packReward)}đ</span>
+                    <div className="px-3 py-1.5 rounded-xl bg-[#0c0c0f] border border-white/[0.06] flex items-center justify-between text-[10px]">
+                        <span className="text-zinc-400 font-medium">Thưởng Đóng Gói (Khâu 3 • {packTime}p):</span>
+                        <span className="font-mono font-bold text-zinc-200">+{formatMoney(packReward)}đ</span>
                     </div>
                 )}
 
-                {/* NÚT THU GỌN Ở DƯỚI CÙNG */}
                 <button
                     onClick={(e) => { e.stopPropagation(); onClose && onClose(); }}
-                    className="w-full py-1.5 bg-[#09090b] hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-98 shadow-sm cursor-pointer"
+                    className="w-full py-1.5 bg-[#0c0c0f] hover:bg-white/[0.05] text-zinc-400 hover:text-zinc-200 border border-white/[0.08] rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                     <i className="fas fa-chevron-up text-[9px]"></i>
                     <span>Thu gọn bảng định mức</span>

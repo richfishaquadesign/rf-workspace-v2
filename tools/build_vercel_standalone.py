@@ -109,11 +109,11 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v10') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v11') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v10', 'true');
+          localStorage.setItem('rf_db_sync_v11', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -511,6 +511,36 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               var pSku = String(p.sku || '').toUpperCase();
               var pName = String(p.name || '').toLowerCase();
               var pCat = String(p.category || '').toUpperCase();
+              if (pCat.indexOf('LAYOUT') !== -1) {
+                var rawLName = String(p.name || '').trim();
+                var mDim = rawLName.match(/(\d{2,3})\s*[xX×*]\s*(\d{2,3})\s*[xX×*]\s*(\d{2,3})/);
+                var dimStr = '';
+                if (mDim) {
+                  dimStr = mDim[1] + 'x' + mDim[2] + 'x' + mDim[3] + 'cm';
+                } else {
+                  var mSkuDim = pSku.match(/-(\d{2})(\d{2})(\d{2})$/);
+                  if (mSkuDim) dimStr = mSkuDim[1] + 'x' + mSkuDim[2] + 'x' + mSkuDim[3] + 'cm';
+                  else if (pSku.slice(-2) === '-S') dimStr = '20x20x20cm';
+                  else if (pSku.slice(-2) === '-M') dimStr = '30x20x20cm';
+                  else if (pSku.slice(-2) === '-L') dimStr = '40x23x25cm';
+                  else if (pSku === 'TRA-001') dimStr = '20x20x20cm';
+                }
+                var baseL = rawLName
+                  .replace(/^Layout\s+/i, '')
+                  .replace(/\s*[—\-]\s*(?:Size\s*)?[SML]\s*(?:\([^\)]*\))?$/i, '')
+                  .replace(/\s*[—\-]\s*\d{2,3}\s*[xX×*]\s*\d{2,3}\s*[xX×*]\s*\d{2,3}\s*(?:cm)?$/i, '')
+                  .replace(/\s*\([A-Z0-9\-]+\)$/, '')
+                  .replace(/\bver\.?\s*(\d+)/i, 'Ver.$1')
+                  .trim();
+                p.name = dimStr ? (baseL + ' - ' + dimStr) : baseL;
+                if (dimStr === '30x20x20cm') {
+                  p.minStock = 1;
+                  p.maxStock = 1;
+                } else {
+                  p.minStock = 0;
+                  p.maxStock = 0;
+                }
+              }
               if (!p.unit || p.unit === 'Cái') {
                 if (pSku.indexOf('NL-LAY-SX-') === 0 || pCat.indexOf('NGUYÊN LIỆU') !== -1 ||
                     pName.indexOf('cát') !== -1 || pName.indexOf('đá') !== -1 || pName.indexOf('lũa') !== -1 ||

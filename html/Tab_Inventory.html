@@ -2165,6 +2165,11 @@ Model ID: 287936773312
     // Side Drawer state (Chi tiết hàng hóa)
     const [selectedDrawerItem, setSelectedDrawerItem] = React.useState(null);
     const [drawerPhotoIdx, setDrawerPhotoIdx] = React.useState(0);
+    const [expandedLayoutGroups, setExpandedLayoutGroups] = React.useState({});
+    const [showDrawerBom, setShowDrawerBom] = React.useState(false);
+    const [isEditingDrawerBom, setIsEditingDrawerBom] = React.useState(false);
+    const [drawerBomDraft, setDrawerBomDraft] = React.useState([]);
+    const [isSavingDrawerBom, setIsSavingDrawerBom] = React.useState(false);
 
     // Product Image Upload & Lightbox State in Drawer
     const [isUploadingProductPhoto, setIsUploadingProductPhoto] = React.useState(false);
@@ -2208,10 +2213,43 @@ Model ID: 287936773312
       };
     }, []);
 
-    // Gom nhóm sản phẩm theo SKU
+    // Gom nhóm sản phẩm theo SKU & chuẩn hóa tên/định mức Layout
     const uniqueProducts = React.useMemo(() => {
       const map = new Map();
-      (data.Products || []).forEach(p => {
+      (data.Products || []).forEach(rawP => {
+        const p = { ...rawP };
+        const cat = String(p.category || '').toUpperCase().trim();
+        if (cat === 'LAYOUT' || cat.includes('LAYOUT')) {
+          let cleanName = String(p.name || '').trim().replace(/^Layout\s+/i, '');
+          cleanName = cleanName.replace(/\bver\.?\s*(\d+)/i, 'Ver.$1');
+          const m = cleanName.match(/^(.*?)\s*[—–-]\s*(?:(?:Size\s*)?[SML]\s*\(\s*(\d+x\d+x\d+)(?:cm)?\s*\)|(\d+x\d+x\d+)(?:cm)?)$/i);
+          if (m) {
+            const base = m[1].trim().replace(/\bver\.?\s*(\d+)/i, 'Ver.$1');
+            const dims = (m[2] || m[3] || '').toLowerCase();
+            p.name = `${base} - ${dims}cm`;
+            p._baseLayoutName = base;
+            p._sizeLabel = `${dims}cm`;
+          } else {
+            const skuM = String(p.sku || '').match(/-(\d{2})(\d{2})(\d{2})$/);
+            const baseOnly = cleanName.split(/\s*[—–-]\s*/)[0].trim().replace(/\bver\.?\s*(\d+)/i, 'Ver.$1');
+            p._baseLayoutName = baseOnly || cleanName;
+            if (skuM) {
+              const dims = `${Number(skuM[1])}x${Number(skuM[2])}x${Number(skuM[3])}`;
+              p._sizeLabel = `${dims}cm`;
+              p.name = `${p._baseLayoutName} - ${dims}cm`;
+            } else {
+              p.name = cleanName;
+              p._sizeLabel = '';
+            }
+          }
+          if (p._sizeLabel === '30x20x20cm' || /30x20x20|-302020$/i.test(`${p.name} ${p.sku}`)) {
+            p.minStock = 1;
+            p.maxStock = 1;
+          } else if (/20x20x20|40x23x25|-202020$|-402325$/i.test(`${p.name} ${p.sku}`)) {
+            p.minStock = 0;
+            p.maxStock = 0;
+          }
+        }
         const key = String(p.sku || p.id).toUpperCase().trim();
         if (!key) return;
         if (map.has(key)) {
@@ -2315,6 +2353,48 @@ Model ID: 287936773312
       return list;
     }, [uniqueProducts, activeSegment, subCatFilter, deferredSearch, isItemInSegment]);
 
+    // Danh sách hiển thị trên bảng: Gom nhóm các kích thước của cùng 1 mẫu Layout (VD: Bonsai Ver.1 -> 20x20x20cm, 30x20x20cm, 40x23x25cm)
+    const tableDisplayRows = React.useMemo(() => {
+      const rows = [];
+      const layoutGroupMap = new Map();
+      const sizeOrderRank = (label) => {
+        const s = String(label || '').toLowerCase();
+        if (s.includes('20x20x20')) return 1;
+        if (s.includes('30x20x20')) return 2;
+        if (s.includes('40x23x25')) return 3;
+        return 9;
+      };
+
+      filteredProducts.forEach(p => {
+        const cat = String(p.category || '').toUpperCase().trim();
+        if (cat === 'LAYOUT' || cat.includes('LAYOUT')) {
+          const baseName = String(p._baseLayoutName || p.name || '').replace(/^Layout\s+/i, '').split(/\s*[—–-]\s*/)[0].trim();
+          const groupKey = `${String(p.sub_category || '').toUpperCase()}__${baseName.toUpperCase()}`;
+          if (!layoutGroupMap.has(groupKey)) {
+            const groupObj = {
+              isLayoutGroup: true,
+              groupKey,
+              baseName,
+              category: 'LAYOUT',
+              sub_category: p.sub_category || '---',
+              variants: []
+            };
+            layoutGroupMap.set(groupKey, groupObj);
+            rows.push(groupObj);
+          }
+          layoutGroupMap.get(groupKey).variants.push(p);
+        } else {
+          rows.push({ isLayoutGroup: false, product: p });
+        }
+      });
+
+      layoutGroupMap.forEach(group => {
+        group.variants.sort((a, b) => sizeOrderRank(a._sizeLabel || a.name) - sizeOrderRank(b._sizeLabel || b.name));
+      });
+
+      return rows;
+    }, [filteredProducts]);
+
     // Bộ 4 Metric Cards (tính động theo danh mục & bộ lọc đang hiển thị)
     const galleryStats = React.useMemo(() => {
       const totalModels = filteredProducts.length;
@@ -2388,11 +2468,14 @@ Model ID: 287936773312
     };
 
     // Drawer Handler: Mở Chi tiết hàng hóa
-    const handleOpenProductDrawer = (prod) => {
+    const handleOpenProductDrawer = (prod, openBomDirect = false) => {
       setSelectedDrawerItem(prod);
       setDrawerPhotoIdx(0);
       setShowProductPhotoUrlInput(false);
       setProductPhotoUrlVal('');
+      setIsEditingDrawerBom(false);
+      setDrawerBomDraft([]);
+      setShowDrawerBom(Boolean(openBomDirect));
     };
 
     // Lắng nghe phím ESC để đóng Drawer / Lightbox an toàn
@@ -2417,6 +2500,161 @@ Model ID: 287936773312
       setProductPhotoUrlVal('');
       setZoomDrawerImage(null);
       setDrawerPhotoIdx(0);
+      setShowDrawerBom(false);
+      setIsEditingDrawerBom(false);
+      setDrawerBomDraft([]);
+    };
+
+    // Danh sách nguyên liệu sản xuất dùng cho trình sửa BOM trong Chi tiết hàng hóa
+    const drawerMaterialProducts = React.useMemo(() => {
+      return (data.Products || []).filter(p => {
+        const c = String(p.category || '').toUpperCase().trim();
+        return c === 'DANH MỤC SẢN XUẤT' || c.includes('NGUYÊN LIỆU') || c.includes('VẬT TƯ');
+      });
+    }, [data.Products]);
+
+    // Tính định mức BOM & Giá vốn sản xuất cho hàng hóa đang mở trong Drawer
+    const drawerBomAndCosts = React.useMemo(() => {
+      if (!selectedDrawerItem) return null;
+      if (typeof window.getProductBOMAndCosts === 'function') {
+        try {
+          return window.getProductBOMAndCosts(
+            selectedDrawerItem,
+            null,
+            data?.Products,
+            data?.kpiConfig || data?.Config_KPI,
+            data
+          );
+        } catch (e) {}
+      }
+      return null;
+    }, [selectedDrawerItem, data?.Products, data?.BOM_Config, data?.kpiConfig, data?.Config_KPI]);
+
+    const handleStartEditDrawerBom = () => {
+      if (!selectedDrawerItem) return;
+      const currentLines = (drawerBomAndCosts?.bomLines || []).map((line, idx) => ({
+        id: line.id || `BOM_LINE_${Date.now()}_${idx}`,
+        materialSku: line.materialSku || '',
+        materialName: line.materialName || '',
+        defaultQty: Number(line.defaultQty || 0),
+        unit: line.unit || 'Cái',
+        unitCost: Number(line.unitCost || 0)
+      }));
+      setDrawerBomDraft(currentLines);
+      setShowDrawerBom(true);
+      setIsEditingDrawerBom(true);
+    };
+
+    const handleAddDrawerBomLine = () => {
+      const firstMat = drawerMaterialProducts[0] || null;
+      setDrawerBomDraft(prev => [
+        ...prev,
+        {
+          id: `BOM_${Date.now()}_${prev.length + 1}`,
+          materialSku: firstMat ? (firstMat.sku || firstMat.id) : '',
+          materialName: firstMat ? firstMat.name : 'Nguyên liệu mới',
+          defaultQty: 1,
+          unit: firstMat ? (firstMat.unit || 'Gam') : 'Gam',
+          unitCost: firstMat ? Number(firstMat.costPrice || firstMat.price || 0) : 0
+        }
+      ]);
+    };
+
+    const handleUpdateDrawerBomLine = (idx, field, val) => {
+      setDrawerBomDraft(prev => prev.map((row, i) => {
+        if (i !== idx) return row;
+        if (field === 'materialSku') {
+          const mat = drawerMaterialProducts.find(m => String(m.sku || m.id) === String(val));
+          if (mat) {
+            return {
+              ...row,
+              materialSku: mat.sku || mat.id,
+              materialName: mat.name,
+              unit: mat.unit || row.unit || 'Gam',
+              unitCost: Number(mat.costPrice || mat.price || 0)
+            };
+          }
+        }
+        return { ...row, [field]: val };
+      }));
+    };
+
+    const handleRemoveDrawerBomLine = (idx) => {
+      setDrawerBomDraft(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleSaveDrawerBom = async () => {
+      if (!selectedDrawerItem) return;
+      setIsSavingDrawerBom(true);
+      try {
+        const targetSku = String(selectedDrawerItem.sku || selectedDrawerItem.id || '').trim();
+        const existingBomTable = Array.isArray(data.BOM_Config) ? data.BOM_Config : [];
+        const oldRowsForProduct = existingBomTable.filter(r =>
+          String(r.productSku || r.productId || '').trim().toUpperCase() === targetSku.toUpperCase()
+        );
+        const deletedIds = oldRowsForProduct.map(r => r.id).filter(Boolean);
+
+        const cleanDraft = drawerBomDraft.filter(r => String(r.materialName || r.materialSku || '').trim() && Number(r.defaultQty || 0) > 0);
+        const newBomRows = cleanDraft.map((r, idx) => ({
+          id: r.id && !String(r.id).startsWith('AUTO_') ? String(r.id) : `BOM_${targetSku}_${Date.now()}_${idx}`,
+          productId: String(selectedDrawerItem.id || targetSku),
+          productSku: targetSku,
+          productName: selectedDrawerItem.name || '',
+          category: selectedDrawerItem.category || '',
+          subCategory: selectedDrawerItem.sub_category || '',
+          materialId: String(r.materialSku || ''),
+          materialSku: String(r.materialSku || ''),
+          materialName: String(r.materialName || ''),
+          defaultQty: Number(r.defaultQty || 0),
+          unit: String(r.unit || 'Gam'),
+          wasteFactor: 1,
+          note: 'Cập nhật từ Chi tiết hàng hóa',
+          updatedAt: new Date().toISOString()
+        }));
+
+        const keptRows = existingBomTable.filter(r =>
+          String(r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase()
+        );
+        const nextBomTable = [...keptRows, ...newBomRows];
+
+        const newMaterialCost = Math.round(cleanDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0));
+        const laborCostVal = Number(drawerBomAndCosts?.laborCost || 0);
+        const newTotalCogs = newMaterialCost + laborCostVal;
+
+        const updatedProduct = {
+          ...selectedDrawerItem,
+          costPrice: newTotalCogs > 0 ? newTotalCogs : selectedDrawerItem.costPrice
+        };
+
+        const nextProducts = (data.Products || []).map(p =>
+          String(p.sku || p.id) === String(selectedDrawerItem.sku || selectedDrawerItem.id)
+            ? { ...p, costPrice: updatedProduct.costPrice }
+            : p
+        );
+
+        const payload = {
+          ...data,
+          Products: nextProducts,
+          BOM_Config: nextBomTable,
+          _changedKeys: ['BOM_Config', 'Products']
+        };
+        if (deletedIds.length > 0) {
+          payload.deletes = { BOM_Config: deletedIds };
+        }
+
+        await pushData(payload);
+        setSelectedDrawerItem(updatedProduct);
+        setIsEditingDrawerBom(false);
+        if (typeof triggerToast === 'function') {
+          triggerToast(`Đã lưu định mức BOM cho ${selectedDrawerItem.name}!`, 'fa-check-circle', 'success');
+        }
+      } catch (err) {
+        if (typeof triggerToast === 'function') {
+          triggerToast('Lỗi khi lưu BOM: ' + (err?.message || err), 'fa-triangle-exclamation', 'error');
+        }
+      } finally {
+        setIsSavingDrawerBom(false);
+      }
     };
 
     const productDetailsMap = (typeof window !== 'undefined' && window.__RF_KNOWLEDGE_OS_SEED__?.ProductDetails) || {};
@@ -2926,7 +3164,7 @@ Model ID: 287936773312
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
-              {filteredProducts.length === 0 ? (
+              {tableDisplayRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-zinc-500 font-bold">
                     <i className="fas fa-boxes text-2xl text-zinc-600 block mb-2"></i>
@@ -2934,7 +3172,146 @@ Model ID: 287936773312
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map(p => {
+                tableDisplayRows.map(row => {
+                  if (row.isLayoutGroup) {
+                    const variants = row.variants || [];
+                    const rep = variants.find(v => String(v._sizeLabel || '').includes('30x20x20')) || variants[0] || {};
+                    const imgUrl = getProductCleanThumb(rep);
+                    const totalQty = Math.round(variants.reduce((s, v) => s + Number(v.quantity || 0), 0) * 100) / 100;
+                    const prices = variants.map(v => Number(v.price || 0)).filter(n => n > 0);
+                    const minPrice = prices.length ? Math.min(...prices) : 0;
+                    const maxPrice = prices.length ? Math.max(...prices) : 0;
+                    const isSearching = Boolean(deferredSearch && deferredSearch.trim());
+                    const isExpanded = isSearching || Boolean(expandedLayoutGroups[row.groupKey]);
+
+                    return (
+                      <React.Fragment key={row.groupKey}>
+                        {/* Hàng cha của mẫu Layout (VD: Bonsai Ver.1) */}
+                        <tr
+                          onClick={() => setExpandedLayoutGroups(prev => ({ ...prev, [row.groupKey]: !prev[row.groupKey] }))}
+                          className={`hover:bg-white/[0.04] transition-colors cursor-pointer group h-14 ${isExpanded ? 'bg-white/[0.03]' : ''}`}
+                        >
+                          {/* 1. Ảnh */}
+                          <td className="p-2.5 pl-4 w-16">
+                            <div className="w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
+                              {imgUrl ? (
+                                <img
+                                  src={imgUrl}
+                                  alt={row.baseName}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
+                                />
+                              ) : (
+                                <i className={`fas ${getSubCategoryIcon(row.sub_category || row.baseName)} text-zinc-600 text-xs`}></i>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 2. Tên hàng hóa (Chỉ Phân loại + Ver, bấm vào xổ xuống các kích thước) */}
+                          <td className="p-2.5 font-bold text-white">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="group-hover:text-[#d4af37] transition-colors">{row.baseName}</span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                                <span>{variants.length} kích thước</span>
+                                <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[9px] text-zinc-400 transition-transform`}></i>
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 3. Danh mục */}
+                          <td className="p-2.5 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]">
+                              LAYOUT
+                            </span>
+                          </td>
+
+                          {/* 4. Phân loại */}
+                          <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]">
+                            {row.sub_category}
+                          </td>
+
+                          {/* 5. Giá bán */}
+                          <td className="p-2.5 text-right whitespace-nowrap font-mono font-bold">
+                            {minPrice > 0 ? (
+                              <span className="text-zinc-100">
+                                {minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ`}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-500">0 đ</span>
+                            )}
+                          </td>
+
+                          {/* 6. Tồn kho */}
+                          <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]">
+                            <span className={totalQty <= 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                              {totalQty}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">Bộ</span>
+                          </td>
+                        </tr>
+
+                        {/* Các dòng kích thước con (20x20x20cm, 30x20x20cm, 40x23x25cm...) */}
+                        {isExpanded && variants.map(v => {
+                          const vQty = Math.round(Number(v.quantity || 0) * 100) / 100;
+                          const vMin = Number(v.minStock ?? (String(v._sizeLabel || '').includes('30x20x20') ? 1 : 0));
+                          const vMax = Number(v.maxStock ?? (String(v._sizeLabel || '').includes('30x20x20') ? 1 : 0));
+                          const vPrice = Number(v.price || 0);
+                          const vSizeText = v._sizeLabel || String(v.name || '').split(/\s*[—–-]\s*/).slice(1).join(' - ') || v.name;
+                          const isReadyStockSize = vMax > 0;
+
+                          return (
+                            <tr
+                              key={v.id || v.sku}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenProductDrawer(v);
+                              }}
+                              className="bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub h-11"
+                            >
+                              <td className="p-2 pl-4 w-16 text-right pr-2">
+                                <span className="inline-block w-2 h-2 rounded-full bg-zinc-700 group-hover/sub:bg-[#d4af37] transition-colors"></span>
+                              </td>
+                              <td className="p-2 pl-2">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="font-mono font-bold text-xs text-zinc-200 group-hover/sub:text-[#d4af37] transition-colors">
+                                    {vSizeText}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${
+                                    isReadyStockSize
+                                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                                      : 'bg-white/[0.03] text-zinc-400 border-white/[0.06]'
+                                  }`}>
+                                    {isReadyStockSize
+                                      ? `Min: ${vMin} • Max: ${vMax} (Sản xuất sẵn)`
+                                      : `Min: ${vMin} • Max: ${vMax} (Có đơn mới SX)`}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="p-2 whitespace-nowrap">
+                                <span className="text-[10px] font-mono text-zinc-500">{v.sku}</span>
+                              </td>
+                              <td className="p-2 whitespace-nowrap text-zinc-400 text-[11px]">
+                                {v.sub_category || '---'}
+                              </td>
+                              <td className="p-2 text-right whitespace-nowrap font-mono font-bold text-zinc-200 text-xs">
+                                {formatMoney(vPrice)} đ
+                              </td>
+                              <td className="p-2 text-right pr-4 whitespace-nowrap font-mono font-bold text-xs">
+                                <span className={vQty <= 0 ? (isReadyStockSize ? 'text-rose-400' : 'text-zinc-400') : 'text-emerald-400'}>
+                                  {vQty}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">Bộ</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  }
+
+                  const p = row.product;
                   const qty = Math.round(Number(p.quantity || 0) * 100) / 100;
                   const min = Number(p.minStock || 0);
                   const isInStock = qty > 0;
@@ -3068,6 +3445,21 @@ Model ID: 287936773312
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {!dIsMaterial && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDrawerBom(prev => !prev)}
+                        className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                          showDrawerBom
+                            ? 'bg-white/[0.12] text-white border-white/25'
+                            : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border-white/10'
+                        }`}
+                        title="Xem & sửa định mức BOM nguyên liệu"
+                      >
+                        <i className="fas fa-layer-group text-[#d4af37]"></i>
+                        <span>Định Mức & BOM</span>
+                      </button>
+                    )}
                     {isAdminRole && (
                       <button
                         type="button"
@@ -3310,7 +3702,260 @@ Model ID: 287936773312
                         </span>
                       </div>
                     </div>
+
+                    {/* Nút mở nhanh Định Mức & BOM Nguyên Liệu ngay trong Thông Tin Chi Tiết */}
+                    {!dIsMaterial && (
+                      <div className="pt-1 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowDrawerBom(prev => !prev)}
+                          className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                            showDrawerBom
+                              ? 'bg-white/[0.08] text-white border-white/20'
+                              : 'bg-[#09090b] hover:bg-white/[0.04] text-zinc-200 border-white/[0.08]'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <i className="fas fa-layer-group text-[#d4af37]"></i>
+                            <span>ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT (BOM NGUYÊN LIỆU)</span>
+                          </span>
+                          <span className="flex items-center gap-2 text-[10.5px] text-zinc-400 font-mono">
+                            {drawerBomAndCosts && (
+                              <span>{drawerBomAndCosts.bomLines?.length || 0} vật tư • {formatMoney(drawerBomAndCosts.totalCOGS || 0)}đ</span>
+                            )}
+                            <i className={`fas fa-chevron-${showDrawerBom ? 'up' : 'down'} text-[10px]`}></i>
+                          </span>
+                        </button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 2.5. ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT (BOM NGUYÊN LIỆU) - CHUẨN TỐI GIẢN RF */}
+                  {!dIsMaterial && showDrawerBom && drawerBomAndCosts && (
+                    <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.08] space-y-3">
+                      <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <i className="fas fa-layer-group text-zinc-300 text-xs"></i>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-100">
+                            Định Mức & Giá Vốn Sản Xuất
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isAdminRole && !isEditingDrawerBom && (
+                            <button
+                              type="button"
+                              onClick={handleStartEditDrawerBom}
+                              className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.08] text-[10px] font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <i className="fas fa-pen text-[9px] text-[#d4af37]"></i>
+                              <span>Sửa BOM</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingDrawerBom(false);
+                              setShowDrawerBom(false);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-[10px] font-semibold cursor-pointer transition-colors"
+                          >
+                            ✕ Đóng
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 4 Ô Thông Số Tối Giản */}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2">
+                          <div className="text-[9px] font-semibold text-zinc-500 uppercase">Vật Tư (BOM)</div>
+                          <div className="text-[12px] font-mono font-bold text-zinc-100 mt-0.5">
+                            {formatMoney(
+                              isEditingDrawerBom
+                                ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
+                                : drawerBomAndCosts.materialCost
+                            )}đ
+                          </div>
+                        </div>
+                        <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2">
+                          <div className="text-[9px] font-semibold text-zinc-500 uppercase">Công Thợ</div>
+                          <div className="text-[12px] font-mono font-bold text-zinc-100 mt-0.5">
+                            {formatMoney(drawerBomAndCosts.laborCost)}đ
+                          </div>
+                        </div>
+                        <div className="bg-[#09090b] border border-white/[0.08] rounded-xl p-2">
+                          <div className="text-[9px] font-semibold text-zinc-400 uppercase">Giá Vốn COGS</div>
+                          <div className="text-[12px] font-mono font-bold text-[#d4af37] mt-0.5">
+                            {formatMoney(
+                              (isEditingDrawerBom
+                                ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
+                                : drawerBomAndCosts.materialCost) + Number(drawerBomAndCosts.laborCost || 0)
+                            )}đ
+                          </div>
+                        </div>
+                        <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2">
+                          <div className="text-[9px] font-semibold text-zinc-500 uppercase">KPI Đóng Gói</div>
+                          <div className="text-[11px] font-mono font-bold text-zinc-200 mt-0.5 truncate">
+                            {drawerBomAndCosts.packingLimitMins}p • +{formatMoney(drawerBomAndCosts.packBonus)}đ
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bảng Định Mức Vật Tư (Xem hoặc Sửa) */}
+                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Bảng Định Mức Vật Tư ({isEditingDrawerBom ? drawerBomDraft.length : (drawerBomAndCosts.bomLines?.length || 0)} loại)
+                          </span>
+                          <span className="text-[10.5px] font-mono font-bold text-zinc-200">
+                            {formatMoney(
+                              isEditingDrawerBom
+                                ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
+                                : drawerBomAndCosts.materialCost
+                            )} đ
+                          </span>
+                        </div>
+
+                        {!isEditingDrawerBom ? (
+                          <div className="divide-y divide-white/[0.04]">
+                            {(drawerBomAndCosts.bomLines || []).map((line, idx) => (
+                              <div key={line.id || idx} className="py-2 flex items-center justify-between gap-2 text-[11px]">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-4 h-4 rounded bg-white/[0.04] border border-white/[0.06] text-[9px] font-mono font-semibold text-zinc-400 flex items-center justify-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="font-medium text-zinc-200 truncate">{line.materialName}</div>
+                                    <div className="text-[9.5px] text-zinc-500 font-mono">
+                                      Định mức: <span className="text-zinc-300 font-semibold">{line.defaultQty} {line.unit}</span>
+                                      {line.unitCost > 0 && ` × ${formatMoney(line.unitCost)}đ/${line.unit}`}
+                                      {line.conversionHint ? <span className="text-zinc-500 ml-1">({line.conversionHint})</span> : null}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 font-mono font-semibold text-zinc-200">
+                                  {formatMoney(line.lineCost)} đ
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-2 pt-1">
+                            {drawerBomDraft.map((row, idx) => (
+                              <div key={row.id || idx} className="bg-[#121214] border border-white/[0.06] rounded-xl p-2 space-y-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={row.materialSku || ''}
+                                    onChange={(e) => handleUpdateDrawerBomLine(idx, 'materialSku', e.target.value)}
+                                    className="flex-1 bg-[#09090b] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none focus:border-white/30"
+                                  >
+                                    <option value="">-- Chọn nguyên liệu --</option>
+                                    {drawerMaterialProducts.map(m => (
+                                      <option key={m.sku || m.id} value={m.sku || m.id}>
+                                        {m.name} ({formatMoney(m.costPrice || m.price || 0)}đ/{m.unit || 'ĐV'})
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDrawerBomLine(idx)}
+                                    className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/[0.06] flex items-center justify-center shrink-0 cursor-pointer"
+                                    title="Xóa nguyên liệu"
+                                  >
+                                    <i className="fas fa-trash-can text-[10px]"></i>
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1.5 items-center">
+                                  <div>
+                                    <label className="text-[9px] text-zinc-500 block mb-0.5">Định mức</label>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      value={row.defaultQty}
+                                      onChange={(e) => handleUpdateDrawerBomLine(idx, 'defaultQty', e.target.value)}
+                                      className="w-full bg-[#09090b] border border-white/10 rounded-lg px-2 py-1 text-[11px] font-mono text-white outline-none focus:border-white/30"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] text-zinc-500 block mb-0.5">Đơn vị</label>
+                                    <input
+                                      type="text"
+                                      value={row.unit || ''}
+                                      onChange={(e) => handleUpdateDrawerBomLine(idx, 'unit', e.target.value)}
+                                      className="w-full bg-[#09090b] border border-white/10 rounded-lg px-2 py-1 text-[11px] text-zinc-200 outline-none focus:border-white/30"
+                                    />
+                                  </div>
+                                  <div className="text-right">
+                                    <label className="text-[9px] text-zinc-500 block mb-0.5">Thành tiền</label>
+                                    <span className="font-mono font-bold text-zinc-200 text-[11px]">
+                                      {formatMoney(Number(row.defaultQty || 0) * Number(row.unitCost || 0))} đ
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={handleAddDrawerBomLine}
+                                className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] text-[10.5px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <i className="fas fa-plus text-[9px]"></i>
+                                <span>Thêm nguyên liệu</span>
+                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsEditingDrawerBom(false)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 text-[10.5px] font-semibold cursor-pointer"
+                                >
+                                  Hủy
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isSavingDrawerBom}
+                                  onClick={handleSaveDrawerBom}
+                                  className="px-3 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#e3be42] text-black text-[10.5px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                >
+                                  <i className={`fas ${isSavingDrawerBom ? 'fa-spinner fa-spin' : 'fa-check'} text-[10px]`}></i>
+                                  <span>Lưu BOM</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2 Khâu Sản Xuất & Thưởng Đóng Gói */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {[drawerBomAndCosts.phase1, drawerBomAndCosts.phase2].map((ph, pIdx) => (
+                          <div key={pIdx} className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 flex flex-col justify-between gap-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[10px] font-semibold text-zinc-300 uppercase truncate">
+                                {ph.name}
+                              </span>
+                              <span className="text-[9.5px] font-mono text-zinc-500 shrink-0">
+                                {ph.timeMins}p
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1 pt-1 border-t border-white/[0.04]">
+                              <span className="text-[9.5px] text-zinc-500">Định mức công</span>
+                              <span className="text-[11px] font-mono font-bold text-zinc-100">
+                                +{formatMoney(ph.bonus)}đ
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-2 flex items-center justify-between text-[10.5px]">
+                        <span className="text-zinc-400">
+                          Thưởng Đóng Gói (Khâu 3 • Chuẩn {drawerBomAndCosts.packingLimitMins} phút)
+                        </span>
+                        <span className="font-mono font-bold text-zinc-200">+{formatMoney(drawerBomAndCosts.packBonus)}đ</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 3. MÔ TẢ HÀNG HÓA */}
                   <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2">
