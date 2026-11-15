@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T10:57:19.067Z",
+  "generatedAt": "2026-11-15T11:09:27.427Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -47,7 +47,7 @@
     "App_Main.html": "737cd13f91376da96a179a924b600cf4d75bfde086365d982725371c48fb8aae"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "800b37297662c3d690269cb857f68b4f1a22663ab532e2f55aa15d0c006c28af",
+    "Compiled_Core.html": "32799707b2f2854cd68c3cf637b4bbc339615f778845f1d34d83e1cd09c40532",
     "Compiled_Deferred.html": "0185c41534a87c762b071cf41b82e7d5f41416213eaca428ff0efa0fba5f0fb8"
   }
 }
