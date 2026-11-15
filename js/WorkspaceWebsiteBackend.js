@@ -1,12 +1,12 @@
 /** Dedicated website sheets in the existing RF Workspace. Public requests never write. */
-function rfWebsiteOrigin_(){return 'https://client-beta-six-70u250c6ff.vercel.app';}
+function rfWebsiteOrigin_(){return 'https://rf-aquarium.vercel.app';}
 function rfWebsiteValidate_(value){
  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Nội dung không hợp lệ.');
  var result;
  function text(v,max){if(typeof v!=='string'||v.length>max)throw new Error('Nội dung vượt giới hạn.');return v;}
  function image(v){
   if(typeof v!=='string'||v.indexOf('..')!==-1)throw new Error('Ảnh không hợp lệ.');
-  if(v!==''&&!/^\/(images|uploads|api\/image)\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+$/.test(v)&&!/^https:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s<>"']*)?$/.test(v))throw new Error('Ảnh không hợp lệ.');
+  if(v!==''&&!/^\/(images|media-vault|uploads|api\/image)\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+$/.test(v)&&!/^https:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s<>"']*)?$/.test(v))throw new Error('Ảnh không hợp lệ.');
   return v;
  }
  if(value.kind==='page'){
@@ -128,7 +128,7 @@ function rfWebsitePublicContent_(){
 }
 
 function rfWebsiteManage(pin,action,args){
- var auth=validatePin(pin);if(!auth||!auth.valid||(!auth.isBoss&&!auth.isAdmin))throw new Error('Chỉ quản trị viên được quản lý website.');
+ var auth=validatePin(pin);if(!auth||!auth.valid||String(auth.role || '').trim().toUpperCase() !== 'TỐI CAO')throw new Error('Chỉ quản trị viên được quản lý website.');
  if(['list','preview','save','publish','syncProductsFromInventory'].indexOf(action)===-1)throw new Error('Thao tác không hợp lệ.');args=args||{};
  if(action==='preview'){
   var preview=UrlFetchApp.fetch(rfWebsiteOrigin_()+'/api/workspace/preview',{method:'post',contentType:'application/json',payload:JSON.stringify({document:rfWebsiteValidate_(args.document)}),muteHttpExceptions:true});

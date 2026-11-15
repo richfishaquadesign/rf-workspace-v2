@@ -1,0 +1,41 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Hàng hóa Obsidian</title><style>body{font:16px system-ui;max-width:960px;margin:auto;padding:24px;color:#173b35}input{padding:8px}article{padding:16px 0;border-top:1px solid #ccd7d3}img{width:140px;height:110px;object-fit:contain;background:#111;float:left;margin-right:20px}article{display:flow-root}summary{cursor:pointer}</style>
+<h1>Hàng hóa Obsidian</h1><label>Chọn thư mục RF_KNOWLEDGE_OS <input id="vault" type="file" webkitdirectory></label><p><input id="query" type="search" placeholder="Tìm SKU hoặc tên hàng"></p><p id="status" role="status"></p><main></main>
+<script>
+const field = (doc, key) => (doc.match(new RegExp('^'+key+':[ \\t]*(.*)$','m'))?.[1] || '').trim().replace(/^"|"$/g,'');
+let records=[], urls=[];
+function render(){
+  const main=document.querySelector('main');
+  main.replaceChildren();
+  urls.forEach(url=>URL.revokeObjectURL(url)); urls=[];
+  const term=query.value.toLocaleLowerCase().trim();
+  const matches=records.filter(p=>(p.sku+' '+p.title).toLocaleLowerCase().includes(term));
+  document.querySelector('#status').textContent=matches.length+' hồ sơ khớp';
+  for(const p of matches.slice(0,100)){
+    const row=document.createElement('article');
+    if(p.photo){const img=document.createElement('img'); img.loading='lazy'; img.src=URL.createObjectURL(p.photo); urls.push(img.src); img.alt=p.title; row.append(img)}
+    const title=document.createElement('strong');title.textContent=p.title+' · '+p.sku;row.append(title);
+    const price=document.createElement('p');price.textContent=p.price?'Giá niêm yết '+Number(p.price).toLocaleString('vi-VN')+' ₫ · '+p.status:'Chưa có giá niêm yết';row.append(price);
+    if(p.bom){const detail=document.createElement('details'), summary=document.createElement('summary'),content=document.createElement('pre'); summary.textContent='Định mức BOM';content.textContent=p.bom;detail.append(summary,content);row.append(detail)}
+    main.append(row)
+  }
+  if(matches.length>100)document.querySelector('#status').textContent+=' · Hiển thị 100 hồ sơ đầu, nhập SKU để lọc.';
+}
+query.oninput=render;
+vault.onchange=async()=>{
+  const files=new Map(Array.from(vault.files,f=>[f.webkitRelativePath.split('/').slice(1).join('/'),f]));
+  const boms=new Map(), next=[];
+  document.querySelector('#status').textContent='Đang đọc hồ sơ…';
+  for(const [path,file] of files){
+    if(!path.startsWith('02_SAN_XUAT/')||!path.endsWith('.md'))continue;
+    const doc=await file.text(), sku=field(doc,'sku_audit_sku');
+    if(sku)boms.set(sku,doc.split(/## Kiểm soát/)[0].split(/\n# /).pop());
+  }
+  for(const [path,file] of files){
+    if(!path.startsWith('01_SAN_PHAM/')||!path.endsWith('.md'))continue;
+    const doc=await file.text(),sku=field(doc,'sku');if(!sku)continue;
+    const image=doc.match(/\[\[([^\]\n]+MAT_TRUOC-01\.(?:jpg|png|webp))\]\]/i)?.[1];
+    next.push({sku,title:field(doc,'title')||sku,price:field(doc,'listed_price_vnd'),status:field(doc,'price_status'),photo:files.get(image),bom:boms.get(sku)});
+  }
+  records=next;render()
+};
+</script></html>
