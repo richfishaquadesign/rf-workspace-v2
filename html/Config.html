@@ -1859,6 +1859,21 @@ window.findLayoutAngles = function(productOrName) {
     .replace(/\s+\d+\s*[xX*×]\s*\d+\s*[xX*×]\s*\d+.*$/g, '')
     .trim();
 
+  // Ánh xạ đồng nghĩa chuẩn cho nhóm Linh Thú (Shopee <-> Thư mục Drive 5 góc)
+  var aliasMap = {
+    'cá voi': 'cá heo',
+    'khủng long ver.1': 'dragon ver.1',
+    'khủng long ver 1': 'dragon ver.1',
+    'khủng long': 'dragon ver.1',
+    'khủng long ver.2': 'dragon ver.2',
+    'khủng long ver 2': 'dragon ver.2',
+    'rồng châu âu': 'rồng châu âu ver.2'
+  };
+  if (aliasMap[cleanBase]) {
+    cleanBase = aliasMap[cleanBase];
+    clean = cleanBase;
+  }
+
   // 1. So khớp tuyệt đối (Exact Match) tên đầy đủ hoặc tên gốc sau bóc tách
   for (var i = 0; i < catalog.length; i++) {
     var it = catalog[i];

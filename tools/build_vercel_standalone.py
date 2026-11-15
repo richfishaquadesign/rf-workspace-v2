@@ -109,11 +109,12 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v13') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v14') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v13', 'true');
+          localStorage.removeItem('rf_drive_5_angles_catalog');
+          localStorage.setItem('rf_db_sync_v14', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -482,7 +483,10 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
                 if (kp && kp.sku) kosBySku[String(kp.sku).toUpperCase()] = kp;
               });
             }
-            var effectiveProducts = (productsRaw && productsRaw.length > 0) ? productsRaw : (kosSeed.Products ? JSON.parse(JSON.stringify(kosSeed.Products)) : []);
+            var effectiveProducts = ((productsRaw && productsRaw.length > 0) ? productsRaw : (kosSeed.Products ? JSON.parse(JSON.stringify(kosSeed.Products)) : [])).filter(function(p) {
+              var k = String(p && p.sku || '').toUpperCase();
+              return k !== 'THU-001-M' && k !== 'THU-001-L';
+            });
             var existingSkus = {};
             effectiveProducts.forEach(function(p) {
               if (!p) return;
@@ -492,10 +496,11 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               if (kSku) existingSkus[kSku] = p;
               var kp = kosBySku[kSku];
               if (kp) {
+                if (kp.name) p.name = kp.name;
                 if (!p.image && kp.image && !isWhiteBgImg(kp.image)) p.image = kp.image;
                 if (!p.realImage && kp.realImage && !isWhiteBgImg(kp.realImage)) p.realImage = kp.realImage;
                 if (!p.costPrice && kp.costPrice) p.costPrice = kp.costPrice;
-                if (!p.price && kp.price) p.price = kp.price;
+                if ((!p.price || kSku.indexOf('THU-') === 0) && kp.price) p.price = kp.price;
               }
             });
             if (kosSeed.Products && kosSeed.Products.length > 0) {
