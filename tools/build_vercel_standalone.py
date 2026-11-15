@@ -257,14 +257,24 @@ bridge_script = """
               };
             }
           }
-          if (inputPin === '226868' || inputPin === '246357') {
+          if (inputPin === '226868') {
+            return {
+              valid: true,
+              user: 'Nguyễn Ngọc Tiến',
+              role: 'TỐI CAO',
+              title: 'Founder',
+              isAdmin: true,
+              isBoss: true
+            };
+          }
+          if (inputPin === '246357') {
             return {
               valid: true,
               user: 'Nguyễn Thị Diệu Hương',
               role: 'QUẢN LÝ BÁN HÀNG',
               title: 'Quản Lý Bán Hàng',
               isAdmin: true,
-              isBoss: inputPin === '226868'
+              isBoss: false
             };
           }
           return { valid: false, error: 'Mã PIN không đúng' };
