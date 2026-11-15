@@ -8617,8 +8617,19 @@ function InventoryListView({
 
   // Side Drawer state (Chi tiết hàng hóa)
   const [selectedDrawerItem, setSelectedDrawerItem] = React.useState(null);
+  const [drawerMode, setDrawerMode] = React.useState('DEFAULT'); // 'DEFAULT' | 'VER_OVERVIEW' | 'SKU_DETAIL'
   const [drawerPhotoIdx, setDrawerPhotoIdx] = React.useState(0);
   const [expandedLayoutGroups, setExpandedLayoutGroups] = React.useState({});
+  const [addingSizeGroupKey, setAddingSizeGroupKey] = React.useState(null);
+  const [newSizeForm, setNewSizeForm] = React.useState({
+    length: '',
+    width: '',
+    height: '',
+    price: '',
+    minStock: 0,
+    maxStock: 0
+  });
+  const [isSavingNewSize, setIsSavingNewSize] = React.useState(false);
   const [showDrawerBom, setShowDrawerBom] = React.useState(false);
   const [isEditingDrawerBom, setIsEditingDrawerBom] = React.useState(false);
   const [drawerBomDraft, setDrawerBomDraft] = React.useState([]);
@@ -8933,14 +8944,99 @@ function InventoryListView({
   };
 
   // Drawer Handler: Mở Chi tiết hàng hóa
-  const handleOpenProductDrawer = (prod, openBomDirect = false) => {
-    setSelectedDrawerItem(prod);
+  // mode: 'DEFAULT' | 'VER_OVERVIEW' (thông tin chung Ver: ảnh + mô tả) | 'SKU_DETAIL' (chi tiết kích thước: Dài Rộng Cao, BOM, lịch sử xuất nhập kiểm)
+  const handleOpenProductDrawer = (prod, openBomDirect = false, mode = 'DEFAULT', verGroup = null) => {
+    if (!prod) return;
+    const itemWithMeta = verGroup ? {
+      ...prod,
+      _verGroup: verGroup
+    } : prod;
+    setSelectedDrawerItem(itemWithMeta);
+    setDrawerMode(mode || 'DEFAULT');
     setDrawerPhotoIdx(0);
     setShowProductPhotoUrlInput(false);
     setProductPhotoUrlVal('');
     setIsEditingDrawerBom(false);
     setDrawerBomDraft([]);
-    setShowDrawerBom(Boolean(openBomDirect));
+    setShowDrawerBom(mode === 'SKU_DETAIL' ? true : Boolean(openBomDirect));
+  };
+
+  // Lưu thêm kích thước mới cho 1 mẫu Layout Ver
+  const handleSaveNewLayoutSize = async groupRow => {
+    if (!groupRow) return;
+    const L = parseInt(String(newSizeForm.length || '').trim(), 10);
+    const W = parseInt(String(newSizeForm.width || '').trim(), 10);
+    const H = parseInt(String(newSizeForm.height || '').trim(), 10);
+    if (!L || !W || !H || L <= 0 || W <= 0 || H <= 0) {
+      if (typeof triggerToast === 'function') {
+        triggerToast('Vui lòng nhập đầy đủ Chiều Dài, Rộng, Cao (cm) hợp lệ!', 'fa-triangle-exclamation', 'error');
+      }
+      return;
+    }
+    setIsSavingNewSize(true);
+    try {
+      const variants = groupRow.variants || [];
+      const rep = variants.find(v => String(v._sizeLabel || '').includes('30x20x20')) || variants[0] || {};
+      const dimsStr = `${L}x${W}x${H}`;
+      const dimsCode = `${String(L).padStart(2, '0')}${String(W).padStart(2, '0')}${String(H).padStart(2, '0')}`;
+      const repSku = String(rep.sku || '').trim();
+      const skuPrefixMatch = repSku.match(/^([A-Z]+-\d+)-/i);
+      const skuPrefix = skuPrefixMatch ? skuPrefixMatch[1].toUpperCase() : repSku.split('-').slice(0, 2).join('-').toUpperCase() || 'LAY-001';
+      const newSku = `${skuPrefix}-${dimsCode}`;
+      const newName = `${groupRow.baseName} - ${dimsStr}cm`;
+      const existingList = Array.isArray(data.Products) ? data.Products : [];
+      if (existingList.some(p => String(p.sku || '').toUpperCase().trim() === newSku)) {
+        if (typeof triggerToast === 'function') {
+          triggerToast(`Kích thước ${dimsStr}cm (${newSku}) đã tồn tại trong mẫu ${groupRow.baseName}!`, 'fa-triangle-exclamation', 'error');
+        }
+        setIsSavingNewSize(false);
+        return;
+      }
+      const is302020 = dimsStr === '30x20x20';
+      const minVal = newSizeForm.minStock !== '' && newSizeForm.minStock !== undefined ? Number(newSizeForm.minStock) : is302020 ? 1 : 0;
+      const maxVal = newSizeForm.maxStock !== '' && newSizeForm.maxStock !== undefined ? Number(newSizeForm.maxStock) : is302020 ? 1 : 0;
+      const priceVal = Number(newSizeForm.price || rep.price || 0);
+      const newProduct = {
+        id: newSku,
+        sku: newSku,
+        name: newName,
+        category: 'LAYOUT',
+        sub_category: groupRow.sub_category || rep.sub_category || 'LAYOUT',
+        unit: rep.unit || 'Bộ',
+        quantity: 0,
+        minStock: minVal,
+        maxStock: maxVal,
+        price: priceVal,
+        costPrice: Number(rep.costPrice || 0),
+        image: rep.image || '',
+        realImage: rep.realImage || '',
+        description: `${groupRow.baseName} chế tác thủ công bởi RF Aquarium từ gỗ lũa và đá tự nhiên, an toàn cho cá tép, sẵn sàng setup bể thủy sinh.`
+      };
+      const nextProducts = [newProduct, ...existingList];
+      await pushData({
+        ...data,
+        Products: nextProducts,
+        _changedKeys: ['Products']
+      });
+      setAddingSizeGroupKey(null);
+      setNewSizeForm({
+        length: '',
+        width: '',
+        height: '',
+        price: '',
+        minStock: 0,
+        maxStock: 0
+      });
+      if (typeof triggerToast === 'function') {
+        triggerToast(`Đã thêm kích thước ${dimsStr}cm (${newSku}) cho ${groupRow.baseName}!`, 'fa-check-circle', 'success');
+      }
+    } catch (err) {
+      if (typeof triggerToast === 'function') {
+        triggerToast('Lỗi khi thêm kích thước: ' + (err?.message || err), 'fa-triangle-exclamation', 'error');
+      }
+    } finally {
+      setIsSavingNewSize(false);
+    }
   };
 
   // Lắng nghe phím ESC để đóng Drawer / Lightbox an toàn
@@ -8961,6 +9057,7 @@ function InventoryListView({
   // Đóng Drawer
   const handleCloseDrawer = () => {
     setSelectedDrawerItem(null);
+    setDrawerMode('DEFAULT');
     setShowProductPhotoUrlInput(false);
     setProductPhotoUrlVal('');
     setZoomDrawerImage(null);
@@ -8990,13 +9087,14 @@ function InventoryListView({
   }, [selectedDrawerItem, data?.Products, data?.BOM_Config, data?.kpiConfig, data?.Config_KPI]);
   const handleStartEditDrawerBom = () => {
     if (!selectedDrawerItem) return;
-    const currentLines = (drawerBomAndCosts?.bomLines || []).map((line, idx) => ({
+    const rawLines = drawerBomAndCosts?.bomItems || drawerBomAndCosts?.bomLines || [];
+    const currentLines = rawLines.map((line, idx) => ({
       id: line.id || `BOM_LINE_${Date.now()}_${idx}`,
-      materialSku: line.materialSku || '',
-      materialName: line.materialName || '',
-      defaultQty: Number(line.defaultQty || 0),
-      unit: line.unit || 'Cái',
-      unitCost: Number(line.unitCost || 0)
+      materialSku: line.sku || line.materialSku || '',
+      materialName: line.name || line.materialName || '',
+      defaultQty: Number(line.qty ?? line.defaultQty ?? 0),
+      unit: line.unit || 'Gam',
+      unitCost: Number(line.costPrice ?? line.unitCost ?? 0)
     }));
     setDrawerBomDraft(currentLines);
     setShowDrawerBom(true);
@@ -9056,7 +9154,7 @@ function InventoryListView({
       const keptRows = existingBomTable.filter(r => String(r.layoutCode || r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase());
       const nextBomTable = [...keptRows, ...newBomRows];
       const newMaterialCost = Math.round(cleanDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0));
-      const laborCostVal = Number(drawerBomAndCosts?.laborCost || 0);
+      const laborCostVal = Number(drawerBomAndCosts?.totalLaborCost ?? drawerBomAndCosts?.laborCost ?? 0);
       const newTotalCogs = newMaterialCost + laborCostVal;
       const updatedProduct = {
         ...selectedDrawerItem,
@@ -9093,12 +9191,15 @@ function InventoryListView({
   };
   const productDetailsMap = typeof window !== 'undefined' && window.__RF_KNOWLEDGE_OS_SEED__?.ProductDetails || {};
   const getProductCleanThumb = React.useCallback(p => {
+    if (!p) return '';
     const safeDarkImg = u => {
       const s = formatImageUrl(u);
       return s && !/shopee|\/images\/catalog\//i.test(s) ? s : '';
     };
     const detailImgs = (productDetailsMap[p?.sku]?.images || []).map(safeDarkImg).filter(Boolean);
-    return safeDarkImg(p?.image) || safeDarkImg(p?.realImage) || detailImgs[0] || '';
+    const l5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
+    const l5Url = l5?.angles ? safeDarkImg(l5.angles.front?.url) || safeDarkImg(l5.angles.distant?.url) || safeDarkImg(l5.angles.left?.url) || safeDarkImg(l5.angles.right?.url) || safeDarkImg(l5.angles.top?.url) : '';
+    return safeDarkImg(p?.image) || safeDarkImg(p?.realImage) || detailImgs[0] || l5Url || '';
   }, [productDetailsMap]);
   const drawerDetailMeta = React.useMemo(() => {
     if (!selectedDrawerItem) return {};
@@ -9548,7 +9649,7 @@ function InventoryListView({
     if (row.isLayoutGroup) {
       const variants = row.variants || [];
       const rep = variants.find(v => String(v._sizeLabel || '').includes('30x20x20')) || variants[0] || {};
-      const imgUrl = getProductCleanThumb(rep);
+      const imgUrl = variants.map(v => getProductCleanThumb(v)).find(Boolean) || getProductCleanThumb(rep);
       const totalQty = Math.round(variants.reduce((s, v) => s + Number(v.quantity || 0), 0) * 100) / 100;
       const prices = variants.map(v => Number(v.price || 0)).filter(n => n > 0);
       const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -9558,10 +9659,7 @@ function InventoryListView({
       return /*#__PURE__*/React.createElement(React.Fragment, {
         key: row.groupKey
       }, /*#__PURE__*/React.createElement("tr", {
-        onClick: () => setExpandedLayoutGroups(prev => ({
-          ...prev,
-          [row.groupKey]: !prev[row.groupKey]
-        })),
+        onClick: () => handleOpenProductDrawer(rep, false, 'VER_OVERVIEW', row),
         className: `hover:bg-white/[0.04] transition-colors cursor-pointer group h-14 ${isExpanded ? 'bg-white/[0.03]' : ''}`
       }, /*#__PURE__*/React.createElement("td", {
         className: "p-2.5 pl-4 w-16"
@@ -9579,13 +9677,22 @@ function InventoryListView({
       }))), /*#__PURE__*/React.createElement("td", {
         className: "p-2.5 font-bold text-white"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 flex-wrap"
+        className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "group-hover:text-[#d4af37] transition-colors"
-      }, row.baseName), /*#__PURE__*/React.createElement("span", {
-        className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/[0.04] text-zinc-400 border border-white/[0.06]"
-      }, /*#__PURE__*/React.createElement("span", null, variants.length, " k\xEDch th\u01B0\u1EDBc"), /*#__PURE__*/React.createElement("i", {
-        className: `fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[9px] text-zinc-400 transition-transform`
+      }, row.baseName), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: e => {
+          e.stopPropagation();
+          setExpandedLayoutGroups(prev => ({
+            ...prev,
+            [row.groupKey]: !prev[row.groupKey]
+          }));
+        },
+        className: `w-6 h-6 rounded-lg flex items-center justify-center border transition-all cursor-pointer shrink-0 ${isExpanded ? 'bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/30' : 'bg-white/[0.04] hover:bg-white/[0.1] text-zinc-400 hover:text-white border-white/[0.08]'}`,
+        title: isExpanded ? 'Thu gọn danh sách kích thước' : `Mở ${variants.length} kích thước`
+      }, /*#__PURE__*/React.createElement("i", {
+        className: `fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px]`
       })))), /*#__PURE__*/React.createElement("td", {
         className: "p-2.5 whitespace-nowrap"
       }, /*#__PURE__*/React.createElement("span", {
@@ -9615,7 +9722,7 @@ function InventoryListView({
           key: v.id || v.sku,
           onClick: e => {
             e.stopPropagation();
-            handleOpenProductDrawer(v);
+            handleOpenProductDrawer(v, true, 'SKU_DETAIL', row);
           },
           className: "bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub h-11"
         }, /*#__PURE__*/React.createElement("td", {
@@ -9645,7 +9752,109 @@ function InventoryListView({
         }, vQty), /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
         }, "B\u1ED9")));
-      }));
+      }), isExpanded && isAdminRole && /*#__PURE__*/React.createElement("tr", {
+        onClick: e => e.stopPropagation(),
+        className: "bg-[#09090b] border-t border-white/[0.03]"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-2 pl-4 w-16"
+      }), /*#__PURE__*/React.createElement("td", {
+        colSpan: 5,
+        className: "p-2 pr-4"
+      }, addingSizeGroupKey === row.groupKey ? /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 flex-wrap bg-[#121214] border border-white/[0.08] rounded-xl p-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10.5px] font-bold text-zinc-300 mr-1"
+      }, "K\xEDch th\u01B0\u1EDBc m\u1EDBi (", row.baseName, "):"), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        placeholder: "D\xE0i",
+        value: newSizeForm.length,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          length: e.target.value
+        })),
+        className: "w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-500 font-mono text-xs"
+      }, "\xD7"), /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        placeholder: "R\u1ED9ng",
+        value: newSizeForm.width,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          width: e.target.value
+        })),
+        className: "w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-500 font-mono text-xs"
+      }, "\xD7"), /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        placeholder: "Cao",
+        value: newSizeForm.height,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          height: e.target.value
+        })),
+        className: "w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-mono text-zinc-400"
+      }, "cm")), /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        placeholder: "Gi\xE1 b\xE1n (\u0111)",
+        value: newSizeForm.price,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          price: e.target.value
+        })),
+        className: "w-28 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white outline-none focus:border-[#d4af37]"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 text-[10px] text-zinc-400 font-mono"
+      }, /*#__PURE__*/React.createElement("span", null, "Min"), /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        value: newSizeForm.minStock,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          minStock: e.target.value
+        })),
+        className: "w-11 bg-[#09090b] border border-white/15 rounded-lg px-1.5 py-1 text-[11px] font-mono text-white text-center outline-none"
+      }), /*#__PURE__*/React.createElement("span", null, "Max"), /*#__PURE__*/React.createElement("input", {
+        type: "number",
+        value: newSizeForm.maxStock,
+        onChange: e => setNewSizeForm(prev => ({
+          ...prev,
+          maxStock: e.target.value
+        })),
+        className: "w-11 bg-[#09090b] border border-white/15 rounded-lg px-1.5 py-1 text-[11px] font-mono text-white text-center outline-none"
+      })), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        disabled: isSavingNewSize,
+        onClick: () => handleSaveNewLayoutSize(row),
+        className: "px-2.5 py-1 rounded-lg bg-[#d4af37] hover:bg-[#e3be42] text-black text-[10.5px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+      }, /*#__PURE__*/React.createElement("i", {
+        className: `fas ${isSavingNewSize ? 'fa-spinner fa-spin' : 'fa-check'} text-[9px]`
+      }), /*#__PURE__*/React.createElement("span", null, "L\u01B0u")), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setAddingSizeGroupKey(null),
+        className: "px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white text-[10.5px] font-semibold cursor-pointer"
+      }, "H\u1EE7y")) : /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: e => {
+          e.stopPropagation();
+          setAddingSizeGroupKey(row.groupKey);
+          setNewSizeForm({
+            length: '',
+            width: '',
+            height: '',
+            price: rep.price || '',
+            minStock: 0,
+            maxStock: 0
+          });
+        },
+        className: "px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 border border-dashed border-white/[0.1] text-[10.5px] font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+      }, /*#__PURE__*/React.createElement("i", {
+        className: "fas fa-plus text-[9px] text-[#d4af37]"
+      }), /*#__PURE__*/React.createElement("span", null, "Th\xEAm k\xEDch th\u01B0\u1EDBc m\u1EDBi")))));
     }
     const p = row.product;
     const qty = Math.round(Number(p.quantity || 0) * 100) / 100;
@@ -9660,7 +9869,7 @@ function InventoryListView({
     const costNum = Number(p.costPrice || 0);
     return /*#__PURE__*/React.createElement("tr", {
       key: p.id || p.sku,
-      onClick: () => handleOpenProductDrawer(p),
+      onClick: () => handleOpenProductDrawer(p, false, 'DEFAULT'),
       className: "hover:bg-white/[0.04] transition-colors cursor-pointer group h-14"
     }, /*#__PURE__*/React.createElement("td", {
       className: "p-2.5 pl-4 w-16"
@@ -9703,6 +9912,10 @@ function InventoryListView({
       className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
     }, unitLabel)));
   })))), selectedDrawerItem && (() => {
+    const isVerOverview = drawerMode === 'VER_OVERVIEW';
+    const isSkuDetail = drawerMode === 'SKU_DETAIL';
+    const verGroupObj = selectedDrawerItem._verGroup || null;
+    const headerTitle = isVerOverview ? verGroupObj?.baseName || selectedDrawerItem._baseLayoutName || selectedDrawerItem.name : selectedDrawerItem.name;
     const dQty = Math.round(Number(selectedDrawerItem.quantity || 0) * 100) / 100;
     const dMin = Number(selectedDrawerItem.minStock || 0);
     const dMax = Number(selectedDrawerItem.maxStock || 0);
@@ -9716,8 +9929,27 @@ function InventoryListView({
     const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
     const activePhotoObj = drawerGallery[drawerPhotoIdx] || drawerGallery[0] || null;
     const activeImgUrl = activePhotoObj?.url || '';
-    const dDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
-    const dDimensions = String(drawerDetailMeta?.dimensions || '').trim();
+    const rawDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
+    const dDescription = isVerOverview ? rawDescription.replace(/^Layout\s+/i, '').replace(/\s*[—–-]\s*(?:Size\s*[SML]\s*)?\(\s*\d+x\d+x\d+(?:cm)?\s*\)/gi, '').replace(/\s*[—–-]\s*\d+x\d+x\d+(?:cm)?/gi, '').trim() : rawDescription;
+    const dDimensions = String(selectedDrawerItem._sizeLabel || drawerDetailMeta?.dimensions || '').trim();
+    const dimMatch = `${selectedDrawerItem._sizeLabel || ''} ${selectedDrawerItem.name || ''} ${dDimensions}`.match(/(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/i);
+    const dimLength = dimMatch ? Number(dimMatch[1]) : null;
+    const dimWidth = dimMatch ? Number(dimMatch[2]) : null;
+    const dimHeight = dimMatch ? Number(dimMatch[3]) : null;
+    const bomRows = drawerBomAndCosts?.bomItems || drawerBomAndCosts?.bomLines || [];
+    const matCostVal = Number(drawerBomAndCosts?.totalMaterialCost ?? drawerBomAndCosts?.materialCost ?? 0);
+    const laborCostVal = Number(drawerBomAndCosts?.totalLaborCost ?? drawerBomAndCosts?.laborCost ?? 0);
+    const packMinsVal = Number(drawerBomAndCosts?.packTime ?? drawerBomAndCosts?.packingLimitMins ?? 10);
+    const packBonusVal = Number(drawerBomAndCosts?.packReward ?? drawerBomAndCosts?.packBonus ?? 0);
+    const phaseList = drawerBomAndCosts ? drawerBomAndCosts.phase1 ? [drawerBomAndCosts.phase1, drawerBomAndCosts.phase2] : [{
+      name: drawerBomAndCosts.p1Name || 'Khâu 1: Dựng Khung',
+      timeMins: drawerBomAndCosts.p1Time || 0,
+      bonus: drawerBomAndCosts.p1Reward || 0
+    }, {
+      name: drawerBomAndCosts.p2Name || 'Khâu 2: Gia Cố',
+      timeMins: drawerBomAndCosts.p2Time || 0,
+      bonus: drawerBomAndCosts.p2Reward || 0
+    }] : [];
     const drawerUi = /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[99999] overflow-hidden flex justify-end animate-fade-in"
     }, /*#__PURE__*/React.createElement("div", {
@@ -9733,28 +9965,30 @@ function InventoryListView({
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-10 h-10 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0"
     }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-box-open"
+      className: `fas ${isVerOverview ? 'fa-images' : 'fa-box-open'}`
     })), /*#__PURE__*/React.createElement("div", {
       className: "min-w-0"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-sm font-black text-white uppercase tracking-wide truncate",
-      title: selectedDrawerItem.name
-    }, selectedDrawerItem.name), /*#__PURE__*/React.createElement("div", {
+      title: headerTitle
+    }, headerTitle), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mt-0.5 flex-wrap"
-    }, /*#__PURE__*/React.createElement("span", {
+    }, isVerOverview ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[10.5px] font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md"
+    }, "Th\xF4ng tin chung m\u1EABu Ver \u2022 ", (verGroupObj?.variants || []).length || 3, " k\xEDch th\u01B0\u1EDBc") : /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-mono font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md"
     }, "SKU: ", selectedDrawerItem.sku || 'N/A'), /*#__PURE__*/React.createElement("span", {
       className: "text-[10.5px] font-bold text-zinc-400"
     }, dCatDisplay, " ", selectedDrawerItem.sub_category ? `• ${selectedDrawerItem.sub_category}` : '')))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1.5 shrink-0"
-    }, !dIsMaterial && /*#__PURE__*/React.createElement("button", {
+    }, !isVerOverview && !dIsMaterial && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setShowDrawerBom(prev => !prev),
       className: `h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${showDrawerBom ? 'bg-white/[0.12] text-white border-white/25' : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border-white/10'}`,
       title: "Xem & s\u1EEDa \u0111\u1ECBnh m\u1EE9c BOM nguy\xEAn li\u1EC7u"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-layer-group text-[#d4af37]"
-    }), /*#__PURE__*/React.createElement("span", null, "\u0110\u1ECBnh M\u1EE9c & BOM")), isAdminRole && /*#__PURE__*/React.createElement("button", {
+    }), /*#__PURE__*/React.createElement("span", null, "\u0110\u1ECBnh M\u1EE9c & BOM")), isAdminRole && !isVerOverview && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setEditProd(selectedDrawerItem),
       className: "h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-[#d4af37]/20 text-zinc-200 hover:text-[#d4af37] border border-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all",
@@ -9773,7 +10007,7 @@ function InventoryListView({
       className: "fas fa-times text-sm font-bold"
     })))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, !isSkuDetail && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2 flex-wrap"
@@ -9841,7 +10075,7 @@ function InventoryListView({
       className: "relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.08] group h-56 sm:h-64 flex items-center justify-center"
     }, /*#__PURE__*/React.createElement("img", {
       src: activeImgUrl,
-      alt: selectedDrawerItem.name,
+      alt: headerTitle,
       className: "w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]",
       referrerPolicy: "no-referrer",
       onError: e => typeof window.handleImageError === 'function' ? window.handleImageError(e) : e.target.style.display = 'none',
@@ -9891,23 +10125,49 @@ function InventoryListView({
       className: "p-6 rounded-xl bg-[#09090b] border border-dashed border-white/10 text-center text-zinc-500"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-image text-2xl text-zinc-600 block mb-1.5"
-    }), "Ch\u01B0a c\xF3 \u1EA3nh cho h\xE0ng h\xF3a n\xE0y")), /*#__PURE__*/React.createElement("div", {
+    }), "Ch\u01B0a c\xF3 \u1EA3nh cho h\xE0ng h\xF3a n\xE0y")), !isVerOverview && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2"
     }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-circle-info text-[#d4af37] text-xs"
+      className: "fas fa-ruler-combined text-[#d4af37] text-xs"
     }), /*#__PURE__*/React.createElement("span", {
       className: "font-bold text-[11px] uppercase tracking-wider text-white"
-    }, "Th\xF4ng Tin Chi Ti\u1EBFt")), dIsOut ? /*#__PURE__*/React.createElement("span", {
+    }, dimLength ? 'Chi Tiết Kích Thước & Mã SKU' : 'Thông Tin Chi Tiết')), dIsOut ? /*#__PURE__*/React.createElement("span", {
       className: "px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30"
     }, "H\u1EBFt h\xE0ng") : dIsLow ? /*#__PURE__*/React.createElement("span", {
       className: "px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"
     }, "S\u1EAFp h\u1EBFt") : /*#__PURE__*/React.createElement("span", {
       className: "px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-    }, "C\xF2n h\xE0ng")), /*#__PURE__*/React.createElement("div", {
+    }, "C\xF2n h\xE0ng")), dimLength && dimWidth && dimHeight && /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9.5px] uppercase font-bold text-zinc-500 block"
+    }, "Chi\u1EC1u D\xE0i"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono font-black text-white text-[14px] mt-0.5 block"
+    }, dimLength, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-zinc-400"
+    }, "cm"))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9.5px] uppercase font-bold text-zinc-500 block"
+    }, "Chi\u1EC1u R\u1ED9ng"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono font-black text-white text-[14px] mt-0.5 block"
+    }, dimWidth, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-zinc-400"
+    }, "cm"))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9.5px] uppercase font-bold text-zinc-500 block"
+    }, "Chi\u1EC1u Cao"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono font-black text-white text-[14px] mt-0.5 block"
+    }, dimHeight, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-normal text-zinc-400"
+    }, "cm")))), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 sm:grid-cols-3 gap-2.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5"
@@ -9945,9 +10205,9 @@ function InventoryListView({
       className: "bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5"
-    }, dDimensions ? 'Kích Thước' : 'Đơn Vị Nhập'), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-bold text-zinc-200 text-[12px]"
-    }, dDimensions || `${selectedDrawerItem.importUnit || dUnit}${Number(selectedDrawerItem.conversionRate) > 1 ? ` (x${selectedDrawerItem.conversionRate})` : ''}`))), !dIsMaterial && /*#__PURE__*/React.createElement("div", {
+    }, dimLength ? 'Qui Cách SX' : 'Đơn Vị Nhập'), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono font-bold text-zinc-200 text-[11.5px]"
+    }, dimLength ? dMax > 0 ? 'Sản xuất sẵn kho' : 'Có đơn mới SX' : `${selectedDrawerItem.importUnit || dUnit}${Number(selectedDrawerItem.conversionRate) > 1 ? ` (x${selectedDrawerItem.conversionRate})` : ''}`))), !dIsMaterial && /*#__PURE__*/React.createElement("div", {
       className: "pt-1 flex items-center justify-between gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -9959,9 +10219,9 @@ function InventoryListView({
       className: "fas fa-layer-group text-[#d4af37]"
     }), /*#__PURE__*/React.createElement("span", null, "\u0110\u1ECANH M\u1EE8C & GI\xC1 V\u1ED0N S\u1EA2N XU\u1EA4T (BOM NGUY\xCAN LI\u1EC6U)")), /*#__PURE__*/React.createElement("span", {
       className: "flex items-center gap-2 text-[10.5px] text-zinc-400 font-mono"
-    }, drawerBomAndCosts && /*#__PURE__*/React.createElement("span", null, drawerBomAndCosts.bomLines?.length || 0, " v\u1EADt t\u01B0 \u2022 ", formatMoney(drawerBomAndCosts.totalCOGS || 0), "\u0111"), /*#__PURE__*/React.createElement("i", {
+    }, drawerBomAndCosts && /*#__PURE__*/React.createElement("span", null, bomRows.length, " v\u1EADt t\u01B0 \u2022 ", formatMoney(drawerBomAndCosts.totalCOGS || matCostVal + laborCostVal || 0), "\u0111"), /*#__PURE__*/React.createElement("i", {
       className: `fas fa-chevron-${showDrawerBom ? 'up' : 'down'} text-[10px]`
-    }))))), !dIsMaterial && showDrawerBom && drawerBomAndCosts && /*#__PURE__*/React.createElement("div", {
+    }))))), !isVerOverview && !dIsMaterial && showDrawerBom && drawerBomAndCosts && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#121214] p-3.5 rounded-2xl border border-white/[0.08] space-y-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5"
@@ -9979,14 +10239,14 @@ function InventoryListView({
       className: "px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 border border-white/[0.08] text-[10px] font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-pen text-[9px] text-[#d4af37]"
-    }), /*#__PURE__*/React.createElement("span", null, "S\u1EEDa BOM")), /*#__PURE__*/React.createElement("button", {
+    }), /*#__PURE__*/React.createElement("span", null, "S\u1EEDa BOM")), !isSkuDetail && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setIsEditingDrawerBom(false);
         setShowDrawerBom(false);
       },
       className: "px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-[10px] font-semibold cursor-pointer transition-colors"
-    }, "\u2715 \u0110\xF3ng"))), /*#__PURE__*/React.createElement("div", {
+    }, "Thu g\u1ECDn"))), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-2"
@@ -9994,54 +10254,62 @@ function InventoryListView({
       className: "text-[9px] font-semibold text-zinc-500 uppercase"
     }, "V\u1EADt T\u01B0 (BOM)"), /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-mono font-bold text-zinc-100 mt-0.5"
-    }, formatMoney(isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : drawerBomAndCosts.materialCost), "\u0111")), /*#__PURE__*/React.createElement("div", {
+    }, formatMoney(isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : matCostVal), "\u0111")), /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-semibold text-zinc-500 uppercase"
     }, "C\xF4ng Th\u1EE3"), /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-mono font-bold text-zinc-100 mt-0.5"
-    }, formatMoney(drawerBomAndCosts.laborCost), "\u0111")), /*#__PURE__*/React.createElement("div", {
+    }, formatMoney(laborCostVal), "\u0111")), /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.08] rounded-xl p-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-semibold text-zinc-400 uppercase"
     }, "Gi\xE1 V\u1ED1n COGS"), /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-mono font-bold text-[#d4af37] mt-0.5"
-    }, formatMoney((isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : drawerBomAndCosts.materialCost) + Number(drawerBomAndCosts.laborCost || 0)), "\u0111")), /*#__PURE__*/React.createElement("div", {
+    }, formatMoney((isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : matCostVal) + laborCostVal), "\u0111")), /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-semibold text-zinc-500 uppercase"
     }, "KPI \u0110\xF3ng G\xF3i"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-mono font-bold text-zinc-200 mt-0.5 truncate"
-    }, drawerBomAndCosts.packingLimitMins, "p \u2022 +", formatMoney(drawerBomAndCosts.packBonus), "\u0111"))), /*#__PURE__*/React.createElement("div", {
+    }, packMinsVal, "p \u2022 +", formatMoney(packBonusVal), "\u0111"))), /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 space-y-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-semibold uppercase tracking-wider text-zinc-400"
-    }, "B\u1EA3ng \u0110\u1ECBnh M\u1EE9c V\u1EADt T\u01B0 (", isEditingDrawerBom ? drawerBomDraft.length : drawerBomAndCosts.bomLines?.length || 0, " lo\u1EA1i)"), /*#__PURE__*/React.createElement("span", {
+    }, "B\u1EA3ng \u0110\u1ECBnh M\u1EE9c V\u1EADt T\u01B0 (", isEditingDrawerBom ? drawerBomDraft.length : bomRows.length, " lo\u1EA1i)"), /*#__PURE__*/React.createElement("span", {
       className: "text-[10.5px] font-mono font-bold text-zinc-200"
-    }, formatMoney(isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : drawerBomAndCosts.materialCost), " \u0111")), !isEditingDrawerBom ? /*#__PURE__*/React.createElement("div", {
+    }, formatMoney(isEditingDrawerBom ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0) : matCostVal), " \u0111")), !isEditingDrawerBom ? /*#__PURE__*/React.createElement("div", {
       className: "divide-y divide-white/[0.04]"
-    }, (drawerBomAndCosts.bomLines || []).map((line, idx) => /*#__PURE__*/React.createElement("div", {
-      key: line.id || idx,
-      className: "py-2 flex items-center justify-between gap-2 text-[11px]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 min-w-0"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "w-4 h-4 rounded bg-white/[0.04] border border-white/[0.06] text-[9px] font-mono font-semibold text-zinc-400 flex items-center justify-center shrink-0"
-    }, idx + 1), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "font-medium text-zinc-200 truncate"
-    }, line.materialName), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9.5px] text-zinc-500 font-mono"
-    }, "\u0110\u1ECBnh m\u1EE9c: ", /*#__PURE__*/React.createElement("span", {
-      className: "text-zinc-300 font-semibold"
-    }, line.defaultQty, " ", line.unit), line.unitCost > 0 && ` × ${formatMoney(line.unitCost)}đ/${line.unit}`, line.conversionHint ? /*#__PURE__*/React.createElement("span", {
-      className: "text-zinc-500 ml-1"
-    }, "(", line.conversionHint, ")") : null))), /*#__PURE__*/React.createElement("div", {
-      className: "text-right shrink-0 font-mono font-semibold text-zinc-200"
-    }, formatMoney(line.lineCost), " \u0111")))) : /*#__PURE__*/React.createElement("div", {
+    }, bomRows.map((line, idx) => {
+      const mName = line.name || line.materialName || 'Nguyên liệu';
+      const mQty = line.qty ?? line.defaultQty ?? 0;
+      const mUnit = line.unit || '';
+      const mUnitCost = Number(line.costPrice ?? line.unitCost ?? 0);
+      const mLineCost = Number(line.totalCost ?? line.lineCost ?? mQty * mUnitCost);
+      const mConvNote = line.conversionNote || line.conversionHint || '';
+      return /*#__PURE__*/React.createElement("div", {
+        key: line.id || idx,
+        className: "py-2 flex items-center justify-between gap-2 text-[11px]"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 min-w-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-4 h-4 rounded bg-white/[0.04] border border-white/[0.06] text-[9px] font-mono font-semibold text-zinc-400 flex items-center justify-center shrink-0"
+      }, idx + 1), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "font-medium text-zinc-200 truncate"
+      }, mName), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9.5px] text-zinc-500 font-mono"
+      }, "\u0110\u1ECBnh m\u1EE9c: ", /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-300 font-semibold"
+      }, mQty, " ", mUnit), mUnitCost > 0 && ` × ${formatMoney(mUnitCost)}đ/${mUnit}`, mConvNote ? /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-500 ml-1"
+      }, "(", mConvNote, ")") : null))), /*#__PURE__*/React.createElement("div", {
+        className: "text-right shrink-0 font-mono font-semibold text-zinc-200"
+      }, formatMoney(mLineCost), " \u0111"));
+    })) : /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 pt-1"
     }, drawerBomDraft.map((row, idx) => /*#__PURE__*/React.createElement("div", {
       key: row.id || idx,
@@ -10110,28 +10378,28 @@ function InventoryListView({
       className: `fas ${isSavingDrawerBom ? 'fa-spinner fa-spin' : 'fa-check'} text-[10px]`
     }), /*#__PURE__*/React.createElement("span", null, "L\u01B0u BOM")))))), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
-    }, [drawerBomAndCosts.phase1, drawerBomAndCosts.phase2].map((ph, pIdx) => /*#__PURE__*/React.createElement("div", {
+    }, phaseList.map((ph, pIdx) => /*#__PURE__*/React.createElement("div", {
       key: pIdx,
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 flex flex-col justify-between gap-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-1"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-semibold text-zinc-300 uppercase truncate"
-    }, ph.name), /*#__PURE__*/React.createElement("span", {
+    }, ph?.name), /*#__PURE__*/React.createElement("span", {
       className: "text-[9.5px] font-mono text-zinc-500 shrink-0"
-    }, ph.timeMins, "p")), /*#__PURE__*/React.createElement("div", {
+    }, ph?.timeMins, "p")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-1 pt-1 border-t border-white/[0.04]"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9.5px] text-zinc-500"
     }, "\u0110\u1ECBnh m\u1EE9c c\xF4ng"), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-mono font-bold text-zinc-100"
-    }, "+", formatMoney(ph.bonus), "\u0111"))))), /*#__PURE__*/React.createElement("div", {
+    }, "+", formatMoney(ph?.bonus || 0), "\u0111"))))), /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-2 flex items-center justify-between text-[10.5px]"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-zinc-400"
-    }, "Th\u01B0\u1EDFng \u0110\xF3ng G\xF3i (Kh\xE2u 3 \u2022 Chu\u1EA9n ", drawerBomAndCosts.packingLimitMins, " ph\xFAt)"), /*#__PURE__*/React.createElement("span", {
+    }, "Th\u01B0\u1EDFng \u0110\xF3ng G\xF3i (Kh\xE2u 3 \u2022 Chu\u1EA9n ", packMinsVal, " ph\xFAt)"), /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-bold text-zinc-200"
-    }, "+", formatMoney(drawerBomAndCosts.packBonus), "\u0111"))), /*#__PURE__*/React.createElement("div", {
+    }, "+", formatMoney(packBonusVal), "\u0111"))), !isSkuDetail && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2"
@@ -10143,7 +10411,7 @@ function InventoryListView({
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto custom-scrollbar"
     }, dDescription) : /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[11.5px] text-zinc-500 italic"
-    }, "Ch\u01B0a c\xF3 m\xF4 t\u1EA3 chi ti\u1EBFt cho h\xE0ng h\xF3a n\xE0y.")), /*#__PURE__*/React.createElement("div", {
+    }, "Ch\u01B0a c\xF3 m\xF4 t\u1EA3 chi ti\u1EBFt cho h\xE0ng h\xF3a n\xE0y.")), !isVerOverview && /*#__PURE__*/React.createElement("div", {
       className: "bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between"

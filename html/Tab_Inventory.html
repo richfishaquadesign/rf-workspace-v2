@@ -2164,8 +2164,12 @@ Model ID: 287936773312
 
     // Side Drawer state (Chi tiết hàng hóa)
     const [selectedDrawerItem, setSelectedDrawerItem] = React.useState(null);
+    const [drawerMode, setDrawerMode] = React.useState('DEFAULT'); // 'DEFAULT' | 'VER_OVERVIEW' | 'SKU_DETAIL'
     const [drawerPhotoIdx, setDrawerPhotoIdx] = React.useState(0);
     const [expandedLayoutGroups, setExpandedLayoutGroups] = React.useState({});
+    const [addingSizeGroupKey, setAddingSizeGroupKey] = React.useState(null);
+    const [newSizeForm, setNewSizeForm] = React.useState({ length: '', width: '', height: '', price: '', minStock: 0, maxStock: 0 });
+    const [isSavingNewSize, setIsSavingNewSize] = React.useState(false);
     const [showDrawerBom, setShowDrawerBom] = React.useState(false);
     const [isEditingDrawerBom, setIsEditingDrawerBom] = React.useState(false);
     const [drawerBomDraft, setDrawerBomDraft] = React.useState([]);
@@ -2468,14 +2472,96 @@ Model ID: 287936773312
     };
 
     // Drawer Handler: Mở Chi tiết hàng hóa
-    const handleOpenProductDrawer = (prod, openBomDirect = false) => {
-      setSelectedDrawerItem(prod);
+    // mode: 'DEFAULT' | 'VER_OVERVIEW' (thông tin chung Ver: ảnh + mô tả) | 'SKU_DETAIL' (chi tiết kích thước: Dài Rộng Cao, BOM, lịch sử xuất nhập kiểm)
+    const handleOpenProductDrawer = (prod, openBomDirect = false, mode = 'DEFAULT', verGroup = null) => {
+      if (!prod) return;
+      const itemWithMeta = verGroup ? { ...prod, _verGroup: verGroup } : prod;
+      setSelectedDrawerItem(itemWithMeta);
+      setDrawerMode(mode || 'DEFAULT');
       setDrawerPhotoIdx(0);
       setShowProductPhotoUrlInput(false);
       setProductPhotoUrlVal('');
       setIsEditingDrawerBom(false);
       setDrawerBomDraft([]);
-      setShowDrawerBom(Boolean(openBomDirect));
+      setShowDrawerBom(mode === 'SKU_DETAIL' ? true : Boolean(openBomDirect));
+    };
+
+    // Lưu thêm kích thước mới cho 1 mẫu Layout Ver
+    const handleSaveNewLayoutSize = async (groupRow) => {
+      if (!groupRow) return;
+      const L = parseInt(String(newSizeForm.length || '').trim(), 10);
+      const W = parseInt(String(newSizeForm.width || '').trim(), 10);
+      const H = parseInt(String(newSizeForm.height || '').trim(), 10);
+      if (!L || !W || !H || L <= 0 || W <= 0 || H <= 0) {
+        if (typeof triggerToast === 'function') {
+          triggerToast('Vui lòng nhập đầy đủ Chiều Dài, Rộng, Cao (cm) hợp lệ!', 'fa-triangle-exclamation', 'error');
+        }
+        return;
+      }
+      setIsSavingNewSize(true);
+      try {
+        const variants = groupRow.variants || [];
+        const rep = variants.find(v => String(v._sizeLabel || '').includes('30x20x20')) || variants[0] || {};
+        const dimsStr = `${L}x${W}x${H}`;
+        const dimsCode = `${String(L).padStart(2, '0')}${String(W).padStart(2, '0')}${String(H).padStart(2, '0')}`;
+        const repSku = String(rep.sku || '').trim();
+        const skuPrefixMatch = repSku.match(/^([A-Z]+-\d+)-/i);
+        const skuPrefix = skuPrefixMatch
+          ? skuPrefixMatch[1].toUpperCase()
+          : (repSku.split('-').slice(0, 2).join('-').toUpperCase() || 'LAY-001');
+        const newSku = `${skuPrefix}-${dimsCode}`;
+        const newName = `${groupRow.baseName} - ${dimsStr}cm`;
+
+        const existingList = Array.isArray(data.Products) ? data.Products : [];
+        if (existingList.some(p => String(p.sku || '').toUpperCase().trim() === newSku)) {
+          if (typeof triggerToast === 'function') {
+            triggerToast(`Kích thước ${dimsStr}cm (${newSku}) đã tồn tại trong mẫu ${groupRow.baseName}!`, 'fa-triangle-exclamation', 'error');
+          }
+          setIsSavingNewSize(false);
+          return;
+        }
+
+        const is302020 = dimsStr === '30x20x20';
+        const minVal = newSizeForm.minStock !== '' && newSizeForm.minStock !== undefined ? Number(newSizeForm.minStock) : (is302020 ? 1 : 0);
+        const maxVal = newSizeForm.maxStock !== '' && newSizeForm.maxStock !== undefined ? Number(newSizeForm.maxStock) : (is302020 ? 1 : 0);
+        const priceVal = Number(newSizeForm.price || rep.price || 0);
+
+        const newProduct = {
+          id: newSku,
+          sku: newSku,
+          name: newName,
+          category: 'LAYOUT',
+          sub_category: groupRow.sub_category || rep.sub_category || 'LAYOUT',
+          unit: rep.unit || 'Bộ',
+          quantity: 0,
+          minStock: minVal,
+          maxStock: maxVal,
+          price: priceVal,
+          costPrice: Number(rep.costPrice || 0),
+          image: rep.image || '',
+          realImage: rep.realImage || '',
+          description: `${groupRow.baseName} chế tác thủ công bởi RF Aquarium từ gỗ lũa và đá tự nhiên, an toàn cho cá tép, sẵn sàng setup bể thủy sinh.`
+        };
+
+        const nextProducts = [newProduct, ...existingList];
+        await pushData({
+          ...data,
+          Products: nextProducts,
+          _changedKeys: ['Products']
+        });
+
+        setAddingSizeGroupKey(null);
+        setNewSizeForm({ length: '', width: '', height: '', price: '', minStock: 0, maxStock: 0 });
+        if (typeof triggerToast === 'function') {
+          triggerToast(`Đã thêm kích thước ${dimsStr}cm (${newSku}) cho ${groupRow.baseName}!`, 'fa-check-circle', 'success');
+        }
+      } catch (err) {
+        if (typeof triggerToast === 'function') {
+          triggerToast('Lỗi khi thêm kích thước: ' + (err?.message || err), 'fa-triangle-exclamation', 'error');
+        }
+      } finally {
+        setIsSavingNewSize(false);
+      }
     };
 
     // Lắng nghe phím ESC để đóng Drawer / Lightbox an toàn
@@ -2496,6 +2582,7 @@ Model ID: 287936773312
     // Đóng Drawer
     const handleCloseDrawer = () => {
       setSelectedDrawerItem(null);
+      setDrawerMode('DEFAULT');
       setShowProductPhotoUrlInput(false);
       setProductPhotoUrlVal('');
       setZoomDrawerImage(null);
@@ -2532,13 +2619,14 @@ Model ID: 287936773312
 
     const handleStartEditDrawerBom = () => {
       if (!selectedDrawerItem) return;
-      const currentLines = (drawerBomAndCosts?.bomLines || []).map((line, idx) => ({
+      const rawLines = drawerBomAndCosts?.bomItems || drawerBomAndCosts?.bomLines || [];
+      const currentLines = rawLines.map((line, idx) => ({
         id: line.id || `BOM_LINE_${Date.now()}_${idx}`,
-        materialSku: line.materialSku || '',
-        materialName: line.materialName || '',
-        defaultQty: Number(line.defaultQty || 0),
-        unit: line.unit || 'Cái',
-        unitCost: Number(line.unitCost || 0)
+        materialSku: line.sku || line.materialSku || '',
+        materialName: line.name || line.materialName || '',
+        defaultQty: Number(line.qty ?? line.defaultQty ?? 0),
+        unit: line.unit || 'Gam',
+        unitCost: Number(line.costPrice ?? line.unitCost ?? 0)
       }));
       setDrawerBomDraft(currentLines);
       setShowDrawerBom(true);
@@ -2609,7 +2697,7 @@ Model ID: 287936773312
         const nextBomTable = [...keptRows, ...newBomRows];
 
         const newMaterialCost = Math.round(cleanDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0));
-        const laborCostVal = Number(drawerBomAndCosts?.laborCost || 0);
+        const laborCostVal = Number(drawerBomAndCosts?.totalLaborCost ?? drawerBomAndCosts?.laborCost ?? 0);
         const newTotalCogs = newMaterialCost + laborCostVal;
 
         const updatedProduct = {
@@ -2651,12 +2739,17 @@ Model ID: 287936773312
     const productDetailsMap = (typeof window !== 'undefined' && window.__RF_KNOWLEDGE_OS_SEED__?.ProductDetails) || {};
 
     const getProductCleanThumb = React.useCallback((p) => {
+      if (!p) return '';
       const safeDarkImg = (u) => {
         const s = formatImageUrl(u);
         return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
       };
       const detailImgs = (productDetailsMap[p?.sku]?.images || []).map(safeDarkImg).filter(Boolean);
-      return safeDarkImg(p?.image) || safeDarkImg(p?.realImage) || detailImgs[0] || '';
+      const l5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
+      const l5Url = l5?.angles
+        ? (safeDarkImg(l5.angles.front?.url) || safeDarkImg(l5.angles.distant?.url) || safeDarkImg(l5.angles.left?.url) || safeDarkImg(l5.angles.right?.url) || safeDarkImg(l5.angles.top?.url))
+        : '';
+      return safeDarkImg(p?.image) || safeDarkImg(p?.realImage) || detailImgs[0] || l5Url || '';
     }, [productDetailsMap]);
 
     const drawerDetailMeta = React.useMemo(() => {
@@ -3167,7 +3260,7 @@ Model ID: 287936773312
                   if (row.isLayoutGroup) {
                     const variants = row.variants || [];
                     const rep = variants.find(v => String(v._sizeLabel || '').includes('30x20x20')) || variants[0] || {};
-                    const imgUrl = getProductCleanThumb(rep);
+                    const imgUrl = variants.map(v => getProductCleanThumb(v)).find(Boolean) || getProductCleanThumb(rep);
                     const totalQty = Math.round(variants.reduce((s, v) => s + Number(v.quantity || 0), 0) * 100) / 100;
                     const prices = variants.map(v => Number(v.price || 0)).filter(n => n > 0);
                     const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -3177,9 +3270,9 @@ Model ID: 287936773312
 
                     return (
                       <React.Fragment key={row.groupKey}>
-                        {/* Hàng cha của mẫu Layout (VD: Bonsai Ver.1) */}
+                        {/* Hàng cha của mẫu Layout (VD: Bonsai Ver.1): chạm vào thẻ mở Thông tin chung của Ver (có ảnh + mô tả) */}
                         <tr
-                          onClick={() => setExpandedLayoutGroups(prev => ({ ...prev, [row.groupKey]: !prev[row.groupKey] }))}
+                          onClick={() => handleOpenProductDrawer(rep, false, 'VER_OVERVIEW', row)}
                           className={`hover:bg-white/[0.04] transition-colors cursor-pointer group h-14 ${isExpanded ? 'bg-white/[0.03]' : ''}`}
                         >
                           {/* 1. Ảnh */}
@@ -3200,14 +3293,25 @@ Model ID: 287936773312
                             </div>
                           </td>
 
-                          {/* 2. Tên hàng hóa (Chỉ Phân loại + Ver, bấm vào xổ xuống các kích thước) */}
+                          {/* 2. Tên hàng hóa (Phân loại + Ver + nút icon mũi tên xổ xuống các kích thước) */}
                           <td className="p-2.5 font-bold text-white">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
                               <span className="group-hover:text-[#d4af37] transition-colors">{row.baseName}</span>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
-                                <span>{variants.length} kích thước</span>
-                                <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[9px] text-zinc-400 transition-transform`}></i>
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedLayoutGroups(prev => ({ ...prev, [row.groupKey]: !prev[row.groupKey] }));
+                                }}
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
+                                  isExpanded
+                                    ? 'bg-[#d4af37]/15 text-[#d4af37] border-[#d4af37]/30'
+                                    : 'bg-white/[0.04] hover:bg-white/[0.1] text-zinc-400 hover:text-white border-white/[0.08]'
+                                }`}
+                                title={isExpanded ? 'Thu gọn danh sách kích thước' : `Mở ${variants.length} kích thước`}
+                              >
+                                <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px]`}></i>
+                              </button>
                             </div>
                           </td>
 
@@ -3257,7 +3361,7 @@ Model ID: 287936773312
                               key={v.id || v.sku}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenProductDrawer(v);
+                                handleOpenProductDrawer(v, true, 'SKU_DETAIL', row);
                               }}
                               className="bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub h-11"
                             >
@@ -3298,6 +3402,103 @@ Model ID: 287936773312
                             </tr>
                           );
                         })}
+
+                        {/* Dòng + Thêm kích thước mới ngay dưới danh sách kích thước của Ver */}
+                        {isExpanded && isAdminRole && (
+                          <tr
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-[#09090b] border-t border-white/[0.03]"
+                          >
+                            <td className="p-2 pl-4 w-16"></td>
+                            <td colSpan={5} className="p-2 pr-4">
+                              {addingSizeGroupKey === row.groupKey ? (
+                                <div className="flex items-center gap-2 flex-wrap bg-[#121214] border border-white/[0.08] rounded-xl p-2">
+                                  <span className="text-[10.5px] font-bold text-zinc-300 mr-1">
+                                    Kích thước mới ({row.baseName}):
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      placeholder="Dài"
+                                      value={newSizeForm.length}
+                                      onChange={(e) => setNewSizeForm(prev => ({ ...prev, length: e.target.value }))}
+                                      className="w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+                                    />
+                                    <span className="text-zinc-500 font-mono text-xs">×</span>
+                                    <input
+                                      type="number"
+                                      placeholder="Rộng"
+                                      value={newSizeForm.width}
+                                      onChange={(e) => setNewSizeForm(prev => ({ ...prev, width: e.target.value }))}
+                                      className="w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+                                    />
+                                    <span className="text-zinc-500 font-mono text-xs">×</span>
+                                    <input
+                                      type="number"
+                                      placeholder="Cao"
+                                      value={newSizeForm.height}
+                                      onChange={(e) => setNewSizeForm(prev => ({ ...prev, height: e.target.value }))}
+                                      className="w-14 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white text-center outline-none focus:border-[#d4af37]"
+                                    />
+                                    <span className="text-[10px] font-mono text-zinc-400">cm</span>
+                                  </div>
+                                  <input
+                                    type="number"
+                                    placeholder="Giá bán (đ)"
+                                    value={newSizeForm.price}
+                                    onChange={(e) => setNewSizeForm(prev => ({ ...prev, price: e.target.value }))}
+                                    className="w-28 bg-[#09090b] border border-white/15 rounded-lg px-2 py-1 text-[11px] font-mono text-white outline-none focus:border-[#d4af37]"
+                                  />
+                                  <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                                    <span>Min</span>
+                                    <input
+                                      type="number"
+                                      value={newSizeForm.minStock}
+                                      onChange={(e) => setNewSizeForm(prev => ({ ...prev, minStock: e.target.value }))}
+                                      className="w-11 bg-[#09090b] border border-white/15 rounded-lg px-1.5 py-1 text-[11px] font-mono text-white text-center outline-none"
+                                    />
+                                    <span>Max</span>
+                                    <input
+                                      type="number"
+                                      value={newSizeForm.maxStock}
+                                      onChange={(e) => setNewSizeForm(prev => ({ ...prev, maxStock: e.target.value }))}
+                                      className="w-11 bg-[#09090b] border border-white/15 rounded-lg px-1.5 py-1 text-[11px] font-mono text-white text-center outline-none"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={isSavingNewSize}
+                                    onClick={() => handleSaveNewLayoutSize(row)}
+                                    className="px-2.5 py-1 rounded-lg bg-[#d4af37] hover:bg-[#e3be42] text-black text-[10.5px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <i className={`fas ${isSavingNewSize ? 'fa-spinner fa-spin' : 'fa-check'} text-[9px]`}></i>
+                                    <span>Lưu</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAddingSizeGroupKey(null)}
+                                    className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white text-[10.5px] font-semibold cursor-pointer"
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAddingSizeGroupKey(row.groupKey);
+                                    setNewSizeForm({ length: '', width: '', height: '', price: rep.price || '', minStock: 0, maxStock: 0 });
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 border border-dashed border-white/[0.1] text-[10.5px] font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                                >
+                                  <i className="fas fa-plus text-[9px] text-[#d4af37]"></i>
+                                  <span>Thêm kích thước mới</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        )}
                       </React.Fragment>
                     );
                   }
@@ -3317,7 +3518,7 @@ Model ID: 287936773312
                   return (
                     <tr
                       key={p.id || p.sku}
-                      onClick={() => handleOpenProductDrawer(p)}
+                      onClick={() => handleOpenProductDrawer(p, false, 'DEFAULT')}
                       className="hover:bg-white/[0.04] transition-colors cursor-pointer group h-14"
                     >
                       {/* 1. Ảnh */}
@@ -3387,6 +3588,13 @@ Model ID: 287936773312
 
         {/* 5. DRAWER CHI TIẾT HÀNG HÓA (RENDER QUA PORTAL TRÊN BODY ĐỂ KHÔNG BỊ HEADER CHE) */}
         {selectedDrawerItem && (() => {
+          const isVerOverview = drawerMode === 'VER_OVERVIEW';
+          const isSkuDetail = drawerMode === 'SKU_DETAIL';
+          const verGroupObj = selectedDrawerItem._verGroup || null;
+          const headerTitle = isVerOverview
+            ? (verGroupObj?.baseName || selectedDrawerItem._baseLayoutName || selectedDrawerItem.name)
+            : selectedDrawerItem.name;
+
           const dQty = Math.round(Number(selectedDrawerItem.quantity || 0) * 100) / 100;
           const dMin = Number(selectedDrawerItem.minStock || 0);
           const dMax = Number(selectedDrawerItem.maxStock || 0);
@@ -3400,8 +3608,33 @@ Model ID: 287936773312
           const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
           const activePhotoObj = drawerGallery[drawerPhotoIdx] || drawerGallery[0] || null;
           const activeImgUrl = activePhotoObj?.url || '';
-          const dDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
-          const dDimensions = String(drawerDetailMeta?.dimensions || '').trim();
+          const rawDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
+          const dDescription = isVerOverview
+            ? rawDescription
+                .replace(/^Layout\s+/i, '')
+                .replace(/\s*[—–-]\s*(?:Size\s*[SML]\s*)?\(\s*\d+x\d+x\d+(?:cm)?\s*\)/gi, '')
+                .replace(/\s*[—–-]\s*\d+x\d+x\d+(?:cm)?/gi, '')
+                .trim()
+            : rawDescription;
+          const dDimensions = String(selectedDrawerItem._sizeLabel || drawerDetailMeta?.dimensions || '').trim();
+          const dimMatch = `${selectedDrawerItem._sizeLabel || ''} ${selectedDrawerItem.name || ''} ${dDimensions}`.match(/(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/i);
+          const dimLength = dimMatch ? Number(dimMatch[1]) : null;
+          const dimWidth = dimMatch ? Number(dimMatch[2]) : null;
+          const dimHeight = dimMatch ? Number(dimMatch[3]) : null;
+
+          const bomRows = drawerBomAndCosts?.bomItems || drawerBomAndCosts?.bomLines || [];
+          const matCostVal = Number(drawerBomAndCosts?.totalMaterialCost ?? drawerBomAndCosts?.materialCost ?? 0);
+          const laborCostVal = Number(drawerBomAndCosts?.totalLaborCost ?? drawerBomAndCosts?.laborCost ?? 0);
+          const packMinsVal = Number(drawerBomAndCosts?.packTime ?? drawerBomAndCosts?.packingLimitMins ?? 10);
+          const packBonusVal = Number(drawerBomAndCosts?.packReward ?? drawerBomAndCosts?.packBonus ?? 0);
+          const phaseList = drawerBomAndCosts
+            ? (drawerBomAndCosts.phase1
+                ? [drawerBomAndCosts.phase1, drawerBomAndCosts.phase2]
+                : [
+                    { name: drawerBomAndCosts.p1Name || 'Khâu 1: Dựng Khung', timeMins: drawerBomAndCosts.p1Time || 0, bonus: drawerBomAndCosts.p1Reward || 0 },
+                    { name: drawerBomAndCosts.p2Name || 'Khâu 2: Gia Cố', timeMins: drawerBomAndCosts.p2Time || 0, bonus: drawerBomAndCosts.p2Reward || 0 }
+                  ])
+            : [];
 
           const drawerUi = (
             <div className="fixed inset-0 z-[99999] overflow-hidden flex justify-end animate-fade-in">
@@ -3418,16 +3651,22 @@ Model ID: 287936773312
                 <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#121214] shrink-0 z-20 shadow-md gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0">
-                      <i className="fas fa-box-open"></i>
+                      <i className={`fas ${isVerOverview ? 'fa-images' : 'fa-box-open'}`}></i>
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-black text-white uppercase tracking-wide truncate" title={selectedDrawerItem.name}>
-                        {selectedDrawerItem.name}
+                      <h3 className="text-sm font-black text-white uppercase tracking-wide truncate" title={headerTitle}>
+                        {headerTitle}
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-[11px] font-mono font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md">
-                          SKU: {selectedDrawerItem.sku || 'N/A'}
-                        </span>
+                        {isVerOverview ? (
+                          <span className="text-[10.5px] font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md">
+                            Thông tin chung mẫu Ver • {(verGroupObj?.variants || []).length || 3} kích thước
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-mono font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md">
+                            SKU: {selectedDrawerItem.sku || 'N/A'}
+                          </span>
+                        )}
                         <span className="text-[10.5px] font-bold text-zinc-400">
                           {dCatDisplay} {selectedDrawerItem.sub_category ? `• ${selectedDrawerItem.sub_category}` : ''}
                         </span>
@@ -3436,7 +3675,7 @@ Model ID: 287936773312
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {!dIsMaterial && (
+                    {!isVerOverview && !dIsMaterial && (
                       <button
                         type="button"
                         onClick={() => setShowDrawerBom(prev => !prev)}
@@ -3451,7 +3690,7 @@ Model ID: 287936773312
                         <span>Định Mức & BOM</span>
                       </button>
                     )}
-                    {isAdminRole && (
+                    {isAdminRole && !isVerOverview && (
                       <button
                         type="button"
                         onClick={() => setEditProd(selectedDrawerItem)}
@@ -3477,252 +3716,284 @@ Model ID: 287936773312
                 {/* Drawer Body Content */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs">
 
-                  {/* 1. BỘ ẢNH CỦA HÀNG HÓA */}
-                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <i className="fas fa-images text-[#d4af37] text-sm"></i>
-                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">
-                          Bộ Ảnh Hàng Hóa ({drawerGallery.length})
-                        </span>
-                      </div>
+                  {/* 1. BỘ ẢNH CỦA HÀNG HÓA (Chỉ hiển thị ở Thông tin chung Ver hoặc hàng hóa thường, KHÔNG hiển thị ở chi tiết SKU kích thước) */}
+                  {!isSkuDetail && (
+                    <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <i className="fas fa-images text-[#d4af37] text-sm"></i>
+                          <span className="font-bold text-[11px] uppercase tracking-wider text-white">
+                            Bộ Ảnh Hàng Hóa ({drawerGallery.length})
+                          </span>
+                        </div>
 
-                      <div className="flex items-center gap-1.5">
-                        {layout5 && (
-                          <button
-                            type="button"
-                            onClick={() => window.openLayout5AngleViewer(layout5)}
-                            className="h-7 px-2.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] text-zinc-950 font-black text-[10.5px] uppercase flex items-center gap-1.5 transition-all cursor-pointer hover:brightness-110 active:scale-95"
-                          >
-                            <i className="fas fa-expand text-[10px]"></i>
-                            <span>5 Góc Studio</span>
-                          </button>
-                        )}
-                        {isAdminRole && (
-                          <>
-                            <label
-                              className={`h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/10 font-bold text-[10.5px] flex items-center gap-1.5 transition-all ${isUploadingProductPhoto ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
-                              title="Tải ảnh lên"
-                            >
-                              <i className={`fas ${isUploadingProductPhoto ? 'fa-spinner fa-spin' : 'fa-camera'}`}></i>
-                              <span className="hidden sm:inline">{isUploadingProductPhoto ? 'Đang tải...' : 'Đổi ảnh'}</span>
-                              <input
-                                type="file"
-                                accept="image/png, image/jpeg, image/jpg, image/webp"
-                                className="hidden"
-                                disabled={isUploadingProductPhoto}
-                                onChange={(e) => {
-                                  if (e.target.files && e.target.files[0]) {
-                                    handleUploadProductPhoto(e.target.files[0]);
-                                    e.target.value = '';
-                                  }
-                                }}
-                              />
-                            </label>
+                        <div className="flex items-center gap-1.5">
+                          {layout5 && (
                             <button
                               type="button"
-                              onClick={() => setShowProductPhotoUrlInput(prev => !prev)}
-                              className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-[11px] cursor-pointer"
-                              title="Dán link URL ảnh"
+                              onClick={() => window.openLayout5AngleViewer(layout5)}
+                              className="h-7 px-2.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] text-zinc-950 font-black text-[10.5px] uppercase flex items-center gap-1.5 transition-all cursor-pointer hover:brightness-110 active:scale-95"
                             >
-                              <i className="fas fa-link"></i>
+                              <i className="fas fa-expand text-[10px]"></i>
+                              <span>5 Góc Studio</span>
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {showProductPhotoUrlInput && (
-                      <div className="p-2.5 rounded-xl bg-[#09090b] border border-[#d4af37]/30 flex items-center gap-2 animate-fade-in">
-                        <input
-                          type="text"
-                          value={productPhotoUrlVal}
-                          onChange={(e) => setProductPhotoUrlVal(e.target.value)}
-                          placeholder="Dán link ảnh trực tiếp (Google Drive hoặc URL)..."
-                          className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 outline-none font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleSaveProductPhotoUrl}
-                          disabled={!productPhotoUrlVal.trim() || isUploadingProductPhoto}
-                          className="px-3 py-1 bg-[#d4af37] text-zinc-950 font-bold text-xs rounded-lg disabled:opacity-40 cursor-pointer"
-                        >
-                          Lưu
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowProductPhotoUrlInput(false)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white text-xs cursor-pointer"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    )}
-
-                    {activeImgUrl ? (
-                      <div className="space-y-2.5">
-                        {/* Ảnh chính */}
-                        <div className="relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.08] group h-56 sm:h-64 flex items-center justify-center">
-                          <img
-                            src={activeImgUrl}
-                            alt={selectedDrawerItem.name}
-                            className="w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
-                            onClick={() => setZoomDrawerImage(activeImgUrl)}
-                            title="Nhấn để phóng to toàn màn hình"
-                          />
-                          {drawerGallery.length > 1 && (
+                          )}
+                          {isAdminRole && (
                             <>
+                              <label
+                                className={`h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/10 font-bold text-[10.5px] flex items-center gap-1.5 transition-all ${isUploadingProductPhoto ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+                                title="Tải ảnh lên"
+                              >
+                                <i className={`fas ${isUploadingProductPhoto ? 'fa-spinner fa-spin' : 'fa-camera'}`}></i>
+                                <span className="hidden sm:inline">{isUploadingProductPhoto ? 'Đang tải...' : 'Đổi ảnh'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                                  className="hidden"
+                                  disabled={isUploadingProductPhoto}
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      handleUploadProductPhoto(e.target.files[0]);
+                                      e.target.value = '';
+                                    }
+                                  }}
+                                />
+                              </label>
                               <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx - 1 + drawerGallery.length) % drawerGallery.length); }}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
+                                onClick={() => setShowProductPhotoUrlInput(prev => !prev)}
+                                className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-[11px] cursor-pointer"
+                                title="Dán link URL ảnh"
                               >
-                                <i className="fas fa-chevron-left text-xs"></i>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx + 1) % drawerGallery.length); }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
-                              >
-                                <i className="fas fa-chevron-right text-xs"></i>
+                                <i className="fas fa-link"></i>
                               </button>
                             </>
                           )}
-                          <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10 text-[10px] text-zinc-200 pointer-events-none">
-                            {activePhotoObj?.label ? `${activePhotoObj.label} • ` : ''}{drawerPhotoIdx + 1}/{drawerGallery.length}
-                          </div>
-                          <div className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/10 text-[10px] text-[#d4af37] pointer-events-none flex items-center gap-1">
-                            <i className="fas fa-magnifying-glass-plus"></i>
-                            <span>Phóng to</span>
-                          </div>
                         </div>
+                      </div>
 
-                        {/* Dải thumbnail bộ ảnh */}
-                        {drawerGallery.length > 1 && (
-                          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                            {drawerGallery.map((g, idx) => {
-                              const isActive = idx === drawerPhotoIdx;
-                              return (
+                      {showProductPhotoUrlInput && (
+                        <div className="p-2.5 rounded-xl bg-[#09090b] border border-[#d4af37]/30 flex items-center gap-2 animate-fade-in">
+                          <input
+                            type="text"
+                            value={productPhotoUrlVal}
+                            onChange={(e) => setProductPhotoUrlVal(e.target.value)}
+                            placeholder="Dán link ảnh trực tiếp (Google Drive hoặc URL)..."
+                            className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 outline-none font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveProductPhotoUrl}
+                            disabled={!productPhotoUrlVal.trim() || isUploadingProductPhoto}
+                            className="px-3 py-1 bg-[#d4af37] text-zinc-950 font-bold text-xs rounded-lg disabled:opacity-40 cursor-pointer"
+                          >
+                            Lưu
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowProductPhotoUrlInput(false)}
+                            className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white text-xs cursor-pointer"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      )}
+
+                      {activeImgUrl ? (
+                        <div className="space-y-2.5">
+                          {/* Ảnh chính */}
+                          <div className="relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.08] group h-56 sm:h-64 flex items-center justify-center">
+                            <img
+                              src={activeImgUrl}
+                              alt={headerTitle}
+                              className="w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
+                              onClick={() => setZoomDrawerImage(activeImgUrl)}
+                              title="Nhấn để phóng to toàn màn hình"
+                            />
+                            {drawerGallery.length > 1 && (
+                              <>
                                 <button
-                                  key={g.url}
                                   type="button"
-                                  onClick={() => setDrawerPhotoIdx(idx)}
-                                  className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 bg-black/50 cursor-pointer transition-all ${isActive
-                                      ? 'border-[#d4af37] ring-2 ring-[#d4af37]/30 scale-[1.03]'
-                                      : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
-                                    }`}
-                                  title={g.label || `Ảnh ${idx + 1}`}
+                                  onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx - 1 + drawerGallery.length) % drawerGallery.length); }}
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
                                 >
-                                  <img
-                                    src={g.url}
-                                    alt={g.label || ''}
-                                    className="w-full h-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
+                                  <i className="fas fa-chevron-left text-xs"></i>
                                 </button>
-                              );
-                            })}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx + 1) % drawerGallery.length); }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
+                                >
+                                  <i className="fas fa-chevron-right text-xs"></i>
+                                </button>
+                              </>
+                            )}
+                            <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10 text-[10px] text-zinc-200 pointer-events-none">
+                              {activePhotoObj?.label ? `${activePhotoObj.label} • ` : ''}{drawerPhotoIdx + 1}/{drawerGallery.length}
+                            </div>
+                            <div className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/10 text-[10px] text-[#d4af37] pointer-events-none flex items-center gap-1">
+                              <i className="fas fa-magnifying-glass-plus"></i>
+                              <span>Phóng to</span>
+                            </div>
                           </div>
+
+                          {/* Dải thumbnail bộ ảnh */}
+                          {drawerGallery.length > 1 && (
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                              {drawerGallery.map((g, idx) => {
+                                const isActive = idx === drawerPhotoIdx;
+                                return (
+                                  <button
+                                    key={g.url}
+                                    type="button"
+                                    onClick={() => setDrawerPhotoIdx(idx)}
+                                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 bg-black/50 cursor-pointer transition-all ${isActive
+                                        ? 'border-[#d4af37] ring-2 ring-[#d4af37]/30 scale-[1.03]'
+                                        : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
+                                      }`}
+                                    title={g.label || `Ảnh ${idx + 1}`}
+                                  >
+                                    <img
+                                      src={g.url}
+                                      alt={g.label || ''}
+                                      className="w-full h-full object-cover"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-xl bg-[#09090b] border border-dashed border-white/10 text-center text-zinc-500">
+                          <i className="fas fa-image text-2xl text-zinc-600 block mb-1.5"></i>
+                          Chưa có ảnh cho hàng hóa này
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 2. THÔNG TIN CHI TIẾT KÍCH THƯỚC DÀI × RỘNG × CAO & THÔNG SỐ SKU (Ẩn khi đang xem Thông tin chung Ver) */}
+                  {!isVerOverview && (
+                    <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <i className="fas fa-ruler-combined text-[#d4af37] text-xs"></i>
+                          <span className="font-bold text-[11px] uppercase tracking-wider text-white">
+                            {dimLength ? 'Chi Tiết Kích Thước & Mã SKU' : 'Thông Tin Chi Tiết'}
+                          </span>
+                        </div>
+                        {dIsOut ? (
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">Hết hàng</span>
+                        ) : dIsLow ? (
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Sắp hết</span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Còn hàng</span>
                         )}
                       </div>
-                    ) : (
-                      <div className="p-6 rounded-xl bg-[#09090b] border border-dashed border-white/10 text-center text-zinc-500">
-                        <i className="fas fa-image text-2xl text-zinc-600 block mb-1.5"></i>
-                        Chưa có ảnh cho hàng hóa này
-                      </div>
-                    )}
-                  </div>
 
-                  {/* 2. THÔNG TIN CHI TIẾT (SKU, TỒN KHO, ĐỊNH MỨC, GIÁ BÁN, GIÁ VỐN, TRẠNG THÁI) */}
-                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <i className="fas fa-circle-info text-[#d4af37] text-xs"></i>
-                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">Thông Tin Chi Tiết</span>
-                      </div>
-                      {dIsOut ? (
-                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">Hết hàng</span>
-                      ) : dIsLow ? (
-                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Sắp hết</span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Còn hàng</span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Mã SKU</span>
-                        <span className="font-mono font-black text-[#d4af37] text-[12.5px] break-all">{selectedDrawerItem.sku || 'N/A'}</span>
-                      </div>
-                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Tồn Kho Hiện Tại</span>
-                        <span className={`font-mono font-black text-[14px] ${dIsOut ? 'text-rose-400' : dIsLow ? 'text-amber-400' : 'text-emerald-400'}`}>
-                          {dQty} <span className="text-[11px] text-zinc-400 font-sans font-normal">{dUnit}</span>
-                        </span>
-                      </div>
-                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Định Mức Tồn</span>
-                        <span className="font-mono font-bold text-zinc-200 text-[12px]">
-                          Min {dMin || 0} / Max {dMax || 0}
-                        </span>
-                      </div>
-                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Giá Bán</span>
-                        <span className="font-mono font-black text-emerald-400 text-[13px]">
-                          {dPrice > 0 ? `${formatMoney(dPrice)} đ` : '---'}
-                        </span>
-                      </div>
-                      {canViewCost && (
-                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
-                            {dIsMaterial ? 'Giá Nhập' : 'Giá Vốn'}
-                          </span>
-                          <span className="font-mono font-bold text-amber-300 text-[13px]">
-                            {dCost > 0 ? `${formatMoney(dCost)} đ` : '---'}
-                          </span>
+                      {/* 3 Ô Kích thước Dài - Rộng - Cao (cm) khi có thông số kích thước */}
+                      {dimLength && dimWidth && dimHeight && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center">
+                            <span className="text-[9.5px] uppercase font-bold text-zinc-500 block">Chiều Dài</span>
+                            <span className="font-mono font-black text-white text-[14px] mt-0.5 block">
+                              {dimLength} <span className="text-[10px] font-normal text-zinc-400">cm</span>
+                            </span>
+                          </div>
+                          <div className="bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center">
+                            <span className="text-[9.5px] uppercase font-bold text-zinc-500 block">Chiều Rộng</span>
+                            <span className="font-mono font-black text-white text-[14px] mt-0.5 block">
+                              {dimWidth} <span className="text-[10px] font-normal text-zinc-400">cm</span>
+                            </span>
+                          </div>
+                          <div className="bg-[#09090b] border border-white/[0.08] rounded-xl p-2.5 text-center">
+                            <span className="text-[9.5px] uppercase font-bold text-zinc-500 block">Chiều Cao</span>
+                            <span className="font-mono font-black text-white text-[14px] mt-0.5 block">
+                              {dimHeight} <span className="text-[10px] font-normal text-zinc-400">cm</span>
+                            </span>
+                          </div>
                         </div>
                       )}
-                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
-                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
-                          {dDimensions ? 'Kích Thước' : 'Đơn Vị Nhập'}
-                        </span>
-                        <span className="font-mono font-bold text-zinc-200 text-[12px]">
-                          {dDimensions || `${selectedDrawerItem.importUnit || dUnit}${Number(selectedDrawerItem.conversionRate) > 1 ? ` (x${selectedDrawerItem.conversionRate})` : ''}`}
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Nút mở nhanh Định Mức & BOM Nguyên Liệu ngay trong Thông Tin Chi Tiết */}
-                    {!dIsMaterial && (
-                      <div className="pt-1 flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowDrawerBom(prev => !prev)}
-                          className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                            showDrawerBom
-                              ? 'bg-white/[0.08] text-white border-white/20'
-                              : 'bg-[#09090b] hover:bg-white/[0.04] text-zinc-200 border-white/[0.08]'
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <i className="fas fa-layer-group text-[#d4af37]"></i>
-                            <span>ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT (BOM NGUYÊN LIỆU)</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Mã SKU</span>
+                          <span className="font-mono font-black text-[#d4af37] text-[12.5px] break-all">{selectedDrawerItem.sku || 'N/A'}</span>
+                        </div>
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Tồn Kho Hiện Tại</span>
+                          <span className={`font-mono font-black text-[14px] ${dIsOut ? 'text-rose-400' : dIsLow ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {dQty} <span className="text-[11px] text-zinc-400 font-sans font-normal">{dUnit}</span>
                           </span>
-                          <span className="flex items-center gap-2 text-[10.5px] text-zinc-400 font-mono">
-                            {drawerBomAndCosts && (
-                              <span>{drawerBomAndCosts.bomLines?.length || 0} vật tư • {formatMoney(drawerBomAndCosts.totalCOGS || 0)}đ</span>
-                            )}
-                            <i className={`fas fa-chevron-${showDrawerBom ? 'up' : 'down'} text-[10px]`}></i>
+                        </div>
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Định Mức Tồn</span>
+                          <span className="font-mono font-bold text-zinc-200 text-[12px]">
+                            Min {dMin || 0} / Max {dMax || 0}
                           </span>
-                        </button>
+                        </div>
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Giá Bán</span>
+                          <span className="font-mono font-black text-emerald-400 text-[13px]">
+                            {dPrice > 0 ? `${formatMoney(dPrice)} đ` : '---'}
+                          </span>
+                        </div>
+                        {canViewCost && (
+                          <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                            <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
+                              {dIsMaterial ? 'Giá Nhập' : 'Giá Vốn'}
+                            </span>
+                            <span className="font-mono font-bold text-amber-300 text-[13px]">
+                              {dCost > 0 ? `${formatMoney(dCost)} đ` : '---'}
+                            </span>
+                          </div>
+                        )}
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
+                            {dimLength ? 'Qui Cách SX' : 'Đơn Vị Nhập'}
+                          </span>
+                          <span className="font-mono font-bold text-zinc-200 text-[11.5px]">
+                            {dimLength
+                              ? (dMax > 0 ? 'Sản xuất sẵn kho' : 'Có đơn mới SX')
+                              : `${selectedDrawerItem.importUnit || dUnit}${Number(selectedDrawerItem.conversionRate) > 1 ? ` (x${selectedDrawerItem.conversionRate})` : ''}`}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Nút mở nhanh Định Mức & BOM Nguyên Liệu ngay trong Thông Tin Chi Tiết */}
+                      {!dIsMaterial && (
+                        <div className="pt-1 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowDrawerBom(prev => !prev)}
+                            className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                              showDrawerBom
+                                ? 'bg-white/[0.08] text-white border-white/20'
+                                : 'bg-[#09090b] hover:bg-white/[0.04] text-zinc-200 border-white/[0.08]'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <i className="fas fa-layer-group text-[#d4af37]"></i>
+                              <span>ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT (BOM NGUYÊN LIỆU)</span>
+                            </span>
+                            <span className="flex items-center gap-2 text-[10.5px] text-zinc-400 font-mono">
+                              {drawerBomAndCosts && (
+                                <span>{bomRows.length} vật tư • {formatMoney(drawerBomAndCosts.totalCOGS || (matCostVal + laborCostVal) || 0)}đ</span>
+                              )}
+                              <i className={`fas fa-chevron-${showDrawerBom ? 'up' : 'down'} text-[10px]`}></i>
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 2.5. ĐỊNH MỨC & GIÁ VỐN SẢN XUẤT (BOM NGUYÊN LIỆU) - CHUẨN TỐI GIẢN RF */}
-                  {!dIsMaterial && showDrawerBom && drawerBomAndCosts && (
+                  {!isVerOverview && !dIsMaterial && showDrawerBom && drawerBomAndCosts && (
                     <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.08] space-y-3">
                       <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
                         <div className="flex items-center gap-2">
@@ -3742,16 +4013,18 @@ Model ID: 287936773312
                               <span>Sửa BOM</span>
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsEditingDrawerBom(false);
-                              setShowDrawerBom(false);
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-[10px] font-semibold cursor-pointer transition-colors"
-                          >
-                            ✕ Đóng
-                          </button>
+                          {!isSkuDetail && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingDrawerBom(false);
+                                setShowDrawerBom(false);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.06] text-[10px] font-semibold cursor-pointer transition-colors"
+                            >
+                              Thu gọn
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -3763,14 +4036,14 @@ Model ID: 287936773312
                             {formatMoney(
                               isEditingDrawerBom
                                 ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
-                                : drawerBomAndCosts.materialCost
+                                : matCostVal
                             )}đ
                           </div>
                         </div>
                         <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2">
                           <div className="text-[9px] font-semibold text-zinc-500 uppercase">Công Thợ</div>
                           <div className="text-[12px] font-mono font-bold text-zinc-100 mt-0.5">
-                            {formatMoney(drawerBomAndCosts.laborCost)}đ
+                            {formatMoney(laborCostVal)}đ
                           </div>
                         </div>
                         <div className="bg-[#09090b] border border-white/[0.08] rounded-xl p-2">
@@ -3779,14 +4052,14 @@ Model ID: 287936773312
                             {formatMoney(
                               (isEditingDrawerBom
                                 ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
-                                : drawerBomAndCosts.materialCost) + Number(drawerBomAndCosts.laborCost || 0)
+                                : matCostVal) + laborCostVal
                             )}đ
                           </div>
                         </div>
                         <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2">
                           <div className="text-[9px] font-semibold text-zinc-500 uppercase">KPI Đóng Gói</div>
                           <div className="text-[11px] font-mono font-bold text-zinc-200 mt-0.5 truncate">
-                            {drawerBomAndCosts.packingLimitMins}p • +{formatMoney(drawerBomAndCosts.packBonus)}đ
+                            {packMinsVal}p • +{formatMoney(packBonusVal)}đ
                           </div>
                         </div>
                       </div>
@@ -3795,39 +4068,47 @@ Model ID: 287936773312
                       <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                            Bảng Định Mức Vật Tư ({isEditingDrawerBom ? drawerBomDraft.length : (drawerBomAndCosts.bomLines?.length || 0)} loại)
+                            Bảng Định Mức Vật Tư ({isEditingDrawerBom ? drawerBomDraft.length : bomRows.length} loại)
                           </span>
                           <span className="text-[10.5px] font-mono font-bold text-zinc-200">
                             {formatMoney(
                               isEditingDrawerBom
                                 ? drawerBomDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0)
-                                : drawerBomAndCosts.materialCost
+                                : matCostVal
                             )} đ
                           </span>
                         </div>
 
                         {!isEditingDrawerBom ? (
                           <div className="divide-y divide-white/[0.04]">
-                            {(drawerBomAndCosts.bomLines || []).map((line, idx) => (
-                              <div key={line.id || idx} className="py-2 flex items-center justify-between gap-2 text-[11px]">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="w-4 h-4 rounded bg-white/[0.04] border border-white/[0.06] text-[9px] font-mono font-semibold text-zinc-400 flex items-center justify-center shrink-0">
-                                    {idx + 1}
-                                  </span>
-                                  <div className="min-w-0">
-                                    <div className="font-medium text-zinc-200 truncate">{line.materialName}</div>
-                                    <div className="text-[9.5px] text-zinc-500 font-mono">
-                                      Định mức: <span className="text-zinc-300 font-semibold">{line.defaultQty} {line.unit}</span>
-                                      {line.unitCost > 0 && ` × ${formatMoney(line.unitCost)}đ/${line.unit}`}
-                                      {line.conversionHint ? <span className="text-zinc-500 ml-1">({line.conversionHint})</span> : null}
+                            {bomRows.map((line, idx) => {
+                              const mName = line.name || line.materialName || 'Nguyên liệu';
+                              const mQty = line.qty ?? line.defaultQty ?? 0;
+                              const mUnit = line.unit || '';
+                              const mUnitCost = Number(line.costPrice ?? line.unitCost ?? 0);
+                              const mLineCost = Number(line.totalCost ?? line.lineCost ?? (mQty * mUnitCost));
+                              const mConvNote = line.conversionNote || line.conversionHint || '';
+                              return (
+                                <div key={line.id || idx} className="py-2 flex items-center justify-between gap-2 text-[11px]">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="w-4 h-4 rounded bg-white/[0.04] border border-white/[0.06] text-[9px] font-mono font-semibold text-zinc-400 flex items-center justify-center shrink-0">
+                                      {idx + 1}
+                                    </span>
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-zinc-200 truncate">{mName}</div>
+                                      <div className="text-[9.5px] text-zinc-500 font-mono">
+                                        Định mức: <span className="text-zinc-300 font-semibold">{mQty} {mUnit}</span>
+                                        {mUnitCost > 0 && ` × ${formatMoney(mUnitCost)}đ/${mUnit}`}
+                                        {mConvNote ? <span className="text-zinc-500 ml-1">({mConvNote})</span> : null}
+                                      </div>
                                     </div>
                                   </div>
+                                  <div className="text-right shrink-0 font-mono font-semibold text-zinc-200">
+                                    {formatMoney(mLineCost)} đ
+                                  </div>
                                 </div>
-                                <div className="text-right shrink-0 font-mono font-semibold text-zinc-200">
-                                  {formatMoney(line.lineCost)} đ
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <div className="space-y-2 pt-1">
@@ -3919,20 +4200,20 @@ Model ID: 287936773312
 
                       {/* 2 Khâu Sản Xuất & Thưởng Đóng Gói */}
                       <div className="grid grid-cols-2 gap-2">
-                        {[drawerBomAndCosts.phase1, drawerBomAndCosts.phase2].map((ph, pIdx) => (
+                        {phaseList.map((ph, pIdx) => (
                           <div key={pIdx} className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 flex flex-col justify-between gap-1">
                             <div className="flex items-center justify-between gap-1">
                               <span className="text-[10px] font-semibold text-zinc-300 uppercase truncate">
-                                {ph.name}
+                                {ph?.name}
                               </span>
                               <span className="text-[9.5px] font-mono text-zinc-500 shrink-0">
-                                {ph.timeMins}p
+                                {ph?.timeMins}p
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-1 pt-1 border-t border-white/[0.04]">
                               <span className="text-[9.5px] text-zinc-500">Định mức công</span>
                               <span className="text-[11px] font-mono font-bold text-zinc-100">
-                                +{formatMoney(ph.bonus)}đ
+                                +{formatMoney(ph?.bonus || 0)}đ
                               </span>
                             </div>
                           </div>
@@ -3941,31 +4222,34 @@ Model ID: 287936773312
 
                       <div className="bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-2 flex items-center justify-between text-[10.5px]">
                         <span className="text-zinc-400">
-                          Thưởng Đóng Gói (Khâu 3 • Chuẩn {drawerBomAndCosts.packingLimitMins} phút)
+                          Thưởng Đóng Gói (Khâu 3 • Chuẩn {packMinsVal} phút)
                         </span>
-                        <span className="font-mono font-bold text-zinc-200">+{formatMoney(drawerBomAndCosts.packBonus)}đ</span>
+                        <span className="font-mono font-bold text-zinc-200">+{formatMoney(packBonusVal)}đ</span>
                       </div>
                     </div>
                   )}
 
-                  {/* 3. MÔ TẢ HÀNG HÓA */}
-                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2">
-                    <div className="flex items-center gap-2">
-                      <i className="fas fa-align-left text-[#d4af37] text-xs"></i>
-                      <span className="font-bold text-[11px] uppercase tracking-wider text-white">Mô Tả Hàng Hóa</span>
+                  {/* 3. MÔ TẢ HÀNG HÓA (Chỉ hiển thị ở Thông tin chung Ver hoặc hàng hóa thường, KHÔNG hiển thị ở chi tiết SKU kích thước) */}
+                  {!isSkuDetail && (
+                    <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2">
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-align-left text-[#d4af37] text-xs"></i>
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">Mô Tả Hàng Hóa</span>
+                      </div>
+                      {dDescription ? (
+                        <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto custom-scrollbar">
+                          {dDescription}
+                        </div>
+                      ) : (
+                        <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[11.5px] text-zinc-500 italic">
+                          Chưa có mô tả chi tiết cho hàng hóa này.
+                        </div>
+                      )}
                     </div>
-                    {dDescription ? (
-                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto custom-scrollbar">
-                        {dDescription}
-                      </div>
-                    ) : (
-                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[11.5px] text-zinc-500 italic">
-                        Chưa có mô tả chi tiết cho hàng hóa này.
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* 4. LỊCH SỬ XUẤT - NHẬP - KIỂM CỦA HÀNG HÓA */}
+                  {/* 4. LỊCH SỬ XUẤT - NHẬP - KIỂM CỦA MÃ SKU (Ẩn khi đang xem Thông tin chung Ver) */}
+                  {!isVerOverview && (
                   <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -4031,6 +4315,7 @@ Model ID: 287936773312
                       </div>
                     )}
                   </div>
+                  )}
 
                 </div>
               </div>
