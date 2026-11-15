@@ -1,4 +1,15 @@
 // Shared browser/server rules, based on the seller form supplied by the user.
+function rfReturnClaimPlatform_(order) {
+  var ch = String((order && order.channel) || '').trim();
+  var up = ch.toUpperCase();
+  if (!ch || up.indexOf('SHOPEE') >= 0) return 'Shopee';
+  if (up.indexOf('TIKTOK') >= 0) return 'TikTok Shop';
+  if (up.indexOf('LAZADA') >= 0) return 'Lazada';
+  if (up.indexOf('BÁN LẺ') >= 0 || up.indexOf('BAN LE') >= 0 || up.indexOf('CTV') >= 0 || up.indexOf('CỘNG TÁC VIÊN') >= 0 || up.indexOf('WEBSITE') >= 0) {
+    return 'Đơn vị vận chuyển';
+  }
+  return ch;
+}
 var RF_SHOPEE_CLAIM_TYPES = {
   DAMAGE: 'Hư hỏng/ bể vỡ',
   WRONG_MISSING: 'Sai hàng/ Thiếu hàng/ Hàng rỗng',
@@ -25,9 +36,10 @@ function rfReturnClaimCheck_(order, workflow, draft, nowMs) {
     });
   });
   var check = draft.checks || {};
+  var platform = rfReturnClaimPlatform_(order);
   if (draft.issue === 'DAMAGE' || draft.issue === 'WRONG_MISSING') {
     if (!groups.PACKING.length) errors.push('Bổ sung bằng chứng đóng gói trước khi gửi.');
-    if (!groups.UNBOXING.some(function(f) { return /^video\//.test(f.mime); })) errors.push('Thiếu video mở kiện hoàn ở nhóm bắt buộc trong mẫu Shopee đã cung cấp.');
+    if (!groups.UNBOXING.some(function(f) { return /^video\//.test(f.mime); })) errors.push('Thiếu video mở kiện hoàn ở nhóm bắt buộc theo quy chuẩn ' + platform + '.');
     ['packingWaybill','packingCondition','packingQuantity','unboxingWaybill','unboxingCondition','unboxingQuantity'].forEach(function(k) { if (check[k] !== true) errors.push('Chưa xác nhận: ' + ({packingWaybill:'mã vận đơn lúc đóng gói',packingCondition:'quy cách và tình trạng lúc đóng gói',packingQuantity:'số lượng lúc đóng gói',unboxingWaybill:'mã vận đơn kiện hoàn',unboxingCondition:'bao bì và tình trạng khi mở kiện',unboxingQuantity:'số lượng nhận hoàn'})[k]); });
   } else if (draft.issue === 'NOT_RETURNED' || draft.issue === 'DELIVERED_MISREPORTED') {
     if (!groups.OTHER.length) errors.push('Bổ sung chứng từ hành trình/xác nhận giao nhận ở nhóm Bằng chứng khác.');
@@ -37,7 +49,7 @@ function rfReturnClaimCheck_(order, workflow, draft, nowMs) {
   if (draft.deadline) {
     var deadline = new Date(String(draft.deadline).replace(' ', 'T') + '+07:00').getTime();
     if (!Number.isFinite(deadline)) errors.push('Hạn nộp trên sàn không hợp lệ.');
-    else if (deadline <= nowMs) errors.push('Đã qua hạn bạn nhập; kiểm tra lại khả năng gửi trên Shopee.');
+    else if (deadline <= nowMs) errors.push('Đã qua hạn bạn nhập; kiểm tra lại khả năng gửi trên ' + platform + '.');
   }
   return { ready: errors.length === 0, errors: errors, groups: groups };
 }

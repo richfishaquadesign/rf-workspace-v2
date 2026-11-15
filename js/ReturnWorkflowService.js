@@ -94,7 +94,7 @@ function rfReturnPlan(order, productions, products, tickets, command, actor, now
   } else if (action === 'SUBMIT_CLAIM') {
     var claimCheck = rfReturnClaimCheck_(order, workflow, workflow.claimDraft || {}, new Date(String(now).replace(' ','T') + '+07:00').getTime());
     if (!claimCheck.ready) throw new Error('Hồ sơ chưa đủ: ' + claimCheck.errors.join(' '));
-    if (!String(command.evidence || '').trim()) throw new Error('Nhập mã yêu cầu Shopee sau khi đã gửi trên sàn.');
+    if (!String(command.evidence || '').trim()) throw new Error('Nhập mã yêu cầu ' + (typeof rfReturnClaimPlatform_ === 'function' ? rfReturnClaimPlatform_(order) : 'sàn') + ' sau khi đã gửi.');
     workflow.claim = 'PENDING';
     workflow.claimEvidence = String(command.evidence).trim();
     workflow.submittedAt = now;
