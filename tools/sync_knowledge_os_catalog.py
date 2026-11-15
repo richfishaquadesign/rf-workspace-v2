@@ -412,7 +412,8 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
     def register_detail(sku, front, body, fallback_img=""):
         md_imgs, md_desc = extract_md_gallery_and_desc(front, body, media_vault_dir)
         merged_imgs = []
-        for u in list(gallery_map.get(sku) or []) + md_imgs + ([fallback_img] if fallback_img else []):
+        # Ưu tiên tuyệt đối ảnh studio thực tế từ Kho tri thức (media-vault)
+        for u in md_imgs + list(gallery_map.get(sku) or []) + ([fallback_img] if fallback_img else []):
             if u and u not in merged_imgs:
                 merged_imgs.append(u)
         final_desc = desc_map.get(sku) or md_desc
@@ -430,6 +431,7 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
             "dimensions": dims,
             "status": str(front.get("status") or "").strip(),
         }
+        return md_imgs[0] if md_imgs else ""
 
     # 1. BỂ KÍNH (01_SAN_PHAM/02_BE_KINH)
     for f in sorted((KNOWLEDGE_OS_DIR / "01_SAN_PHAM" / "02_BE_KINH").rglob("*.md")):
@@ -444,7 +446,8 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
         price = int(front.get("price_shopee_vnd") or bom_info.get("price_vnd") or 0)
         cost = int(bom_info.get("cost_vnd") or front.get("cost_vnd") or round(price * 0.42))
         img = img_map.get(sku, "")
-        register_detail(sku, front, body, img)
+        real_os_img = register_detail(sku, front, body, img)
+        img = real_os_img or img
         products.append({
             "id": f"BE_{sku}",
             "sku": sku,
@@ -516,7 +519,8 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
             gallery_map[sku] = list(drive_imgs)
 
         img = img_map.get(sku, "")
-        register_detail(sku, front, body, img)
+        real_os_img = register_detail(sku, front, body, img)
+        img = real_os_img or img
         min_s = 1 if dim_str == "30x20x20cm" else 0
         max_s = 1 if dim_str == "30x20x20cm" else 0
         products.append({
@@ -551,7 +555,8 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
         price = int(front.get("price_shopee_vnd") or front.get("listed_price_vnd") or 0)
         cost = int(front.get("cost_vnd") or front.get("purchase_price_vnd") or round(price * 0.45))
         img = img_map.get(sku, "")
-        register_detail(sku, front, body, img)
+        real_os_img = register_detail(sku, front, body, img)
+        img = real_os_img or img
         if not product_details[sku].get("description") and raw_title != title:
             product_details[sku]["description"] = raw_title
         products.append({
