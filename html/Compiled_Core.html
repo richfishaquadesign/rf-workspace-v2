@@ -16478,7 +16478,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     pushDeltas: pushDeltas,
     triggerToast: triggerToast
   }), document.body), /*#__PURE__*/React.createElement("div", {
-    className: `pl-16 ${titlePadding} mb-3 min-h-[3rem]`
+    className: `${onToggleSelect ? 'pl-14' : 'pl-7'} ${titlePadding} mb-3 min-h-[3rem]`
   }, isUrgent && /*#__PURE__*/React.createElement("div", {
     onClick: handleToggleUrgent,
     className: "inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/50 text-rose-400 text-[12px] font-black uppercase tracking-wider mb-2 animate-bounce cursor-pointer hover:bg-rose-500/30 transition-colors shadow-sm",
@@ -19276,6 +19276,1618 @@ try {
 
 /* ═══ MODULE: Tab_Dashboard ═══ */
 
+const MonthlyPenaltyLedger = React.memo(function MonthlyPenaltyLedger({
+  bonusPenalty = [],
+  attendance = [],
+  currentUser = '',
+  isAdmin = false,
+  isBoss = false,
+  pushDeltas,
+  triggerToast
+}) {
+  const currentMonthStr = React.useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+  const [selectedMonth, setSelectedMonth] = React.useState(currentMonthStr);
+  const [isOpenDetails, setIsOpenDetails] = React.useState(false);
+  const [processingId, setProcessingId] = React.useState(null);
+  const allPenaltyRecords = React.useMemo(() => {
+    let list = [];
+    (bonusPenalty || []).forEach(bp => {
+      if (!bp) return;
+      const typeStr = String(bp.type || '').trim();
+      const typeUpper = typeStr.toUpperCase();
+      const noteUpper = String(bp.note || '').toUpperCase();
+      if (typeUpper.includes('TẠM ỨNG') || typeUpper.includes('CHO VAY') || typeUpper.includes('ĐÃ TRẢ') || typeUpper.includes('THƯỞNG') || typeUpper.includes('VAY') || typeUpper.includes('ỨNG LƯƠNG') || noteUpper.includes('TẠM ỨNG') || noteUpper.includes('CHO VAY') || noteUpper.includes('THANH TOÁN DỨT ĐIỂM')) {
+        return;
+      }
+      const amt = Number(bp.amount || 0);
+      const isPenaltyType = typeStr.includes('Phạt') || typeStr.includes('Trừ') || typeStr.includes('Bảo Hành') || typeStr.includes('Vi Phạm') || typeStr.includes('SLA') || typeStr.includes('Kỷ Luật') || typeStr.includes('Chậm') || typeStr.includes('Vỡ') || typeStr.includes('Lỗi') || noteUpper.includes('PHẠT') || noteUpper.includes('TRỪ');
+      if (isPenaltyType && amt !== 0) {
+        const absAmt = Math.abs(amt);
+        list.push({
+          id: bp.id,
+          rawId: bp.id,
+          user: bp.user || 'Nhân sự',
+          amount: absAmt,
+          type: bp.type || 'Phạt Vi Phạm',
+          note: bp.note || 'Trừ lương vi phạm',
+          date: bp.date || '',
+          orderCode: bp.orderCode || '',
+          source: 'BonusPenalty'
+        });
+      }
+    });
+    (attendance || []).forEach(att => {
+      if (!att) return;
+      const pen = Number(att.penalty || 0);
+      if (pen > 0) {
+        list.push({
+          id: 'ATT_PEN_' + (att.id || att.user + '_' + att.date),
+          rawId: att.id,
+          user: att.user || 'Nhân sự',
+          amount: pen,
+          type: 'Đi trễ / Chấm công',
+          note: att.note ? `Chấm công: ${att.note}` : `Vi phạm giờ giấc ca làm (${att.timeIn || att.morningIn || 'Đi trễ'})`,
+          date: att.date || '',
+          orderCode: '',
+          source: 'Attendance',
+          attRecord: att
+        });
+      }
+    });
+    list.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return list;
+  }, [bonusPenalty, attendance]);
+  const filteredRecords = React.useMemo(() => {
+    if (selectedMonth === 'ALL') return allPenaltyRecords;
+    return allPenaltyRecords.filter(rec => String(rec.date || '').startsWith(selectedMonth));
+  }, [allPenaltyRecords, selectedMonth]);
+  const totalDeductedAmount = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
+  const totalIncidents = filteredRecords.length;
+  const monthOptions = React.useMemo(() => {
+    const set = new Set();
+    set.add(currentMonthStr);
+    allPenaltyRecords.forEach(r => {
+      if (r.date && r.date.length >= 7) {
+        set.add(r.date.slice(0, 7));
+      }
+    });
+    return Array.from(set).sort().reverse();
+  }, [allPenaltyRecords, currentMonthStr]);
+  const handleForgivePenalty = async record => {
+    if (!isAdmin && !isBoss) {
+      triggerToast('Chỉ Ban Quản Trị mới có quyền miễn trừ khoản phạt!', 'fa-lock', 'warning');
+      return;
+    }
+    if (!window.confirm(`Xác nhận XOÁ / MIỄN PHẠM cho ${record.user} số tiền -${record.amount.toLocaleString('vi-VN')}đ?\nLý do: ${record.note}`)) {
+      return;
+    }
+    setProcessingId(record.id);
+    try {
+      if (record.source === 'BonusPenalty') {
+        await pushDeltas({
+          deletes: {
+            BonusPenalty: [record.rawId]
+          }
+        }, `Đã miễn phạt -${record.amount.toLocaleString('vi-VN')}đ cho ${record.user}!`, 'fa-trash');
+      } else if (record.source === 'Attendance' && record.attRecord) {
+        const updAtt = {
+          ...record.attRecord,
+          penalty: 0,
+          note: (record.attRecord.note || '') + ' [Đã miễn phạt]'
+        };
+        await pushDeltas({
+          Attendance: [updAtt]
+        }, `Đã miễn phạt chấm công cho ${record.user}!`, 'fa-check');
+      }
+      triggerToast('Đã xoá bản ghi phạt thành công!', 'fa-check', 'success');
+    } catch (e) {
+      triggerToast('Lỗi khi xoá bản ghi phạt!', 'fa-times', 'danger');
+    }
+    setProcessingId(null);
+  };
+  return React.createElement("div", {
+    className: "vision-card p-4 sm:p-5 mb-4 relative overflow-hidden transition-all"
+  }, React.createElement("div", {
+    className: "absolute top-0 right-1/4 w-60 h-24 bg-white/[0.02] rounded-full blur-[50px] pointer-events-none"
+  }), React.createElement("div", {
+    className: "flex items-center justify-between gap-2 pb-3 border-b border-white/[0.08] relative z-10"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5 min-w-0"
+  }, React.createElement("div", {
+    className: "w-8 h-8 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-rose-400 shadow-sm shrink-0"
+  }, React.createElement("i", {
+    className: "fas fa-gavel text-[12px]"
+  })), React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, React.createElement("h2", {
+    className: "font-display font-extrabold text-[15px] sm:text-[17px] text-white tracking-tight truncate"
+  }, "L\u1ECBch S\u1EED Tr\u1EEB L\u01B0\u01A1ng & K\u1EF7 Lu\u1EADt"), React.createElement("span", {
+    className: "bg-rose-500/15 text-rose-300 border border-rose-500/25 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono"
+  }, filteredRecords.length, " vi ph\u1EA1m")))), React.createElement("div", {
+    className: "flex items-center gap-2 shrink-0"
+  }, React.createElement("select", {
+    value: selectedMonth,
+    onChange: e => setSelectedMonth(e.target.value),
+    className: "bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 focus:border-rose-500/50 text-white text-[11px] font-semibold rounded-full px-3 py-1.5 outline-none cursor-pointer font-display transition-colors"
+  }, React.createElement("option", {
+    value: "ALL",
+    className: "bg-[#18191e] text-white"
+  }, "T\u1EA5t c\u1EA3 th\xE1ng"), monthOptions.map(m => React.createElement("option", {
+    key: m,
+    value: m,
+    className: "bg-[#18191e] text-white"
+  }, "Th\xE1ng ", m.split('-')[1], "/", m.split('-')[0]))), (isAdmin || isBoss) && React.createElement("button", {
+    onClick: () => window.dispatchEvent(new Event('openQuickPenaltyModal')),
+    className: "bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 hover:border-rose-500/50 font-bold text-[11px] px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm",
+    title: "L\u1EADp bi\xEAn b\u1EA3n ph\u1EA1t vi ph\u1EA1m"
+  }, React.createElement("i", {
+    className: "fas fa-plus text-[9px]"
+  }), " Ph\u1EA1t"))), React.createElement("div", {
+    className: "grid grid-cols-2 gap-3 my-3 relative z-10"
+  }, React.createElement("div", {
+    className: "p-3.5 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] rounded-2xl flex items-center justify-between transition-all"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "text-[10.5px] font-semibold text-zinc-400 font-display flex items-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-money-bill-wave text-rose-400 text-[11px]"
+  }), React.createElement("span", null, "T\u1ED5ng \u0110\xE3 Tr\u1EEB")), React.createElement("div", {
+    className: "text-[17px] sm:text-[20px] font-extrabold font-display text-rose-400 mt-0.5 tracking-tight"
+  }, "-", totalDeductedAmount.toLocaleString('vi-VN'), "\u0111")), React.createElement("div", {
+    className: "w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-base shrink-0"
+  }, React.createElement("i", {
+    className: "fas fa-hand-holding-usd"
+  }))), React.createElement("div", {
+    className: "p-2.5 sm:p-3 bg-[#121214] border border-[#27272a] rounded-xl flex items-center justify-between"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "text-[9.5px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-tight flex items-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-exclamation-triangle text-amber-400 text-[10px]"
+  }), React.createElement("span", null, "S\u1ED1 V\u1EE5 Vi Ph\u1EA1m")), React.createElement("div", {
+    className: "text-[14px] sm:text-[16px] font-black font-mono text-amber-400 mt-0.5"
+  }, totalIncidents, " l\u01B0\u1EE3t")), React.createElement("div", {
+    className: "w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-sm shrink-0"
+  }, React.createElement("i", {
+    className: "fas fa-clipboard-list"
+  })))), React.createElement("div", {
+    className: "pt-1.5 border-t border-[#1f1f23] relative z-10"
+  }, React.createElement("button", {
+    onClick: () => setIsOpenDetails(prev => !prev),
+    className: `w-full py-2 px-3 rounded-xl border text-[10.5px] font-bold flex items-center justify-between transition-all cursor-pointer active:scale-[0.99] ${isOpenDetails ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-[#121214] hover:bg-[#121214] border-[#27272a] hover:border-zinc-700 text-zinc-300'}`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("i", {
+    className: `fas fa-list-ul ${isOpenDetails ? 'text-rose-400' : 'text-zinc-400'}`
+  }), React.createElement("span", null, isOpenDetails ? 'Thu gọn danh sách vi phạm' : `Xem chi tiết ${filteredRecords.length} vi phạm`)), React.createElement("div", {
+    className: "flex items-center gap-1.5 font-mono text-[9.5px] text-zinc-400"
+  }, React.createElement("span", null, isOpenDetails ? 'Ẩn' : 'Mở'), React.createElement("i", {
+    className: `fas fa-chevron-down text-[8.5px] transition-transform duration-200 ${isOpenDetails ? 'rotate-180 text-rose-400' : ''}`
+  })))), isOpenDetails && React.createElement("div", {
+    className: "space-y-1.5 mt-2.5 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar relative z-10 animate-in fade-in duration-200"
+  }, filteredRecords.length === 0 ? React.createElement("div", {
+    className: "text-center py-6 bg-[#121214] rounded-xl border border-dashed border-[#27272a] text-zinc-500 text-[10.5px] font-bold"
+  }, React.createElement("i", {
+    className: "fas fa-medal text-amber-400/60 text-base mb-1 block"
+  }), "Tuy\u1EC7t v\u1EDDi! Kh\xF4ng c\xF3 b\u1EA3n ghi tr\u1EEB l\u01B0\u01A1ng n\xE0o trong th\xE1ng n\xE0y.") : filteredRecords.map((rec, idx) => {
+    const isAttendance = rec.source === 'Attendance';
+    const badgeBg = isAttendance ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+    return React.createElement("div", {
+      key: rec.id || idx,
+      className: "p-2.5 bg-[#121214] border border-[#27272a] hover:border-rose-900/40 rounded-xl flex items-center justify-between gap-2.5 transition-all group"
+    }, React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1.5 flex-wrap mb-0.5"
+    }, React.createElement("span", {
+      className: "text-[11.5px] font-black text-zinc-100 group-hover:text-rose-300 transition-colors"
+    }, rec.user), React.createElement("span", {
+      className: `text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded border ${badgeBg}`
+    }, rec.type), rec.orderCode && React.createElement("span", {
+      className: "text-[9px] font-mono font-bold text-zinc-400 bg-[#121214] px-1.5 py-0.5 rounded border border-[#27272a]"
+    }, "\u0110\u01A1n: ", rec.orderCode)), React.createElement("div", {
+      className: "text-[10.5px] text-zinc-300 font-medium line-clamp-2"
+    }, rec.note), React.createElement("div", {
+      className: "text-[9px] text-zinc-500 font-mono mt-1 flex items-center gap-2"
+    }, React.createElement("span", null, React.createElement("i", {
+      className: "fas fa-calendar-alt mr-1"
+    }), rec.date), React.createElement("span", null, "\u2022 ", isAttendance ? 'Chấm công tự động' : 'Kỷ luật / Vận hành'))), React.createElement("div", {
+      className: "flex items-center gap-2 shrink-0"
+    }, React.createElement("div", {
+      className: "text-right"
+    }, React.createElement("span", {
+      className: "text-[12px] sm:text-[13px] font-black font-mono text-rose-400 block"
+    }, "-", rec.amount.toLocaleString('vi-VN'), "\u0111")), (isAdmin || isBoss) && React.createElement("button", {
+      onClick: () => handleForgivePenalty(rec),
+      disabled: processingId === rec.id,
+      className: "w-6 h-6 flex items-center justify-center bg-[#121214] hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-[#27272a] hover:border-rose-500/40 rounded-lg transition-colors cursor-pointer",
+      title: "\xC2n x\xE1 / Mi\u1EC5n tr\u1EEB kho\u1EA3n ph\u1EA1t n\xE0y"
+    }, React.createElement("i", {
+      className: `fas ${processingId === rec.id ? 'fa-spinner fa-spin' : 'fa-trash'} text-[9px]`
+    }))));
+  })));
+});
+const DashboardTasksSection = React.memo(function DashboardTasksSection({
+  importExport = [],
+  currentUser,
+  pushDeltas,
+  triggerToast,
+  isAdmin,
+  userConfigs,
+  reimbursements = [],
+  products = [],
+  isBoss
+}) {
+  const [showAddReminder, setShowAddReminder] = React.useState(false);
+  const [inputMode, setInputMode] = React.useState('CATALOG');
+  const [selectedProdId, setSelectedProdId] = React.useState('');
+  const [customName, setCustomName] = React.useState('');
+  const [customCategory, setCustomCategory] = React.useState('Công cụ / Dụng cụ');
+  const [customUnit, setCustomUnit] = React.useState('cái');
+  const [customPrice, setCustomPrice] = React.useState('');
+  const [reqQty, setReqQty] = React.useState('1');
+  const [reqNote, setReqNote] = React.useState('');
+  const [remText, setRemText] = React.useState('');
+  const [processing, setProcessing] = React.useState(false);
+  const selectableProducts = React.useMemo(() => {
+    const filtered = (products || []).filter(p => {
+      const cat = String(p.category || '').toUpperCase();
+      return cat.includes('PHỤ KIỆN') || cat.includes('SẢN XUẤT') || cat.includes('NGUYÊN LIỆU') || !p.category;
+    });
+    return filtered.length > 0 ? filtered : products || [];
+  }, [products]);
+  const materialRequests = React.useMemo(() => {
+    return (importExport || []).filter(ie => ie && (ie.type === 'ĐẶT HÀNG' || ie.type === 'YÊU CẦU NHẬP HÀNG'));
+  }, [importExport]);
+  const parseReqDetails = React.useCallback(req => {
+    let items = [];
+    try {
+      if (req.itemsData) {
+        items = typeof req.itemsData === 'string' ? JSON.parse(req.itemsData) : req.itemsData;
+      }
+    } catch (e) {
+      items = [];
+    }
+    const firstItem = items[0] || {};
+    const itemName = firstItem.name || req.target || 'Vật tư / Hàng hoá';
+    const itemQty = firstItem.quantity || 1;
+    const itemUnit = firstItem.unit || 'cái';
+    const isOrdered = Boolean(req.note && req.note.includes('[ĐÃ ĐẶT HÀNG]'));
+    const isManual = Boolean(firstItem.isManual || firstItem.sku === 'MANUAL' || firstItem.sku === 'TOOL_MANUAL' || req.note && (req.note.includes('công cụ') || req.note.includes('thiết bị') || req.note.includes('Báo mua')));
+    let creator = 'Nhân viên';
+    if (req.note) {
+      const match = req.note.match(/(?:báo nhập|báo mua)[^:]*từ:?\s*([^(]+)/i);
+      if (match) creator = match[1].trim();else if (req.note.includes('từ:')) creator = req.note.split('từ:')[1].split('(')[0].trim();
+    }
+    return {
+      displayName: `${itemName} x${itemQty} ${itemUnit}`,
+      itemName,
+      itemQty,
+      itemUnit,
+      creator,
+      isOrdered,
+      isManual,
+      firstItem,
+      cleanNote: req.note ? req.note.replace(/\[ĐÃ ĐẶT HÀNG\]/g, '').trim() : ''
+    };
+  }, []);
+  const pendingOrderRequests = React.useMemo(() => {
+    return materialRequests.filter(r => !parseReqDetails(r).isOrdered);
+  }, [materialRequests, parseReqDetails]);
+  const orderedRequests = React.useMemo(() => {
+    return materialRequests.filter(r => parseReqDetails(r).isOrdered);
+  }, [materialRequests, parseReqDetails]);
+  const handleCreateMaterialRequest = async () => {
+    const isCustom = inputMode === 'CUSTOM';
+    const qty = Math.max(1, Number(reqQty) || 1);
+    let prodName = '';
+    let prodSku = '';
+    let prodUnit = 'cái';
+    let prodCostPrice = 0;
+    let selectedProd = null;
+    let categoryTag = 'Vật tư';
+    if (isCustom) {
+      if (!customName.trim()) {
+        triggerToast('Vui lòng nhập tên công cụ / trang thiết bị cần mua!', 'fa-exclamation-triangle', 'warning');
+        return;
+      }
+      prodName = customName.trim();
+      prodSku = 'TOOL_MANUAL';
+      prodUnit = customUnit.trim() || 'cái';
+      prodCostPrice = parseInt(String(customPrice).replace(/[^0-9]/g, '')) || 0;
+      categoryTag = customCategory || 'Công cụ / Dụng cụ';
+    } else {
+      if (!selectedProdId) {
+        triggerToast('Vui lòng chọn hàng hoá / vật tư cần nhập từ kho!', 'fa-exclamation-triangle', 'warning');
+        return;
+      }
+      selectedProd = selectableProducts.find(p => String(p.id) === String(selectedProdId));
+      if (!selectedProd) {
+        triggerToast('Hàng hoá đã chọn không hợp lệ!', 'fa-exclamation-triangle', 'warning');
+        return;
+      }
+      prodName = selectedProd.name;
+      prodSku = selectedProd.sku || '';
+      prodUnit = selectedProd.unit || 'cái';
+      prodCostPrice = Number(selectedProd.costPrice || selectedProd.price || 0);
+      categoryTag = selectedProd.category || 'Vật tư';
+    }
+    const totalCost = prodCostPrice * qty;
+    setProcessing(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const nowStr = nowIso.slice(0, 19).replace('T', ' ');
+      const ieTicket = {
+        id: 'IE_' + Date.now(),
+        type: 'ĐẶT HÀNG',
+        target: isCustom ? customCategory || 'Công cụ / Dụng cụ' : selectedProd && selectedProd.supplier ? selectedProd.supplier : 'Khác',
+        totalAmount: totalCost,
+        date: nowStr,
+        note: `Báo mua [${categoryTag}] từ: ${currentUser}${reqNote ? ' (' + reqNote.trim() + ')' : ''}`,
+        itemsData: JSON.stringify([{
+          id: isCustom ? 'TOOL_' + Date.now() : selectedProd.id,
+          sku: prodSku,
+          name: prodName,
+          quantity: qty,
+          unit: prodUnit,
+          costPrice: prodCostPrice,
+          category: categoryTag,
+          isManual: isCustom
+        }])
+      };
+      await pushDeltas({
+        ImportExport: [ieTicket]
+      }, `Đã gửi yêu cầu & lên list đặt: ${prodName} x${qty}`, 'fa-boxes');
+      triggerToast(`Đã lên list mua [${prodName}] thành công!`, 'fa-check', 'success');
+      setSelectedProdId('');
+      setCustomName('');
+      setCustomPrice('');
+      setCustomUnit('cái');
+      setReqQty('1');
+      setReqNote('');
+      setRemText('');
+      setShowAddReminder(false);
+    } catch (e) {
+      triggerToast('Lỗi khi tạo phiếu đặt hàng!', 'fa-times', 'danger');
+    }
+    setProcessing(false);
+  };
+  const handleMarkAsOrdered = async req => {
+    const details = parseReqDetails(req);
+    if (!window.confirm(`Xác nhận ĐÃ ĐẶT HÀNG cho: ${details.displayName}?`)) return;
+    setProcessing(true);
+    try {
+      const upd = {
+        ...req,
+        note: (req.note || '') + ' [ĐÃ ĐẶT HÀNG]'
+      };
+      await pushDeltas({
+        ImportExport: [upd]
+      }, `Xác nhận đã đặt hàng: ${details.displayName}`, 'fa-truck-loading');
+      triggerToast('Đã cập nhật trạng thái Đã đặt hàng!', 'fa-truck-loading', 'success');
+    } catch (e) {
+      triggerToast('Lỗi cập nhật!', 'fa-times', 'danger');
+    }
+    setProcessing(false);
+  };
+  const handleMarkAsImported = req => {
+    const details = parseReqDetails(req);
+    window.pendingAction = 'createImportTicket';
+    window.dispatchEvent(new CustomEvent('globalNavigateAndTrigger', {
+      detail: {
+        tab: 'import_export',
+        trigger: 'triggerCreateImportTicket',
+        data: {
+          linkedRequestId: req.id,
+          linkedMaterialName: details.displayName,
+          itemsData: req.itemsData
+        },
+        mode: 'ERP'
+      }
+    }));
+  };
+  const handleDeleteRequest = async req => {
+    if (!window.confirm('Xác nhận huỷ/xoá phiếu báo đặt hàng này?')) return;
+    setProcessing(true);
+    try {
+      await pushDeltas({
+        deletes: {
+          ImportExport: [req.id]
+        }
+      }, 'Đã xoá phiếu đặt hàng', 'fa-trash');
+      triggerToast('Đã xoá phiếu đặt hàng thành công!', 'fa-trash', 'success');
+    } catch (e) {
+      triggerToast('Lỗi khi xoá!', 'fa-times', 'danger');
+    }
+    setProcessing(false);
+  };
+  return React.createElement("div", {
+    className: "space-y-4 animate-fade-in w-full"
+  }, isAdmin && reimbursements && reimbursements.length > 0 && React.createElement("div", {
+    className: "vision-card p-4 sm:p-5 mb-4 relative overflow-hidden"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 border-b border-white/[0.08] pb-3 mb-4"
+  }, React.createElement("div", {
+    className: "w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400"
+  }, React.createElement("i", {
+    className: "fas fa-receipt text-[12px]"
+  })), React.createElement("span", {
+    className: "font-display font-extrabold text-[15px] sm:text-[17px] text-white tracking-tight"
+  }, "Y\xEAu C\u1EA7u Ho\xE0n Ti\u1EC1n V\u1EADt T\u01B0 (", reimbursements.length, ")")), React.createElement("div", {
+    className: "space-y-2"
+  }, reimbursements.map(rb => React.createElement("div", {
+    key: rb.id,
+    className: "p-3 bg-white/[0.04] border border-white/[0.08] rounded-xl flex items-center justify-between gap-3 flex-wrap"
+  }, React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, React.createElement("span", {
+    className: "font-bold text-[13px] text-white block"
+  }, rb.reason || rb.name), React.createElement("span", {
+    className: "text-[11px] font-medium text-zinc-400 block mt-0.5"
+  }, "Ng\u01B0\u1EDDi y\xEAu c\u1EA7u: ", React.createElement("span", {
+    className: "text-rose-400 font-bold"
+  }, rb.staffName || rb.user), " - S\u1ED1 ti\u1EC1n: ", React.createElement("span", {
+    className: "text-emerald-400 font-bold font-mono"
+  }, Number(rb.amount || 0).toLocaleString('vi-VN'), "\u0111"))), React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
+    onClick: () => {
+      window.dispatchEvent(new CustomEvent('openAdminApprovalModal', {
+        detail: rb
+      }));
+    },
+    className: "px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full text-[11px] font-bold uppercase tracking-wide flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+  }, React.createElement("i", {
+    className: "fas fa-money-check-alt"
+  }), " Duy\u1EC7t Chi")))))), React.createElement("div", {
+    className: "bg-[#09090b] border border-[#27272a] rounded-xl p-4 shadow-sm relative overflow-hidden"
+  }, React.createElement("div", {
+    className: "absolute top-0 left-0 w-1 h-full bg-emerald-500"
+  }), React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#27272a] pb-3 mb-4"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("div", {
+    className: "w-6 h-6 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"
+  }, React.createElement("i", {
+    className: "fas fa-boxes text-emerald-500 text-[11px]"
+  })), React.createElement("span", {
+    className: "font-black text-[12px] text-zinc-100 uppercase tracking-widest"
+  }, "B\u1EA3ng B\xE1o Nh\u1EADp H\xE0ng")), React.createElement("button", {
+    onClick: () => {
+      setRemText('');
+      setShowAddReminder(!showAddReminder);
+    },
+    className: "bg-[#121214] hover:bg-[#121214] text-emerald-500 border border-[#27272a] hover:border-emerald-500/50 font-bold text-[10px] px-3 py-1.5 rounded flex items-center gap-1.5 uppercase tracking-wide transition-all cursor-pointer"
+  }, React.createElement("i", {
+    className: `fas ${showAddReminder ? 'fa-times text-zinc-400' : 'fa-plus'}`
+  }), " ", showAddReminder ? 'Đóng' : 'Báo Nhập')), showAddReminder && React.createElement("div", {
+    className: "bg-[#121214] border border-[#27272a] p-4 rounded-xl space-y-4 mb-4 text-[12px] animate-fade-in shadow-lg"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 p-1 bg-[#09090b] rounded-lg border border-[#27272a]"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setInputMode('CATALOG'),
+    className: `flex-1 py-1.5 px-3 rounded text-[11px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${inputMode === 'CATALOG' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`
+  }, React.createElement("i", {
+    className: "fas fa-boxes text-[10px]"
+  }), " Ch\u1ECDn T\u1EEB Kho H\xE0ng"), React.createElement("button", {
+    type: "button",
+    onClick: () => setInputMode('CUSTOM'),
+    className: `flex-1 py-1.5 px-3 rounded text-[11px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${inputMode === 'CUSTOM' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}`
+  }, React.createElement("i", {
+    className: "fas fa-tools text-[10px]"
+  }), " Nh\u1EADp Th\u1EE7 C\xF4ng (C\xF4ng C\u1EE5 / Thi\u1EBFt B\u1ECB)")), inputMode === 'CATALOG' ? React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "Ch\u1ECDn H\xE0ng Ho\xE1 / V\u1EADt T\u01B0 C\xF3 S\u1EB5n Trong Kho ", React.createElement("span", {
+    className: "text-rose-500"
+  }, "*")), React.createElement("select", {
+    value: selectedProdId,
+    onChange: e => {
+      if (e.target.value === '__SWITCH_CUSTOM__') {
+        setInputMode('CUSTOM');
+        setSelectedProdId('');
+      } else {
+        setSelectedProdId(e.target.value);
+      }
+    },
+    className: "w-full bg-[#09090b] border border-[#27272a] text-zinc-100 font-medium rounded-lg px-3 py-2 outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
+  }, React.createElement("option", {
+    value: ""
+  }, "-- Ch\u1ECDn v\u1EADt t\u01B0 / ph\u1EE5 ki\u1EC7n trong kho --"), selectableProducts.map(p => React.createElement("option", {
+    key: p.id,
+    value: p.id
+  }, "[", p.category || 'Vật tư', "] ", p.name, " ", p.sku ? `(${p.sku})` : '', " - ", Number(p.costPrice || p.price || 0).toLocaleString('vi-VN'), "\u0111")), React.createElement("option", {
+    value: "__SWITCH_CUSTOM__"
+  }, "\u270D\uFE0F + Nh\u1EADp th\u1EE7 c\xF4ng c\xF4ng c\u1EE5 / thi\u1EBFt b\u1ECB kh\xE1c ngo\xE0i kho..."))) : React.createElement("div", {
+    className: "space-y-3"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-amber-400 block mb-1.5 uppercase tracking-wide flex items-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-pen-to-square text-[10px]"
+  }), "T\xEAn C\xF4ng C\u1EE5 / Trang Thi\u1EBFt B\u1ECB C\u1EA7n Mua ", React.createElement("span", {
+    className: "text-rose-500"
+  }, "*")), React.createElement("input", {
+    type: "text",
+    value: customName,
+    onChange: e => setCustomName(e.target.value),
+    placeholder: "VD: M\xE1y khoan pin Makita, K\xECm b\u1EA5m ch\u1EBFt, Th\u01B0\u1EDBc nh\xF4m 1m, Th\xF9ng r\xE1c c\xF4ng nghi\u1EC7p...",
+    className: "w-full bg-[#09090b] border border-amber-500/30 text-white font-semibold rounded-lg px-3 py-2 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder-zinc-600",
+    autoFocus: true
+  })), React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-3 gap-3"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "Ph\xE2n Lo\u1EA1i"), React.createElement("select", {
+    value: customCategory,
+    onChange: e => setCustomCategory(e.target.value),
+    className: "w-full bg-[#09090b] border border-[#27272a] text-zinc-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
+  }, React.createElement("option", {
+    value: "C\xF4ng c\u1EE5 / D\u1EE5ng c\u1EE5"
+  }, "\uD83D\uDEE0\uFE0F C\xF4ng c\u1EE5 / D\u1EE5ng c\u1EE5"), React.createElement("option", {
+    value: "Trang thi\u1EBFt b\u1ECB x\u01B0\u1EDFng"
+  }, "\u2699\uFE0F Trang thi\u1EBFt b\u1ECB x\u01B0\u1EDFng"), React.createElement("option", {
+    value: "V\u1EADt t\u01B0 ti\xEAu hao"
+  }, "\uD83D\uDCE6 V\u1EADt t\u01B0 ti\xEAu hao"), React.createElement("option", {
+    value: "\u0110\u1ED3 b\u1EA3o h\u1ED9 lao \u0111\u1ED9ng"
+  }, "\uD83E\uDDBA \u0110\u1ED3 b\u1EA3o h\u1ED9 lao \u0111\u1ED9ng"), React.createElement("option", {
+    value: "V\u0103n ph\xF2ng ph\u1EA9m"
+  }, "\uD83D\uDCCE V\u0103n ph\xF2ng ph\u1EA9m"), React.createElement("option", {
+    value: "Kh\xE1c"
+  }, "\uD83C\uDFF7\uFE0F Kh\xE1c"))), React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "\u0110\u01A1n V\u1ECB T\xEDnh"), React.createElement("input", {
+    type: "text",
+    value: customUnit,
+    onChange: e => setCustomUnit(e.target.value),
+    placeholder: "c\xE1i, b\u1ED9, cu\u1ED9n, h\u1ED9p...",
+    className: "w-full bg-[#09090b] border border-[#27272a] text-zinc-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50 font-mono"
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "\u0110\u01A1n Gi\xE1 D\u1EF1 Ki\u1EBFn (N\u1EBFu c\xF3)"), React.createElement("input", {
+    type: "text",
+    value: customPrice ? parseInt(String(customPrice).replace(/[^0-9]/g, '')).toLocaleString('vi-VN') : '',
+    onChange: e => setCustomPrice(e.target.value.replace(/[^0-9]/g, '')),
+    placeholder: "0 \u20AB",
+    className: "w-full bg-[#09090b] border border-[#27272a] text-amber-400 font-mono font-bold text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
+  })))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-3"
+  }, React.createElement("div", {
+    className: "col-span-1"
+  }, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "S\u1ED1 L\u01B0\u1EE3ng ", React.createElement("span", {
+    className: "text-rose-500"
+  }, "*")), React.createElement("input", {
+    type: "number",
+    min: "1",
+    value: reqQty,
+    onChange: e => setReqQty(e.target.value),
+    className: "w-full bg-[#09090b] border border-[#27272a] text-emerald-400 font-bold rounded-lg px-3 py-2 outline-none focus:border-emerald-500/50 transition-colors font-mono",
+    placeholder: "1"
+  })), React.createElement("div", {
+    className: "col-span-2"
+  }, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide"
+  }, "Ghi Ch\xFA Th\xEAm"), React.createElement("input", {
+    type: "text",
+    value: reqNote,
+    onChange: e => setReqNote(e.target.value),
+    className: "w-full bg-[#09090b] border border-[#27272a] text-zinc-100 font-medium rounded-lg px-3 py-2 outline-none focus:border-emerald-500/50 transition-colors",
+    placeholder: "M\u1EE5c \u0111\xEDch d\xF9ng, ph\xF2ng ban, link Shopee n\u1EBFu c\xF3..."
+  }))), React.createElement("div", {
+    className: "flex justify-end gap-2 pt-2 border-t border-[#27272a]"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setSelectedProdId('');
+      setCustomName('');
+      setCustomPrice('');
+      setReqQty('1');
+      setReqNote('');
+      setShowAddReminder(false);
+    },
+    className: "bg-transparent hover:bg-[#27272a] text-zinc-400 font-bold px-4 py-2 rounded-lg transition-colors uppercase text-[10px] tracking-wide cursor-pointer"
+  }, "Hu\u1EF7"), React.createElement("button", {
+    type: "button",
+    onClick: handleCreateMaterialRequest,
+    disabled: processing,
+    className: `font-black px-5 py-2 rounded-lg transition-all uppercase text-[10px] tracking-wide flex items-center gap-1.5 cursor-pointer shadow-md ${inputMode === 'CUSTOM' ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20' : 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-emerald-500/20'}`
+  }, processing ? React.createElement("i", {
+    className: "fas fa-spinner fa-spin"
+  }) : React.createElement("i", {
+    className: "fas fa-check"
+  }), inputMode === 'CUSTOM' ? 'Lên List Mua Công Cụ' : 'Tạo Phiếu Đặt Hàng'))), React.createElement("div", {
+    className: "space-y-4"
+  }, pendingOrderRequests.length === 0 && orderedRequests.length === 0 && !showAddReminder ? React.createElement("div", {
+    className: "text-center py-6 text-zinc-500 font-medium text-[12px] italic border border-dashed border-[#27272a] rounded-lg"
+  }, "Kh\xF4ng c\xF3 y\xEAu c\u1EA7u nh\u1EADp v\u1EADt t\u01B0 n\xE0o.") : null, pendingOrderRequests.length > 0 && React.createElement("div", {
+    className: "space-y-2"
+  }, React.createElement("div", {
+    className: "text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-hourglass-half"
+  }), " Ch\u1EDD \u0111\u1EB7t h\xE0ng (", pendingOrderRequests.length, ")"), pendingOrderRequests.map(req => {
+    const details = parseReqDetails(req);
+    return React.createElement("div", {
+      key: req.id,
+      className: "p-3 bg-[#121214] border border-[#27272a] rounded-lg flex items-center justify-between gap-3 flex-wrap group hover:border-amber-500/30 transition-colors"
+    }, React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, React.createElement("span", {
+      className: "font-bold text-[12px] text-zinc-100 flex items-center gap-1.5 flex-wrap"
+    }, React.createElement("span", null, details.displayName), details.isManual ? React.createElement("span", {
+      className: "text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide inline-flex items-center gap-1"
+    }, React.createElement("i", {
+      className: "fas fa-tools text-[8px]"
+    }), " ", details.firstItem?.category || 'Công cụ / Thiết bị') : React.createElement("span", {
+      className: "text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide inline-flex items-center gap-1"
+    }, React.createElement("i", {
+      className: "fas fa-box text-[8px]"
+    }), " H\xE0ng kho")), React.createElement("span", {
+      className: "text-[10px] font-medium text-zinc-500 block mt-1"
+    }, React.createElement("i", {
+      className: "fas fa-user-circle mr-1"
+    }), " ", details.creator, " ", details.cleanNote && React.createElement("span", {
+      className: "text-zinc-400"
+    }, "(", details.cleanNote, ")"))), React.createElement("div", {
+      className: "flex gap-2"
+    }, (isAdmin || isBoss || currentUser === details.creator) && React.createElement("button", {
+      onClick: () => handleDeleteRequest(req),
+      disabled: processing,
+      className: "text-[10px] font-bold w-7 h-7 flex items-center justify-center bg-[#121214] hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 border border-[#27272a] hover:border-rose-500/30 rounded transition-colors cursor-pointer"
+    }, React.createElement("i", {
+      className: "fas fa-trash"
+    })), (isAdmin || isBoss) && React.createElement("button", {
+      onClick: () => handleMarkAsOrdered(req),
+      disabled: processing,
+      className: "text-[10px] font-bold px-3 h-7 bg-amber-500 hover:bg-amber-600 text-[#09090b] rounded uppercase tracking-wide cursor-pointer"
+    }, "X\xE1c nh\u1EADn \u0110\xE3 \u0110\u1EB7t")));
+  })), orderedRequests.length > 0 && React.createElement("div", {
+    className: "space-y-2"
+  }, React.createElement("div", {
+    className: "text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-1.5 mt-4"
+  }, React.createElement("i", {
+    className: "fas fa-truck-loading"
+  }), " \u0110\xE3 \u0111\u1EB7t - Ch\u1EDD nh\u1EADn (", orderedRequests.length, ")"), orderedRequests.map(req => {
+    const details = parseReqDetails(req);
+    return React.createElement("div", {
+      key: req.id,
+      className: "p-3 bg-[#121214] border border-[#27272a] rounded-lg flex items-center justify-between gap-3 flex-wrap group hover:border-blue-500/30 transition-colors"
+    }, React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, React.createElement("span", {
+      className: "font-bold text-[12px] text-zinc-100 flex items-center gap-1.5 flex-wrap"
+    }, React.createElement("span", null, details.displayName), details.isManual ? React.createElement("span", {
+      className: "text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide inline-flex items-center gap-1"
+    }, React.createElement("i", {
+      className: "fas fa-tools text-[8px]"
+    }), " ", details.firstItem?.category || 'Công cụ / Thiết bị') : React.createElement("span", {
+      className: "text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide inline-flex items-center gap-1"
+    }, React.createElement("i", {
+      className: "fas fa-box text-[8px]"
+    }), " H\xE0ng kho")), React.createElement("span", {
+      className: "text-[10px] font-medium text-blue-400/80 block mt-1"
+    }, React.createElement("i", {
+      className: "fas fa-check-circle mr-1"
+    }), " \u0110\xE3 \u0111\u1EB7t h\xE0ng ", details.creator && `(${details.creator})`)), React.createElement("div", {
+      className: "flex gap-2"
+    }, (isAdmin || isBoss || currentUser === details.creator) && React.createElement("button", {
+      onClick: () => handleDeleteRequest(req),
+      disabled: processing,
+      className: "text-[10px] font-bold w-7 h-7 flex items-center justify-center bg-[#121214] hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 border border-[#27272a] hover:border-rose-500/30 rounded transition-colors cursor-pointer"
+    }, React.createElement("i", {
+      className: "fas fa-trash"
+    })), ['QUẢN LÝ KHO', 'KẾ TOÁN', 'TỐI CAO', 'KHO VẬN', 'QUẢN LÝ KHO VẬN'].includes(String(localStorage.getItem('rf_role')).toUpperCase()) && React.createElement("button", {
+      onClick: () => handleMarkAsImported(req),
+      className: "text-[10px] font-bold px-3 h-7 bg-blue-500 hover:bg-blue-600 text-[#09090b] rounded uppercase tracking-wide flex items-center gap-1.5 cursor-pointer"
+    }, React.createElement("i", {
+      className: "fas fa-sign-in-alt"
+    }), " Nh\u1EADp Kho")));
+  })))));
+});
+const RealtimeClock = React.memo(function RealtimeClock() {
+  const [currentTime, setCurrentTime] = React.useState(new Date());
+  React.useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const days = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const day = days[currentTime.getDay()];
+  const time = currentTime.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  const dateStr = currentTime.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  return React.createElement(React.Fragment, null, time, " - ", day, ", ", dateStr);
+});
+const TimelineTaskBoard = React.memo(function TimelineTaskBoard({
+  documents = [],
+  pushDeltas,
+  triggerToast,
+  currentUser = '',
+  isBoss = false,
+  isAdmin = false,
+  allStaffNames = [],
+  todayStr = ''
+}) {
+  const isManager = isBoss || isAdmin || ['TỐI CAO', 'QUẢN LÝ', 'QUẢN LÝ KHO VẬN', 'KẾ TOÁN'].includes(String(localStorage.getItem('rf_role') || '').toUpperCase());
+  const today = React.useMemo(() => todayStr || new Date().toISOString().slice(0, 10), [todayStr]);
+  const tomorrow = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }, []);
+  const [selectedDate, setSelectedDate] = React.useState(today);
+  const [inputDate, setInputDate] = React.useState(today);
+  const [inputTime, setInputTime] = React.useState(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  });
+  const [inputStaff, setInputStaff] = React.useState('');
+  const [inputTask, setInputTask] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  React.useEffect(() => {
+    setInputDate(selectedDate);
+  }, [selectedDate]);
+  const [localTasks, setLocalTasks] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('rf_timeline_tasks_cache');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const updateLocalTasks = newTasks => {
+    setLocalTasks(newTasks);
+    try {
+      localStorage.setItem('rf_timeline_tasks_cache', JSON.stringify(newTasks));
+    } catch (e) {}
+  };
+  const allTasks = React.useMemo(() => {
+    const serverTasks = (documents || []).filter(d => d.category === 'TIMELINE_TASK').map(d => {
+      let meta = {};
+      try {
+        if (d.description && d.description.startsWith('{')) {
+          meta = JSON.parse(d.description);
+        }
+      } catch (e) {}
+      return {
+        id: d.id,
+        date: d.attachments || meta.date || (d.createdAt ? String(d.createdAt).slice(0, 10) : today),
+        time: d.testLink || meta.time || '08:00',
+        staff: d.link || meta.staff || '',
+        task: d.title || meta.task || '',
+        status: d.readBy || meta.status || 'Pending',
+        completedAt: meta.completedAt || '',
+        completedBy: meta.completedBy || '',
+        createdBy: d.createdBy || meta.createdBy || ''
+      };
+    });
+    const map = new Map();
+    serverTasks.forEach(t => map.set(t.id, t));
+    localTasks.forEach(t => map.set(t.id, {
+      ...(map.get(t.id) || {}),
+      ...t
+    }));
+    return Array.from(map.values());
+  }, [documents, localTasks, today]);
+  const filteredTasks = React.useMemo(() => {
+    return allTasks.filter(t => t.date === selectedDate).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+  }, [allTasks, selectedDate]);
+  const formatDateVN = dateStr => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+  const handleAddTask = e => {
+    if (e) e.preventDefault();
+    const cleanTask = inputTask.trim();
+    if (!cleanTask) {
+      if (typeof triggerToast === 'function') triggerToast('Vui lòng nhập việc cần làm!', 'fa-exclamation-circle', 'warning');
+      return;
+    }
+    const staff = inputStaff || allStaffNames && allStaffNames[0] || currentUser || 'Chưa chỉ định';
+    const taskId = 'TL_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    const newTask = {
+      id: taskId,
+      date: inputDate || selectedDate,
+      time: inputTime || '08:00',
+      staff: staff,
+      task: cleanTask,
+      status: 'Pending',
+      completedAt: '',
+      completedBy: '',
+      createdBy: currentUser || 'Quản lý'
+    };
+    const updated = [...localTasks.filter(t => t.id !== taskId), newTask];
+    updateLocalTasks(updated);
+    setInputTask('');
+    const payloadDoc = {
+      id: newTask.id,
+      category: 'TIMELINE_TASK',
+      title: newTask.task,
+      description: JSON.stringify({
+        date: newTask.date,
+        time: newTask.time,
+        staff: newTask.staff,
+        task: newTask.task,
+        status: 'Pending',
+        completedAt: '',
+        completedBy: '',
+        createdBy: newTask.createdBy
+      }),
+      link: newTask.staff,
+      testLink: newTask.time,
+      attachments: newTask.date,
+      readBy: 'Pending',
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      createdBy: currentUser || 'Quản lý'
+    };
+    if (typeof pushDeltas === 'function') {
+      setIsSubmitting(true);
+      pushDeltas({
+        documents: [payloadDoc]
+      }, `Giao việc mới cho ${newTask.staff}: ${newTask.task}`, 'fa-tasks').then(() => {
+        if (typeof triggerToast === 'function') triggerToast(`Đã giao việc cho ${newTask.staff}!`, 'fa-check', 'success');
+      }).catch(err => {
+        console.error('Lỗi khi lưu task timeline:', err);
+      }).finally(() => setIsSubmitting(false));
+    }
+  };
+  const handleToggleComplete = task => {
+    const isDone = task.status === 'Done';
+    const nextStatus = isDone ? 'Pending' : 'Done';
+    const nowTimeStr = new Date().toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const updatedTask = {
+      ...task,
+      status: nextStatus,
+      completedAt: isDone ? '' : nowTimeStr,
+      completedBy: isDone ? '' : currentUser || 'Thành viên'
+    };
+    const updatedList = localTasks.map(t => t.id === task.id ? updatedTask : t);
+    if (!localTasks.some(t => t.id === task.id)) {
+      updatedList.push(updatedTask);
+    }
+    updateLocalTasks(updatedList);
+    const payloadDoc = {
+      id: task.id,
+      category: 'TIMELINE_TASK',
+      title: task.task,
+      description: JSON.stringify({
+        date: updatedTask.date,
+        time: updatedTask.time,
+        staff: updatedTask.staff,
+        task: updatedTask.task,
+        status: nextStatus,
+        completedAt: updatedTask.completedAt,
+        completedBy: updatedTask.completedBy,
+        createdBy: task.createdBy
+      }),
+      link: updatedTask.staff,
+      testLink: updatedTask.time,
+      attachments: updatedTask.date,
+      readBy: nextStatus,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      createdBy: currentUser || 'Thành viên'
+    };
+    if (typeof pushDeltas === 'function') {
+      pushDeltas({
+        documents: [payloadDoc]
+      }, `${currentUser} xác nhận ${nextStatus === 'Done' ? 'xong' : 'chưa xong'}: ${task.task}`, 'fa-check-circle').then(() => {
+        if (typeof triggerToast === 'function') {
+          triggerToast(nextStatus === 'Done' ? `Đã hoàn thành việc: ${task.task}` : `Đã mở lại việc: ${task.task}`, 'fa-check-circle', 'success');
+        }
+      });
+    }
+  };
+  const handleDeleteTask = taskId => {
+    if (!window.confirm('Bạn có chắc muốn xóa đầu việc này khỏi timeline?')) return;
+    const updated = localTasks.filter(t => t.id !== taskId);
+    updateLocalTasks(updated);
+    const payloadDoc = {
+      id: taskId,
+      category: 'DELETED_TIMELINE_TASK',
+      title: '[DELETED]',
+      description: '',
+      link: '',
+      testLink: '',
+      attachments: '',
+      readBy: 'Deleted',
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      createdBy: currentUser || 'Quản lý'
+    };
+    if (typeof pushDeltas === 'function') {
+      pushDeltas({
+        documents: [payloadDoc]
+      }, `Đã xóa việc timeline`, 'fa-trash');
+    }
+  };
+  const handleResetDayTasks = () => {
+    if (filteredTasks.length === 0) return;
+    if (!window.confirm(`Xác nhận reset toàn bộ việc ngày ${formatDateVN(selectedDate)} về ô trống để nhập mới?`)) return;
+    const updated = localTasks.filter(t => t.date !== selectedDate);
+    updateLocalTasks(updated);
+    if (typeof triggerToast === 'function') triggerToast(`Đã reset timeline ngày ${formatDateVN(selectedDate)} về ô trống!`, 'fa-undo', 'info');
+  };
+  const doneCount = filteredTasks.filter(t => t.status === 'Done').length;
+  return React.createElement("div", {
+    className: "bg-[#141414] border border-[#3A3A3A] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2A2A2A] pb-3.5"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, React.createElement("div", {
+    className: "w-8 h-8 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white flex items-center justify-center text-sm"
+  }, React.createElement("i", {
+    className: "fas fa-calendar-alt text-[#D4AF37]"
+  })), React.createElement("div", null, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("h3", {
+    className: "font-bold text-[14px] text-white tracking-wide uppercase"
+  }, "B\u1EA3ng Giao Vi\u1EC7c Theo Timeline"), React.createElement("span", {
+    className: "text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/[0.08]"
+  }, doneCount, "/", filteredTasks.length, " \u0110\xC3 XONG")), React.createElement("p", {
+    className: "text-[11px] text-zinc-400 mt-0.5"
+  }, "Ph\xE2n c\xF4ng & x\xE1c nh\u1EADn ho\xE0n th\xE0nh c\xF4ng vi\u1EC7c theo t\u1EEBng m\u1ED1c gi\u1EDD (24h)"))), React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, React.createElement("button", {
+    onClick: () => setSelectedDate(today),
+    className: `px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${selectedDate === today ? 'bg-white text-black shadow-sm font-black' : 'bg-white/[0.04] text-zinc-400 hover:text-white border border-white/[0.08]'}`
+  }, "H\xF4m nay (", formatDateVN(today).slice(0, 5), ")"), React.createElement("button", {
+    onClick: () => setSelectedDate(tomorrow),
+    className: `px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${selectedDate === tomorrow ? 'bg-white text-black shadow-sm font-black' : 'bg-white/[0.04] text-zinc-400 hover:text-white border border-white/[0.08]'}`,
+    title: "Nh\u1EADp tr\u01B0\u1EDBc l\u1ECBch l\xE0m vi\u1EC7c cho ng\xE0y mai"
+  }, "Ng\xE0y mai (", formatDateVN(tomorrow).slice(0, 5), ")"), React.createElement("input", {
+    type: "date",
+    value: selectedDate,
+    onChange: e => e.target.value && setSelectedDate(e.target.value),
+    className: "bg-[#0B0B0B] border border-[#3A3A3A] text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 outline-none font-mono",
+    title: "Ch\u1ECDn ng\xE0y kh\xE1c"
+  }), isManager && filteredTasks.length > 0 && React.createElement("button", {
+    onClick: handleResetDayTasks,
+    className: "px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 transition-all cursor-pointer flex items-center gap-1",
+    title: "Reset danh s\xE1ch ng\xE0y n\xE0y v\u1EC1 \xF4 tr\u1ED1ng"
+  }, React.createElement("i", {
+    className: "fas fa-undo text-[10px]"
+  }), " Reset tr\u1ED1ng"))), isManager && React.createElement("form", {
+    onSubmit: handleAddTask,
+    className: "bg-[#0B0B0B] border border-[#2A2A2A] rounded-xl p-3 sm:p-3.5 space-y-2.5"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between text-[11px] font-mono text-zinc-400 uppercase tracking-wider"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1.5 text-zinc-300 font-bold"
+  }, React.createElement("i", {
+    className: "fas fa-plus-circle text-[#D4AF37]"
+  }), " Giao vi\u1EC7c cho ng\xE0y ", formatDateVN(inputDate)), React.createElement("span", {
+    className: "text-[10px] text-zinc-500"
+  }, "Gi\u1EDD chu\u1EA9n 24h")), React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-12 gap-2"
+  }, React.createElement("div", {
+    className: "sm:col-span-3"
+  }, React.createElement("input", {
+    type: "date",
+    value: inputDate,
+    onChange: e => setInputDate(e.target.value),
+    className: "w-full bg-[#141414] border border-[#3A3A3A] focus:border-[#666666] text-zinc-200 text-xs rounded-lg px-2.5 py-2 outline-none font-mono"
+  })), React.createElement("div", {
+    className: "sm:col-span-2"
+  }, React.createElement("input", {
+    type: "time",
+    value: inputTime,
+    onChange: e => setInputTime(e.target.value),
+    className: "w-full bg-[#141414] border border-[#3A3A3A] focus:border-[#666666] text-zinc-200 text-xs rounded-lg px-2.5 py-2 outline-none font-mono",
+    title: "Gi\u1EDD (24h)"
+  })), React.createElement("div", {
+    className: "sm:col-span-3"
+  }, React.createElement("select", {
+    value: inputStaff,
+    onChange: e => setInputStaff(e.target.value),
+    className: "w-full bg-[#141414] border border-[#3A3A3A] focus:border-[#666666] text-zinc-200 text-xs rounded-lg px-2.5 py-2 outline-none"
+  }, React.createElement("option", {
+    value: ""
+  }, "-- Ch\u1ECDn nh\xE2n s\u1EF1 --"), (allStaffNames || []).map((name, i) => React.createElement("option", {
+    key: i,
+    value: name
+  }, name)))), React.createElement("div", {
+    className: "sm:col-span-4 flex items-center gap-2"
+  }, React.createElement("input", {
+    type: "text",
+    placeholder: "Vi\u1EC7c c\u1EA7n l\xE0m...",
+    value: inputTask,
+    onChange: e => setInputTask(e.target.value),
+    className: "flex-1 min-w-0 bg-[#141414] border border-[#3A3A3A] focus:border-[#666666] text-zinc-200 text-xs rounded-lg px-3 py-2 outline-none"
+  }), React.createElement("button", {
+    type: "submit",
+    disabled: isSubmitting,
+    className: "shrink-0 bg-white hover:bg-zinc-200 text-black px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm flex items-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-paper-plane text-[10px]"
+  }), " Giao")))), React.createElement("div", {
+    className: "w-full space-y-2.5"
+  }, React.createElement("div", {
+    className: "block md:hidden space-y-2"
+  }, filteredTasks.length === 0 ? React.createElement("div", {
+    className: "py-6 px-4 text-center text-zinc-500 font-mono text-xs italic bg-[#121214] border border-[#2A2A2A] rounded-xl space-y-1"
+  }, React.createElement("i", {
+    className: "fas fa-inbox text-xl text-zinc-600 block mb-1"
+  }), React.createElement("span", null, "Timeline ngày ", formatDateVN(selectedDate), " đang để trống.")) : filteredTasks.map(t => {
+    const isDone = t.status === "Done";
+    return React.createElement("div", {
+      key: `m_task_${t.id}`,
+      className: `p-3 rounded-xl border border-[#2A2A2A] bg-[#121214] space-y-2 transition-all ${isDone ? "opacity-60 bg-[#0E0E10]" : ""}`
+    }, React.createElement("div", {
+      className: "flex items-center justify-between text-xs font-mono"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "px-2 py-0.5 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 font-bold flex items-center gap-1 text-[11px]"
+    }, React.createElement("i", {
+      className: "fas fa-clock text-[9px]"
+    }), t.time), React.createElement("span", {
+      className: "px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-zinc-200 font-bold text-[11px]"
+    }, React.createElement("i", {
+      className: "fas fa-user text-[9px] mr-1 text-zinc-400"
+    }), t.staff || "Chưa gán")), isManager && React.createElement("button", {
+      onClick: () => handleDeleteTask(t.id),
+      className: "w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors cursor-pointer",
+      title: "Xóa đầu việc"
+    }, React.createElement("i", {
+      className: "fas fa-trash-alt text-xs"
+    }))), React.createElement("div", {
+      className: `text-xs font-medium leading-relaxed ${isDone ? "line-through text-zinc-400" : "text-zinc-100"}`
+    }, t.task), t.createdBy && React.createElement("div", {
+      className: "text-[10px] font-mono text-zinc-500"
+    }, "Giao bởi: ", t.createdBy), React.createElement("div", {
+      className: "pt-1 border-t border-white/[0.04]"
+    }, isDone ? React.createElement("div", {
+      className: "flex items-center justify-between"
+    }, React.createElement("span", {
+      className: "px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5"
+    }, React.createElement("i", {
+      className: "fas fa-check-circle"
+    }), "Đã xong ", t.completedAt ? `(${t.completedAt})` : ""), React.createElement("button", {
+      onClick: () => handleToggleComplete(t),
+      className: "text-xs text-zinc-400 hover:text-white underline cursor-pointer p-1"
+    }, "Hoàn tác")) : React.createElement("button", {
+      onClick: () => handleToggleComplete(t),
+      className: "w-full min-h-[44px] py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
+    }, React.createElement("i", {
+      className: "fas fa-check"
+    }), "Xác nhận hoàn thành")));
+  })), React.createElement("div", {
+    className: "hidden md:block w-full max-w-full overflow-x-auto custom-scrollbar rounded-xl border border-[#2A2A2A] bg-[#0B0B0B]"
+  }, React.createElement("table", {
+    className: "w-full text-left text-xs border-collapse"
+  }, React.createElement("thead", null, React.createElement("tr", {
+    className: "border-b border-[#2A2A2A] bg-[#121214] text-zinc-400 font-mono text-[10.5px] uppercase tracking-wider"
+  }, React.createElement("th", {
+    className: "py-2.5 px-3 font-bold w-[110px]"
+  }, "Ng\xE0y Th\xE1ng"), React.createElement("th", {
+    className: "py-2.5 px-3 font-bold w-[90px]"
+  }, "Gi\u1EDD (24h)"), React.createElement("th", {
+    className: "py-2.5 px-3 font-bold w-[160px]"
+  }, "T\xEAn Nh\xE2n S\u1EF1"), React.createElement("th", {
+    className: "py-2.5 px-3 font-bold"
+  }, "Vi\u1EC7c C\u1EA7n L\xE0m"), React.createElement("th", {
+    className: "py-2.5 px-3 font-bold text-center w-[180px]"
+  }, "X\xE1c Nh\u1EADn Ho\xE0n Th\xE0nh"), isManager && React.createElement("th", {
+    className: "py-2.5 px-2 text-center w-[40px]"
+  }))), React.createElement("tbody", {
+    className: "divide-y divide-white/[0.04]"
+  }, filteredTasks.length === 0 ? React.createElement("tr", null, React.createElement("td", {
+    colSpan: isManager ? 6 : 5,
+    className: "py-8 text-center text-zinc-500 font-mono italic"
+  }, React.createElement("div", {
+    className: "flex flex-col items-center justify-center gap-1.5"
+  }, React.createElement("i", {
+    className: "fas fa-inbox text-2xl text-zinc-600 mb-1"
+  }), React.createElement("span", null, "Timeline ng\xE0y ", formatDateVN(selectedDate), " \u0111ang \u0111\u1EC3 tr\u1ED1ng."), React.createElement("span", {
+    className: "text-[10px] text-zinc-600"
+  }, "Cu\u1ED1i ng\xE0y \u0111\xE3 t\u1EF1 \u0111\u1ED9ng reset v\u1EC1 \xF4 tr\u1ED1ng \u0111\u1EC3 qu\u1EA3n l\xFD nh\u1EADp cho ng\xE0y mai sau.")))) : filteredTasks.map(t => {
+    const isDone = t.status === 'Done';
+    return React.createElement("tr", {
+      key: t.id,
+      className: `hover:bg-white/[0.02] transition-colors ${isDone ? 'opacity-60 bg-white/[0.01]' : ''}`
+    }, React.createElement("td", {
+      className: "py-2.5 px-3 font-mono text-zinc-300 font-semibold whitespace-nowrap"
+    }, formatDateVN(t.date)), React.createElement("td", {
+      className: "py-2.5 px-3 font-mono text-[#D4AF37] font-bold whitespace-nowrap"
+    }, React.createElement("i", {
+      className: "fas fa-clock text-[9px] mr-1 opacity-70"
+    }), t.time), React.createElement("td", {
+      className: "py-2.5 px-3 text-zinc-200 font-bold whitespace-nowrap"
+    }, React.createElement("span", {
+      className: "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-zinc-200 text-[11px]"
+    }, React.createElement("i", {
+      className: "fas fa-user text-[9px] text-zinc-400"
+    }), t.staff || 'Chưa gán')), React.createElement("td", {
+      className: "py-2.5 px-3 text-zinc-200 font-medium"
+    }, React.createElement("div", {
+      className: `text-[12.5px] ${isDone ? 'line-through text-zinc-400' : 'text-zinc-100'}`
+    }, t.task), t.createdBy && React.createElement("div", {
+      className: "text-[9.5px] font-mono text-zinc-500 mt-0.5"
+    }, "Giao b\u1EDFi: ", t.createdBy)), React.createElement("td", {
+      className: "py-2.5 px-3 text-center whitespace-nowrap"
+    }, isDone ? React.createElement("div", {
+      className: "inline-flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold inline-flex items-center gap-1"
+    }, React.createElement("i", {
+      className: "fas fa-check-circle"
+    }), " \u0110\xE3 xong ", t.completedAt ? `(${t.completedAt})` : ''), React.createElement("button", {
+      onClick: () => handleToggleComplete(t),
+      title: "M\u1EDF l\u1EA1i vi\u1EC7c n\xE0y",
+      className: "p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+    }, React.createElement("i", {
+      className: "fas fa-undo text-[10px]"
+    }))) : React.createElement("button", {
+      onClick: () => handleToggleComplete(t),
+      className: "px-3 py-1.5 rounded-lg bg-white/[0.08] hover:bg-emerald-500/20 text-zinc-200 hover:text-emerald-300 border border-white/[0.12] hover:border-emerald-500/30 text-[11px] font-bold transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+    }, React.createElement("i", {
+      className: "fas fa-check text-[10px] text-emerald-400"
+    }), " X\xE1c nh\u1EADn ho\xE0n th\xE0nh")), isManager && React.createElement("td", {
+      className: "py-2.5 px-2 text-center whitespace-nowrap"
+    }, React.createElement("button", {
+      onClick: () => handleDeleteTask(t.id),
+      className: "text-zinc-500 hover:text-rose-400 p-1 transition-colors cursor-pointer",
+      title: "X\xF3a \u0111\u1EA7u vi\u1EC7c"
+    }, React.createElement("i", {
+      className: "fas fa-trash-alt text-[11px]"
+    }))));
+  }))))));
+});
+const DEFAULT_QUICK_LINKS = [{
+  id: 'shopee',
+  name: 'Shopee VN',
+  url: 'https://s.shopee.vn/BUCsi2UJB',
+  icon: 'fa-bag-shopping',
+  isBrand: false,
+  color: '#f97316'
+}, {
+  id: 'facebook',
+  name: 'Fanpage',
+  url: 'https://www.facebook.com/richfishaquarium/',
+  icon: 'fa-facebook-f',
+  isBrand: true,
+  color: '#1877f2'
+}, {
+  id: 'tiktok',
+  name: 'TikTok',
+  url: 'https://www.tiktok.com/@richfish_aquarium',
+  icon: 'fa-tiktok',
+  isBrand: true,
+  color: '#ffffff'
+}, {
+  id: 'pinterest',
+  name: 'Pinterest',
+  url: 'https://www.pinterest.com/richfishaquarium/',
+  icon: 'fa-pinterest',
+  isBrand: true,
+  color: '#e60023'
+}, {
+  id: 'youtube',
+  name: 'YouTube',
+  url: 'https://www.youtube.com/@RFaquarium',
+  icon: 'fa-youtube',
+  isBrand: true,
+  color: '#ff0000'
+}, {
+  id: 'website',
+  name: 'Website',
+  url: 'https://richfishaquarium.com/',
+  icon: 'fa-globe',
+  isBrand: false,
+  color: '#10b981'
+}, {
+  id: 'map',
+  name: 'Google Map',
+  url: 'https://maps.app.goo.gl/WMAHReQnb5exjvn57',
+  icon: 'fa-map-location-dot',
+  isBrand: false,
+  color: '#38bdf8'
+}, {
+  id: 'workspace',
+  name: 'Workspace V3',
+  url: 'https://webapp-script.vercel.app/',
+  icon: 'fa-layer-group',
+  isBrand: false,
+  color: '#22c55e'
+}, {
+  id: 'zalo',
+  name: 'Zalo Official',
+  url: 'https://zalo.me/1393615274620008533',
+  icon: 'fa-comment-dots',
+  isBrand: false,
+  color: '#0284c7'
+}, {
+  id: 'instagram',
+  name: 'Instagram',
+  url: 'https://www.instagram.com/rfaquarium',
+  icon: 'fa-instagram',
+  isBrand: true,
+  color: '#e1306c'
+}];
+const PRESET_ICONS = [{
+  label: 'Shopee / Cửa hàng',
+  icon: 'fa-bag-shopping',
+  isBrand: false,
+  color: '#f97316'
+}, {
+  label: 'Facebook / Fanpage',
+  icon: 'fa-facebook-f',
+  isBrand: true,
+  color: '#1877f2'
+}, {
+  label: 'TikTok',
+  icon: 'fa-tiktok',
+  isBrand: true,
+  color: '#ffffff'
+}, {
+  label: 'Pinterest',
+  icon: 'fa-pinterest',
+  isBrand: true,
+  color: '#e60023'
+}, {
+  label: 'YouTube',
+  icon: 'fa-youtube',
+  isBrand: true,
+  color: '#ff0000'
+}, {
+  label: 'Website / Toàn cầu',
+  icon: 'fa-globe',
+  isBrand: false,
+  color: '#10b981'
+}, {
+  label: 'Bản đồ / Địa chỉ',
+  icon: 'fa-map-location-dot',
+  isBrand: false,
+  color: '#38bdf8'
+}, {
+  label: 'Workspace / Hệ thống',
+  icon: 'fa-layer-group',
+  isBrand: false,
+  color: '#22c55e'
+}, {
+  label: 'Tin nhắn / Zalo / Chat',
+  icon: 'fa-comment-dots',
+  isBrand: false,
+  color: '#0284c7'
+}, {
+  label: 'Instagram',
+  icon: 'fa-instagram',
+  isBrand: true,
+  color: '#e1306c'
+}, {
+  label: 'Google Drive / Tài liệu',
+  icon: 'fa-folder-open',
+  isBrand: false,
+  color: '#eab308'
+}, {
+  label: 'Liên kết chung',
+  icon: 'fa-link',
+  isBrand: false,
+  color: '#a1a1aa'
+}];
+const EcosystemQuickLinks = React.memo(function EcosystemQuickLinks({
+  documents = [],
+  pushDeltas,
+  triggerToast,
+  isManager = false,
+  currentUser = ''
+}) {
+  const dbDoc = React.useMemo(() => {
+    return (documents || []).find(d => d.id === 'DOC_QUICK_LINKS' || d.category === 'CONFIG_QUICK_LINKS');
+  }, [documents]);
+  const [localLinks, setLocalLinks] = React.useState(null);
+  const links = React.useMemo(() => {
+    if (localLinks) return localLinks;
+    if (dbDoc && dbDoc.description) {
+      try {
+        const parsed = JSON.parse(dbDoc.description);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    try {
+      const saved = localStorage.getItem('rf_quick_links');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_QUICK_LINKS;
+  }, [dbDoc, localLinks]);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingLink, setEditingLink] = React.useState(null);
+  const [formName, setFormName] = React.useState('');
+  const [formUrl, setFormUrl] = React.useState('');
+  const [formIcon, setFormIcon] = React.useState(PRESET_ICONS[0]);
+  const saveAll = async newLinks => {
+    setLocalLinks(newLinks);
+    try {
+      localStorage.setItem('rf_quick_links', JSON.stringify(newLinks));
+    } catch (e) {}
+    if (typeof pushDeltas === 'function') {
+      const safeDateFull = typeof getLocalISODate === 'function' ? getLocalISODate().replace('T', ' ').slice(0, 19) : new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const docPayload = {
+        id: 'DOC_QUICK_LINKS',
+        category: 'CONFIG_QUICK_LINKS',
+        title: 'Cấu hình Link Truy Cập Nhanh Hệ Sinh Thái',
+        description: JSON.stringify(newLinks),
+        link: '',
+        createdAt: dbDoc?.createdAt || safeDateFull,
+        createdBy: currentUser || 'Admin',
+        attachments: '[]',
+        testLink: '',
+        readBy: '[]'
+      };
+      await pushDeltas({
+        Documents: [docPayload]
+      }, 'Cập nhật danh sách link truy cập nhanh toàn xưởng', 'fa-link');
+    }
+  };
+  const handleOpenAdd = () => {
+    setEditingLink(null);
+    setFormName('');
+    setFormUrl('');
+    setFormIcon(PRESET_ICONS[0]);
+  };
+  const handleOpenEdit = item => {
+    setEditingLink(item);
+    setFormName(item.name || '');
+    setFormUrl(item.url || '');
+    const matched = PRESET_ICONS.find(p => p.icon === item.icon) || {
+      label: 'Tùy chỉnh',
+      icon: item.icon || 'fa-link',
+      isBrand: Boolean(item.isBrand),
+      color: item.color || '#38bdf8'
+    };
+    setFormIcon(matched);
+  };
+  const handleDelete = async id => {
+    if (!window.confirm('Bạn có chắc muốn xóa liên kết này trên toàn hệ thống?')) return;
+    const updated = links.filter(l => l.id !== id);
+    await saveAll(updated);
+    if (editingLink?.id === id) handleOpenAdd();
+    if (typeof triggerToast === 'function') triggerToast('Đã xóa liên kết trên toàn xưởng!', 'fa-trash', 'info');
+  };
+  const handleSaveForm = async e => {
+    e.preventDefault();
+    const name = formName.trim();
+    let url = formUrl.trim();
+    if (!name) {
+      if (typeof triggerToast === 'function') triggerToast('Vui lòng nhập tên liên kết!', 'fa-exclamation', 'warning');
+      return;
+    }
+    if (!url) {
+      if (typeof triggerToast === 'function') triggerToast('Vui lòng nhập đường link!', 'fa-exclamation', 'warning');
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    if (editingLink) {
+      const updated = links.map(l => l.id === editingLink.id ? {
+        ...l,
+        name,
+        url,
+        icon: formIcon.icon,
+        isBrand: formIcon.isBrand,
+        color: formIcon.color
+      } : l);
+      await saveAll(updated);
+      setEditingLink(null);
+      if (typeof triggerToast === 'function') triggerToast('Đã cập nhật liên kết toàn hệ thống!', 'fa-check', 'success');
+    } else {
+      const newEntry = {
+        id: 'link_' + Date.now(),
+        name,
+        url,
+        icon: formIcon.icon,
+        isBrand: formIcon.isBrand,
+        color: formIcon.color
+      };
+      await saveAll([...links, newEntry]);
+      handleOpenAdd();
+      if (typeof triggerToast === 'function') triggerToast('Đã thêm liên kết mới cho toàn xưởng!', 'fa-check', 'success');
+    }
+  };
+  const handleResetDefaults = async () => {
+    if (!window.confirm('Khôi phục danh sách 10 kênh mặc định ban đầu cho toàn hệ thống?')) return;
+    await saveAll(DEFAULT_QUICK_LINKS);
+    handleOpenAdd();
+    if (typeof triggerToast === 'function') triggerToast('Đã khôi phục danh sách mặc định!', 'fa-rotate-left', 'success');
+  };
+  return React.createElement("div", {
+    className: "w-full max-w-full overflow-hidden mt-2"
+  }, React.createElement("div", {
+    className: "w-full max-w-full bg-[#121214] border border-[#2A2A2A] rounded-2xl p-2.5 sm:p-3 space-y-2"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2 border-b border-[#222] pb-1.5"
+  }, React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+  }), React.createElement("span", {
+    className: "text-[10.5px] font-black uppercase tracking-wider text-zinc-300 flex items-center gap-1.5 font-mono"
+  }, React.createElement("i", {
+    className: "fas fa-compass text-zinc-400 text-[11px]"
+  }), React.createElement("span", null, "KÊNH & LIÊN KẾT HỆ SINH THÁI"))), isManager && React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      handleOpenAdd();
+      setIsModalOpen(true);
+    },
+    className: "h-6 px-2 rounded-lg bg-[#18181B] hover:bg-[#252528] border border-white/10 hover:border-white/25 text-zinc-400 hover:text-amber-400 flex items-center gap-1 text-[10px] font-bold transition-all cursor-pointer",
+    title: "Cài đặt / Thêm liên kết mới"
+  }, React.createElement("i", {
+    className: "fas fa-sliders-h text-[10px]"
+  }), React.createElement("span", {
+    className: "hidden xs:inline"
+  }, "Cài đặt"))), React.createElement("div", {
+    className: "grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-1.5 sm:gap-2"
+  }, links.map(link => React.createElement("a", {
+    key: link.id,
+    href: link.url,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    title: `${link.name} · Bấm mở`,
+    className: "h-8 px-2 rounded-xl bg-[#18181B] hover:bg-[#222226] border border-white/[0.06] hover:border-white/20 flex items-center gap-1.5 transition-all group active:scale-95 text-zinc-300 hover:text-white min-w-0"
+  }, React.createElement("span", {
+    className: "w-4 h-4 flex items-center justify-center text-[12px] shrink-0",
+    style: {
+      color: link.color || "#fff"
+    }
+  }, React.createElement("i", {
+    className: `${link.isBrand ? "fab" : "fas"} ${link.icon}`
+  })), React.createElement("span", {
+    className: "text-[11px] font-bold truncate leading-none"
+  }, link.name))))), isModalOpen && React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in"
+  }, React.createElement("div", {
+    className: "bg-[#121214] border border-[#2e2e32] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+  }, React.createElement("div", {
+    className: "px-4 py-3 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between shrink-0"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("div", {
+    className: "w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs"
+  }, React.createElement("i", {
+    className: "fas fa-link"
+  })), React.createElement("div", null, React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "Qu\u1EA3n L\xFD Link Truy C\u1EADp Nhanh"), React.createElement("p", {
+    className: "text-[10px] text-zinc-400"
+  }, "Th\xEAm, s\u1EEDa \u0111\u1ED5i ho\u1EB7c x\xF3a c\xE1c \u0111\u01B0\u1EDDng d\u1EABn tr\xEAn trang T\u1ED5ng quan"))), React.createElement("button", {
+    type: "button",
+    onClick: () => setIsModalOpen(false),
+    className: "w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+  }, React.createElement("i", {
+    className: "fas fa-times"
+  }))), React.createElement("div", {
+    className: "p-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar"
+  }, React.createElement("form", {
+    onSubmit: handleSaveForm,
+    className: "bg-[#18181b] border border-[#27272a] rounded-xl p-3 space-y-3"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between text-xs font-black text-white"
+  }, React.createElement("span", null, editingLink ? '✏️ Chỉnh Sửa Liên Kết' : '➕ Thêm Liên Kết Mới'), editingLink && React.createElement("button", {
+    type: "button",
+    onClick: handleOpenAdd,
+    className: "text-[10px] text-emerald-400 hover:underline"
+  }, "+ H\u1EE7y s\u1EEDa, th\xEAm m\u1EDBi")), React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1"
+  }, "T\xEAn hi\u1EC3n th\u1ECB"), React.createElement("input", {
+    type: "text",
+    placeholder: "VD: Nh\xF3m Zalo B\xE1o \u0110\u01A1n...",
+    value: formName,
+    onChange: e => setFormName(e.target.value),
+    className: "w-full bg-[#101012] border border-[#333338] focus:border-emerald-500 rounded-lg px-2.5 py-1.5 text-white text-xs outline-none"
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1"
+  }, "Lo\u1EA1i Logo / Bi\u1EC3u t\u01B0\u1EE3ng"), React.createElement("select", {
+    value: formIcon.label,
+    onChange: e => {
+      const sel = PRESET_ICONS.find(p => p.label === e.target.value) || PRESET_ICONS[0];
+      setFormIcon(sel);
+    },
+    className: "w-full bg-[#101012] border border-[#333338] focus:border-emerald-500 rounded-lg px-2 py-1.5 text-white text-xs outline-none"
+  }, PRESET_ICONS.map((p, idx) => React.createElement("option", {
+    key: idx,
+    value: p.label
+  }, p.label)))), React.createElement("div", {
+    className: "sm:col-span-2"
+  }, React.createElement("label", {
+    className: "text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1"
+  }, "\u0110\u01B0\u1EDDng d\u1EABn URL"), React.createElement("input", {
+    type: "text",
+    placeholder: "https://...",
+    value: formUrl,
+    onChange: e => setFormUrl(e.target.value),
+    className: "w-full bg-[#101012] border border-[#333338] focus:border-emerald-500 rounded-lg px-2.5 py-1.5 text-white text-xs outline-none font-mono"
+  }))), React.createElement("div", {
+    className: "flex items-center justify-end gap-2 pt-1"
+  }, React.createElement("button", {
+    type: "submit",
+    className: "px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-sm"
+  }, React.createElement("i", {
+    className: "fas fa-save text-[11px]"
+  }), React.createElement("span", null, editingLink ? 'Cập Nhật' : 'Lưu Liên Kết')))), React.createElement("div", {
+    className: "space-y-1.5"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between text-[11px] font-black text-zinc-400 uppercase tracking-wider"
+  }, React.createElement("span", null, "Danh S\xE1ch Hi\u1EC7n C\xF3 (", links.length, ")"), React.createElement("button", {
+    type: "button",
+    onClick: handleResetDefaults,
+    className: "text-[10px] text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+  }, React.createElement("i", {
+    className: "fas fa-rotate-left"
+  }), React.createElement("span", null, "Kh\xF4i ph\u1EE5c 10 link g\u1ED1c"))), React.createElement("div", {
+    className: "space-y-1"
+  }, links.map(link => React.createElement("div", {
+    key: link.id,
+    className: "bg-[#18181b] border border-white/[0.04] hover:border-white/10 rounded-xl p-2 flex items-center justify-between gap-2 text-xs transition-colors"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5 min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "w-6 h-6 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center shrink-0 text-xs",
+    style: {
+      color: link.color || '#fff'
+    }
+  }, React.createElement("i", {
+    className: `${link.isBrand ? 'fab' : 'fas'} ${link.icon}`
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "font-bold text-white truncate text-[11px]"
+  }, link.name), React.createElement("div", {
+    className: "text-[10px] font-mono text-zinc-500 truncate"
+  }, link.url))), React.createElement("div", {
+    className: "flex items-center gap-1 shrink-0"
+  }, React.createElement("a", {
+    href: link.url,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    className: "w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-[10px] transition-colors",
+    title: "M\u1EDF th\u1EED"
+  }, React.createElement("i", {
+    className: "fas fa-external-link-alt"
+  })), React.createElement("button", {
+    type: "button",
+    onClick: () => handleOpenEdit(link),
+    className: "w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-emerald-400 flex items-center justify-center text-[10px] transition-colors cursor-pointer",
+    title: "S\u1EEDa"
+  }, React.createElement("i", {
+    className: "fas fa-pen"
+  })), React.createElement("button", {
+    type: "button",
+    onClick: () => handleDelete(link.id),
+    className: "w-6 h-6 rounded bg-zinc-800 hover:bg-rose-950/60 text-zinc-400 hover:text-rose-400 flex items-center justify-center text-[10px] transition-colors cursor-pointer",
+    title: "X\xF3a"
+  }, React.createElement("i", {
+    className: "fas fa-trash-alt"
+  })))))))), React.createElement("div", {
+    className: "px-4 py-2.5 bg-[#18181b] border-t border-[#27272a] flex items-center justify-end shrink-0"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setIsModalOpen(false),
+    className: "px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+  }, "\u0110\xF3ng")))));
+});
 const DashboardTab = React.memo(function DashboardTab({
   reimbursements = [],
   orders = [],
@@ -20372,6 +21984,187 @@ const DashboardTab = React.memo(function DashboardTab({
 // -------------------------------------------------------------------------
 
 // HÀM PARSE NGÀY ĐA NĂNG TOÀN CỤC (UỶ THÁC CHO window.resolveOrderDateSafe CHUẨN HOÁ GMT+7)
+/* packing-bulk-20261028: UI component for bulk packing completion */
+function RFBulkPackingTools({
+  items,
+  selectedIds,
+  setSelectedIds,
+  role,
+  users,
+  open,
+  setOpen,
+  pushDeltas,
+  triggerToast
+}) {
+  const h = React.createElement;
+  const [worker, setWorker] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [result, setResult] = React.useState(null);
+  const inFlight = React.useRef(false);
+  const snapshot = React.useRef([]);
+  const selected = (items || []).filter(item => (selectedIds || []).includes(item.id));
+  if (String(role || '').trim().toUpperCase() !== 'TỐI CAO') return null;
+  const workers = Array.from(new Set((users && users.users || []).filter(name => name && !/nghỉ|inactive|disabled/i.test((users.statuses || {})[name] || '') && (users.roles || {})[name] !== 'KHÁCH')));
+  function launch() {
+    snapshot.current = selected.map(item => ({
+      id: item.id,
+      orderCode: item.orderCode || item.id,
+      status: item.status || '',
+      channel: item.channel || ''
+    }));
+    setError('');
+    setResult(null);
+    setOpen(true);
+  }
+  if (open && !snapshot.current.length && selected.length > 0) {
+    snapshot.current = selected.map(item => ({
+      id: item.id,
+      orderCode: item.orderCode || item.id,
+      status: item.status || '',
+      channel: item.channel || ''
+    }));
+  }
+  async function submit() {
+    if (inFlight.current || !worker || !snapshot.current.length) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await pushDeltas({
+        bulkPacking: {
+          worker: worker,
+          items: snapshot.current.map(({
+            id,
+            status
+          }) => ({
+            id,
+            status
+          }))
+        }
+      });
+      if (!response || !response.success) {
+        throw new Error(response && (response.message || response.error) || 'Chưa lưu được thay đổi.');
+      }
+      const details = response.data && response.data.bulkPackingResult;
+      setResult(details || {
+        count: 0,
+        skipped: []
+      });
+      setSelectedIds([]);
+      window.dispatchEvent(new CustomEvent('triggerReloadData'));
+      if (typeof triggerToast === 'function') {
+        triggerToast('Đã xử lý hoàn thành nhanh đóng hàng', 'fa-check', 'success');
+      }
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  function close() {
+    if (busy) return;
+    snapshot.current = [];
+    setResult(null);
+    setError('');
+    setOpen(false);
+  }
+  const button = 'px-3 py-2 rounded-xl border border-white/15 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer';
+  return h(React.Fragment, null, h('div', {
+    className: 'mb-3 flex flex-wrap items-center gap-2 bg-[#121318]/70 border border-white/10 p-2.5 rounded-2xl'
+  }, h('button', {
+    type: 'button',
+    className: button + ' bg-zinc-800 hover:bg-zinc-700 text-zinc-100',
+    onClick: () => setSelectedIds((items || []).map(item => item.id)),
+    disabled: !(items && items.length)
+  }, 'Chọn tất cả ' + (items ? items.length : 0) + ' đơn'), selected.length > 0 && h('button', {
+    type: 'button',
+    className: button + ' text-zinc-400 hover:text-rose-400 hover:border-rose-500/30',
+    onClick: () => setSelectedIds([])
+  }, 'Bỏ chọn (' + selected.length + ')'), h('button', {
+    type: 'button',
+    className: button + ' bg-emerald-700 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-950/40',
+    onClick: launch,
+    disabled: !selected.length
+  }, 'Hoàn thành nhanh đóng hàng (' + selected.length + ')'), selected.length > 0 && h('span', {
+    className: 'text-xs text-emerald-400 font-bold ml-1'
+  }, 'Đã chọn: ' + selected.length + ' / ' + (items ? items.length : 0) + ' đơn'), h('span', {
+    className: 'text-xs text-zinc-500 ml-auto'
+  }, 'Chỉ Tối Cao · bấm vào góc thẻ để chọn từng đơn')), open && h('div', {
+    className: 'fixed inset-0 z-[10000] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in'
+  }, h('div', {
+    role: 'dialog',
+    'aria-modal': true,
+    'aria-label': 'Hoàn thành nhanh đóng hàng',
+    className: 'bg-[#18191d] border border-zinc-600 rounded-2xl p-5 w-full max-w-xl max-h-[90vh] overflow-auto text-zinc-100 space-y-3 shadow-2xl'
+  }, h('h2', {
+    className: 'text-lg font-bold flex items-center gap-2'
+  }, h('i', {
+    className: 'fas fa-box-check text-emerald-400'
+  }), 'Hoàn thành nhanh đóng hàng'), h('p', {
+    className: 'text-sm text-zinc-300'
+  }, snapshot.current.length + ' đơn đã chọn trong bộ lọc. Đơn đủ điều kiện sẽ được hoàn thành đóng gói và chuyển sang "Đã Bàn Giao". Gắn ảnh nhân sự tự động, chỉ nhận KPI đóng gói.'), h('label', {
+    className: 'block text-sm font-semibold'
+  }, 'Người nhận KPI', h('select', {
+    'aria-label': 'Người nhận KPI',
+    value: worker,
+    disabled: busy || !!result,
+    onChange: event => setWorker(event.target.value),
+    className: 'block w-full bg-zinc-900 border border-zinc-600 p-2.5 rounded-xl mt-1 text-zinc-100 font-normal focus:border-emerald-500 focus:outline-none'
+  }, h('option', {
+    value: ''
+  }, 'Chọn nhân sự'), ...workers.map(name => h('option', {
+    key: name,
+    value: name
+  }, name)))), h('p', {
+    className: 'text-xs text-amber-200/90 bg-amber-950/30 border border-amber-500/20 p-2.5 rounded-xl'
+  }, 'KPI tính theo cấu hình của từng sản phẩm và kênh bán. Chuyển thẳng sang Đã Bàn Giao, gắn ảnh nhân sự, đơn đã đóng gói hoặc đơn huỷ sẽ tự động được bỏ qua.'), h('div', {
+    className: 'space-y-1'
+  }, h('div', {
+    className: 'text-xs text-zinc-400 flex justify-between'
+  }, h('span', null, 'Danh sách đơn (' + snapshot.current.length + '):'), !result && !busy && snapshot.current.length > 0 && h('span', {
+    className: 'text-[11px] text-zinc-500'
+  }, 'Bấm ✕ để loại bớt đơn')), h('ul', {
+    className: 'text-xs max-h-36 overflow-auto space-y-1.5 p-1 bg-black/40 rounded-xl border border-white/5'
+  }, ...snapshot.current.map(item => h('li', {
+    key: item.id,
+    className: 'flex items-center justify-between gap-2 p-1.5 px-2 rounded-lg bg-zinc-900/80 border border-white/5'
+  }, h('span', {
+    className: 'truncate font-mono text-[11px]'
+  }, (item.orderCode || item.id) + (item.channel ? ' · ' + item.channel : '') + (item.status ? ' · ' + item.status : '')), !result && !busy && h('button', {
+    type: 'button',
+    onClick: () => {
+      snapshot.current = snapshot.current.filter(x => x.id !== item.id);
+      setSelectedIds(prev => prev.filter(id => id !== item.id));
+    },
+    className: 'text-zinc-500 hover:text-rose-400 font-bold px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer',
+    title: 'Bỏ chọn đơn này'
+  }, '✕'))))), error && h('p', {
+    role: 'alert',
+    className: 'text-red-300 text-sm bg-red-950/40 p-2.5 rounded-xl border border-red-500/30'
+  }, error), result && h('div', {
+    role: 'status',
+    className: 'text-emerald-300 text-sm bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/30 space-y-1'
+  }, h('p', {
+    className: 'font-bold'
+  }, 'Đã hoàn thành ' + result.count + ' đơn cho ' + worker + '. Bỏ qua ' + (result.skipped || []).length + ' đơn.'), ...(result.skipped || []).map(item => h('p', {
+    key: item.id,
+    className: 'text-xs text-amber-300'
+  }, (item.orderCode || item.id) + ': ' + item.reason))), h('div', {
+    className: 'flex flex-wrap justify-end gap-2 pt-2'
+  }, h('button', {
+    type: 'button',
+    className: button,
+    disabled: busy,
+    onClick: close
+  }, 'Đóng'), !result && h('button', {
+    type: 'button',
+    className: button + ' bg-emerald-700 hover:bg-emerald-600 text-white font-black',
+    disabled: busy || !worker || !snapshot.current.length,
+    onClick: submit
+  }, busy ? 'Đang xử lý…' : 'Xác nhận hoàn thành đóng hàng (' + snapshot.current.length + ')')))));
+}
 window.parseOrderDateSafe = function (dateInput) {
   if (typeof window.resolveOrderDateSafe === 'function') {
     var res = window.resolveOrderDateSafe(dateInput);
@@ -21747,6 +23540,7 @@ const OrdersTab = React.memo(function OrdersTab({
   const [addingMode, setAddingMode] = React.useState(false);
   const [draftData, setDraftData] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState([]);
+  const [isSelectMode, setIsSelectMode] = React.useState(false);
   const [bulkPackingOpen, setBulkPackingOpen] = React.useState(false);
   const tabsContainerRef = React.useRef(null);
   const [isScanningReturn, setIsScanningReturn] = React.useState(false);
@@ -21873,7 +23667,10 @@ const OrdersTab = React.memo(function OrdersTab({
   const toggleSelect = React.useCallback(orderId => {
     setSelectedIds(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]);
   }, []);
-  const clearSelection = React.useCallback(() => setSelectedIds([]), []);
+  const clearSelection = React.useCallback(() => {
+    setSelectedIds([]);
+    setIsSelectMode(false);
+  }, []);
   const handleEditOrder = React.useCallback((order, prods) => {
     setEditingOrder({
       order,
@@ -22051,6 +23848,18 @@ const OrdersTab = React.memo(function OrdersTab({
       window.GLOBAL_ALL_ORDERS = orders;
     }
   }, [orders]);
+  const effectiveCurrentMonth = React.useMemo(() => {
+    const now = new Date();
+    const sysMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    let maxMonth = sysMonth;
+    (orders || []).forEach(o => {
+      const n = typeof window.resolveOrderDateSafe === 'function' ? window.resolveOrderDateSafe(o) : typeof window.normalizeDateVN === 'function' ? window.normalizeDateVN(o.date || o.createdAt || o.deadline) : null;
+      if (n && n.monthStr && /^\d{4}-\d{2}$/.test(n.monthStr) && n.monthStr > maxMonth) {
+        maxMonth = n.monthStr;
+      }
+    });
+    return maxMonth;
+  }, [orders]);
   const matchTimeFilter = React.useCallback(order => {
     if (!filterTime || filterTime === 'ALL' || filterTime === 'Tất Cả') return true;
     const st = String(order.status || order._effectiveStatus || '').toUpperCase().trim();
@@ -22058,11 +23867,10 @@ const OrdersTab = React.memo(function OrdersTab({
     const isReturnOrder = st === 'HÀNG HOÀN' || st.includes('HOÀN CHỜ XỬ') || st.includes('HOÀN TRẢ') || st === 'KIỂM HÀNG HOÀN';
     const isClosed = st === 'HOÀN THÀNH' || st === 'ĐỐI SOÁT THÀNH CÔNG' || st === 'ĐÃ BÀN GIAO' || st === 'ĐƠN HUỶ' || st === 'ĐÃ NHẬP KHO' || isReturnOrder && isRec || isRec;
     const norm = typeof window.resolveOrderDateSafe === 'function' ? window.resolveOrderDateSafe(order) : typeof window.normalizeDateVN === 'function' ? window.normalizeDateVN(order.date || order.createdAt || order.deadline) : null;
-    const now = new Date();
-    const curY = now.getFullYear();
-    const curM = now.getMonth() + 1;
-    const curMStr = String(curM).padStart(2, '0');
-    const targetCurrentMonth = `${curY}-${curMStr}`;
+    const targetCurrentMonth = effectiveCurrentMonth;
+    const [curYStr, curMStr] = targetCurrentMonth.split('-');
+    const curY = parseInt(curYStr, 10);
+    const curM = parseInt(curMStr, 10);
     const prevM = curM === 1 ? 12 : curM - 1;
     const prevY = curM === 1 ? curY - 1 : curY;
     const targetPrevMonth = `${prevY}-${String(prevM).padStart(2, '0')}`;
@@ -22086,7 +23894,7 @@ const OrdersTab = React.memo(function OrdersTab({
     }
     if (!norm || !norm.dateObj) return true;
     return isDateInRangeLocal(norm.isoDate, filterTime, customMonth);
-  }, [filterTime, customMonth]);
+  }, [filterTime, customMonth, effectiveCurrentMonth]);
   const sourceOrders = React.useMemo(() => {
     return orders || [];
   }, [orders]);
@@ -23287,13 +25095,17 @@ const OrdersTab = React.memo(function OrdersTab({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 relative"
   }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"
+    className: "fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: searchCode,
     onChange: e => setSearchCode(e.target.value),
     placeholder: "T\xECm m\xE3 \u0111\u01A1n, m\xE3 v\u1EADn \u0111\u01A1n, kh\xE1ch h\xE0ng, s\u1ED1 \u0111i\u1EC7n tho\u1EA1i...",
-    className: "w-full h-10 pl-9 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
+    style: {
+      paddingLeft: '2.5rem',
+      paddingRight: searchCode ? '2.25rem' : '0.875rem'
+    },
+    className: "w-full h-10 pl-10 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
   }), searchCode && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSearchCode(''),
@@ -23360,7 +25172,21 @@ const OrdersTab = React.memo(function OrdersTab({
     className: "hidden sm:inline"
   }, "Th\u1EBB")))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5 shrink-0 ml-auto"
-  }, hasPerm('ORDER_CREATE') && /*#__PURE__*/React.createElement("button", {
+  }, (!isCTV || isAdmin || isBossRole) && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      if (isSelectMode || selectedIds.length > 0) {
+        setIsSelectMode(false);
+        setSelectedIds([]);
+      } else {
+        setIsSelectMode(true);
+      }
+    },
+    className: `h-8.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${isSelectMode || selectedIds.length > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold' : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'}`,
+    title: isSelectMode ? "Thoát chế độ chọn đơn" : "Bật chế độ chọn nhiều đơn"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: `fas ${isSelectMode || selectedIds.length > 0 ? 'fa-check-double' : 'fa-check-square'} text-[11px]`
+  }), /*#__PURE__*/React.createElement("span", null, isSelectMode || selectedIds.length > 0 ? `Xong${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}` : 'Chọn')), hasPerm('ORDER_CREATE') && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setAddingMode(true),
     className: "h-8.5 px-3 bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer border-0",
@@ -24010,7 +25836,7 @@ const OrdersTab = React.memo(function OrdersTab({
     className: "border-b border-white/[0.06] bg-[#09090b]/80 text-[11px] font-black uppercase text-zinc-400 tracking-wider h-11"
   }, /*#__PURE__*/React.createElement("th", {
     className: "w-12 px-3 text-center"
-  }, /*#__PURE__*/React.createElement("input", {
+  }, isSelectMode || selectedIds.length > 0 ? /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
     checked: sortedFiltered.slice(0, renderLimit).length > 0 && sortedFiltered.slice(0, renderLimit).every(o => selectedIds.includes(o.id)),
     onChange: e => {
@@ -24022,6 +25848,9 @@ const OrdersTab = React.memo(function OrdersTab({
       }
     },
     className: "w-4 h-4 rounded accent-[#d4af37] cursor-pointer"
+  }) : /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-star text-zinc-600 text-[10px]",
+    title: "\u01AFu ti\xEAn"
   })), /*#__PURE__*/React.createElement("th", {
     className: "px-3 min-w-[190px]"
   }, "M\xC3 \u0110\u01A0N & V\u1EACN \u0110\u01A0N"), /*#__PURE__*/React.createElement("th", {
@@ -24073,7 +25902,7 @@ const OrdersTab = React.memo(function OrdersTab({
       onClick: e => e.stopPropagation()
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("input", {
+    }, (isSelectMode || selectedIds.length > 0) && /*#__PURE__*/React.createElement("input", {
       type: "checkbox",
       checked: isSelected,
       onChange: () => toggleSelect(order.id),
@@ -24242,7 +26071,7 @@ const OrdersTab = React.memo(function OrdersTab({
         className: "text-[11px] font-mono text-zinc-400 bg-white/[0.06] px-2 py-0.5 rounded-md font-normal"
       }, groupOrders.length, " \u0111\u01A1n")), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2 shrink-0"
-      }, (!isCTV || isAdmin || isBossRole) && groupOrders.length > 0 && /*#__PURE__*/React.createElement("button", {
+      }, (isSelectMode || selectedIds.length > 0) && (!isCTV || isAdmin || isBossRole) && groupOrders.length > 0 && /*#__PURE__*/React.createElement("button", {
         type: "button",
         className: "flex items-center gap-1.5 px-2 py-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer border-0 bg-transparent",
         title: "Ch\u1ECDn ho\u1EB7c b\u1ECF ch\u1ECDn to\xE0n b\u1ED9 \u0111\u01A1n trong nh\xF3m n\xE0y",
@@ -24301,7 +26130,7 @@ const OrdersTab = React.memo(function OrdersTab({
           userConfigs: userConfigs,
           triggerToast: triggerToast,
           isSelected: selectedIds.includes(o.id),
-          onToggleSelect: toggleSelect,
+          onToggleSelect: isSelectMode || selectedIds.length > 0 ? toggleSelect : undefined,
           kpiConfig: kpiConfig,
           idx_num: originalIdx,
           handleCancelOrder: handleCancelOrder,

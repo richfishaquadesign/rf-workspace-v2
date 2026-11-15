@@ -7096,7 +7096,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     document.body
                 )}
 
-                <div className={`pl-16 ${titlePadding} mb-3 min-h-[3rem]`}>
+                <div className={`${onToggleSelect ? 'pl-14' : 'pl-7'} ${titlePadding} mb-3 min-h-[3rem]`}>
                     {isUrgent && (
                         <div 
                             onClick={handleToggleUrgent}

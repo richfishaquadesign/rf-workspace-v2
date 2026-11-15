@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T18:47:53.220Z",
+  "generatedAt": "2026-11-15T18:58:31.132Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -40,13 +40,13 @@
     "ReturnClaimRules.js": "c98daef812bb417e1459347a64bc15daae1326355dca5952708a5496379c2e56",
     "Components.html": "e4a09ff33429a362914fe3fe72ab14a5c5cf17f355ec7b55178f231098744641",
     "Modals.html": "7f89c67dfc95ff023b723fd5090a4196ddb6c7eb492e780e9e96c47dbb6b028e",
-    "Modals_Orders.html": "03228cb77c460dc6d502fa2486f48dfa8a2c4ef12262bb4559aab3b8760a0e0f",
-    "Tab_Dashboard.html": "fb36d362b2b0ff5c55389a4cd10545cec0d297fbda1ee45649b3e3f1cad32656",
-    "Tab_Orders.html": "2a2a6e46079ab5e549dc848939a907d8fe5bb1d867260767d6c7b61ba41a4ad5",
+    "Modals_Orders.html": "9d5fd7ee37cdd69ddc58c3cf8f1f257407d2a6ee963d06936eaa7b54fd036bfd",
+    "Tab_Dashboard.html": "94b6e77dbbc431d365858de643e80e236860ebcb5202728366995648142b6651",
+    "Tab_Orders.html": "7ce2b37141fd2f540315d453a5b6b3ae453219e47f948d710674a25c65207fe9",
     "App_Main.html": "b8c7b33ebab0b1d3e6e72d76ebf9df92b52f13bf208af8ecd193571c525e3274"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "e69acc6d5aa862f13a5bb585fbe56e09316889f51c0fc001d9f7230120263c64",
+    "Compiled_Core.html": "f419606636e9f509a779787261571da1a36123ec3fa99126c39be551b2190bf0",
     "Compiled_Deferred.html": "202ae02d6f6217e2a2826b31de4539ed4207959fc5ba6e8a34779c90d0b5dbb4"
   }
 }

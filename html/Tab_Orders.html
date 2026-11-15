@@ -7,6 +7,185 @@
     // -------------------------------------------------------------------------
 
     // HÀM PARSE NGÀY ĐA NĂNG TOÀN CỤC (UỶ THÁC CHO window.resolveOrderDateSafe CHUẨN HOÁ GMT+7)
+/* packing-bulk-20261028: UI component for bulk packing completion */
+function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, open, setOpen, pushDeltas, triggerToast }) {
+  const h = React.createElement;
+  const [worker, setWorker] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [result, setResult] = React.useState(null);
+  const inFlight = React.useRef(false);
+  const snapshot = React.useRef([]);
+  const selected = (items || []).filter(item => (selectedIds || []).includes(item.id));
+
+  if (String(role || '').trim().toUpperCase() !== 'TỐI CAO') return null;
+
+  const workers = Array.from(new Set(
+    (users && users.users || []).filter(name =>
+      name &&
+      !/nghỉ|inactive|disabled/i.test((users.statuses || {})[name] || '') &&
+      (users.roles || {})[name] !== 'KHÁCH'
+    )
+  ));
+
+  function launch() {
+    snapshot.current = selected.map(item => ({
+      id: item.id,
+      orderCode: item.orderCode || item.id,
+      status: item.status || '',
+      channel: item.channel || ''
+    }));
+    setError('');
+    setResult(null);
+    setOpen(true);
+  }
+
+  if (open && !snapshot.current.length && selected.length > 0) {
+    snapshot.current = selected.map(item => ({
+      id: item.id,
+      orderCode: item.orderCode || item.id,
+      status: item.status || '',
+      channel: item.channel || ''
+    }));
+  }
+
+  async function submit() {
+    if (inFlight.current || !worker || !snapshot.current.length) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await pushDeltas({
+        bulkPacking: {
+          worker: worker,
+          items: snapshot.current.map(({ id, status }) => ({ id, status }))
+        }
+      });
+      if (!response || !response.success) {
+        throw new Error((response && (response.message || response.error)) || 'Chưa lưu được thay đổi.');
+      }
+      const details = response.data && response.data.bulkPackingResult;
+      setResult(details || { count: 0, skipped: [] });
+      setSelectedIds([]);
+      window.dispatchEvent(new CustomEvent('triggerReloadData'));
+      if (typeof triggerToast === 'function') {
+        triggerToast('Đã xử lý hoàn thành nhanh đóng hàng', 'fa-check', 'success');
+      }
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
+  function close() {
+    if (busy) return;
+    snapshot.current = [];
+    setResult(null);
+    setError('');
+    setOpen(false);
+  }
+
+  const button = 'px-3 py-2 rounded-xl border border-white/15 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer';
+
+  return h(React.Fragment, null,
+    h('div', { className: 'mb-3 flex flex-wrap items-center gap-2 bg-[#121318]/70 border border-white/10 p-2.5 rounded-2xl' },
+      h('button', {
+        type: 'button',
+        className: button + ' bg-zinc-800 hover:bg-zinc-700 text-zinc-100',
+        onClick: () => setSelectedIds((items || []).map(item => item.id)),
+        disabled: !(items && items.length)
+      }, 'Chọn tất cả ' + (items ? items.length : 0) + ' đơn'),
+      selected.length > 0 && h('button', {
+        type: 'button',
+        className: button + ' text-zinc-400 hover:text-rose-400 hover:border-rose-500/30',
+        onClick: () => setSelectedIds([]),
+      }, 'Bỏ chọn (' + selected.length + ')'),
+      h('button', {
+        type: 'button',
+        className: button + ' bg-emerald-700 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-950/40',
+        onClick: launch,
+        disabled: !selected.length
+      }, 'Hoàn thành nhanh đóng hàng (' + selected.length + ')'),
+      selected.length > 0 && h('span', { className: 'text-xs text-emerald-400 font-bold ml-1' },
+        'Đã chọn: ' + selected.length + ' / ' + (items ? items.length : 0) + ' đơn'
+      ),
+      h('span', { className: 'text-xs text-zinc-500 ml-auto' }, 'Chỉ Tối Cao · bấm vào góc thẻ để chọn từng đơn')
+    ),
+    open && h('div', { className: 'fixed inset-0 z-[10000] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in' },
+      h('div', {
+        role: 'dialog',
+        'aria-modal': true,
+        'aria-label': 'Hoàn thành nhanh đóng hàng',
+        className: 'bg-[#18191d] border border-zinc-600 rounded-2xl p-5 w-full max-w-xl max-h-[90vh] overflow-auto text-zinc-100 space-y-3 shadow-2xl'
+      },
+        h('h2', { className: 'text-lg font-bold flex items-center gap-2' },
+          h('i', { className: 'fas fa-box-check text-emerald-400' }),
+          'Hoàn thành nhanh đóng hàng'
+        ),
+        h('p', { className: 'text-sm text-zinc-300' },
+          snapshot.current.length + ' đơn đã chọn trong bộ lọc. Đơn đủ điều kiện sẽ được hoàn thành đóng gói và chuyển sang "Đã Bàn Giao". Gắn ảnh nhân sự tự động, chỉ nhận KPI đóng gói.'
+        ),
+        h('label', { className: 'block text-sm font-semibold' },
+          'Người nhận KPI',
+          h('select', {
+            'aria-label': 'Người nhận KPI',
+            value: worker,
+            disabled: busy || !!result,
+            onChange: event => setWorker(event.target.value),
+            className: 'block w-full bg-zinc-900 border border-zinc-600 p-2.5 rounded-xl mt-1 text-zinc-100 font-normal focus:border-emerald-500 focus:outline-none'
+          },
+            h('option', { value: '' }, 'Chọn nhân sự'),
+            ...workers.map(name => h('option', { key: name, value: name }, name))
+          )
+        ),
+        h('p', { className: 'text-xs text-amber-200/90 bg-amber-950/30 border border-amber-500/20 p-2.5 rounded-xl' },
+          'KPI tính theo cấu hình của từng sản phẩm và kênh bán. Chuyển thẳng sang Đã Bàn Giao, gắn ảnh nhân sự, đơn đã đóng gói hoặc đơn huỷ sẽ tự động được bỏ qua.'
+        ),
+        h('div', { className: 'space-y-1' },
+          h('div', { className: 'text-xs text-zinc-400 flex justify-between' },
+            h('span', null, 'Danh sách đơn (' + snapshot.current.length + '):'),
+            !result && !busy && snapshot.current.length > 0 && h('span', { className: 'text-[11px] text-zinc-500' }, 'Bấm ✕ để loại bớt đơn')
+          ),
+          h('ul', { className: 'text-xs max-h-36 overflow-auto space-y-1.5 p-1 bg-black/40 rounded-xl border border-white/5' },
+            ...snapshot.current.map(item =>
+              h('li', { key: item.id, className: 'flex items-center justify-between gap-2 p-1.5 px-2 rounded-lg bg-zinc-900/80 border border-white/5' },
+                h('span', { className: 'truncate font-mono text-[11px]' },
+                  (item.orderCode || item.id) + (item.channel ? ' · ' + item.channel : '') + (item.status ? ' · ' + item.status : '')
+                ),
+                !result && !busy && h('button', {
+                  type: 'button',
+                  onClick: () => {
+                    snapshot.current = snapshot.current.filter(x => x.id !== item.id);
+                    setSelectedIds(prev => prev.filter(id => id !== item.id));
+                  },
+                  className: 'text-zinc-500 hover:text-rose-400 font-bold px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors cursor-pointer',
+                  title: 'Bỏ chọn đơn này'
+                }, '✕')
+              )
+            )
+          )
+        ),
+        error && h('p', { role: 'alert', className: 'text-red-300 text-sm bg-red-950/40 p-2.5 rounded-xl border border-red-500/30' }, error),
+        result && h('div', { role: 'status', className: 'text-emerald-300 text-sm bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/30 space-y-1' },
+          h('p', { className: 'font-bold' }, 'Đã hoàn thành ' + result.count + ' đơn cho ' + worker + '. Bỏ qua ' + (result.skipped || []).length + ' đơn.'),
+          ...(result.skipped || []).map(item => h('p', { key: item.id, className: 'text-xs text-amber-300' }, (item.orderCode || item.id) + ': ' + item.reason))
+        ),
+        h('div', { className: 'flex flex-wrap justify-end gap-2 pt-2' },
+          h('button', { type: 'button', className: button, disabled: busy, onClick: close }, 'Đóng'),
+          !result && h('button', {
+            type: 'button',
+            className: button + ' bg-emerald-700 hover:bg-emerald-600 text-white font-black',
+            disabled: busy || !worker || !snapshot.current.length,
+            onClick: submit
+          }, busy ? 'Đang xử lý…' : 'Xác nhận hoàn thành đóng hàng (' + snapshot.current.length + ')')
+        )
+      )
+    )
+  );
+}
+
     window.parseOrderDateSafe = function(dateInput) {
         if (typeof window.resolveOrderDateSafe === 'function') {
             var res = window.resolveOrderDateSafe(dateInput);
@@ -1380,6 +1559,7 @@
         const [addingMode, setAddingMode] = React.useState(false);
         const [draftData, setDraftData] = React.useState(null);
         const [selectedIds, setSelectedIds] = React.useState([]);
+        const [isSelectMode, setIsSelectMode] = React.useState(false);
         const [bulkPackingOpen, setBulkPackingOpen] = React.useState(false);
         const tabsContainerRef = React.useRef(null);
 
@@ -1510,7 +1690,7 @@
             setSelectedIds(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]);
         }, []);
 
-        const clearSelection = React.useCallback(() => setSelectedIds([]), []);
+        const clearSelection = React.useCallback(() => { setSelectedIds([]); setIsSelectMode(false); }, []);
 
         const handleEditOrder = React.useCallback((order, prods) => {
             setEditingOrder({ order, prods });
@@ -1731,6 +1911,21 @@
             }
         }, [orders]);
 
+        const effectiveCurrentMonth = React.useMemo(() => {
+            const now = new Date();
+            const sysMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            let maxMonth = sysMonth;
+            (orders || []).forEach(o => {
+                const n = typeof window.resolveOrderDateSafe === 'function'
+                    ? window.resolveOrderDateSafe(o)
+                    : (typeof window.normalizeDateVN === 'function' ? window.normalizeDateVN(o.date || o.createdAt || o.deadline) : null);
+                if (n && n.monthStr && /^\d{4}-\d{2}$/.test(n.monthStr) && n.monthStr > maxMonth) {
+                    maxMonth = n.monthStr;
+                }
+            });
+            return maxMonth;
+        }, [orders]);
+
         const matchTimeFilter = React.useCallback((order) => {
             if (!filterTime || filterTime === 'ALL' || filterTime === 'Tất Cả') return true;
 
@@ -1752,11 +1947,10 @@
                 ? window.resolveOrderDateSafe(order)
                 : (typeof window.normalizeDateVN === 'function' ? window.normalizeDateVN(order.date || order.createdAt || order.deadline) : null);
 
-            const now = new Date();
-            const curY = now.getFullYear();
-            const curM = now.getMonth() + 1;
-            const curMStr = String(curM).padStart(2, '0');
-            const targetCurrentMonth = `${curY}-${curMStr}`;
+            const targetCurrentMonth = effectiveCurrentMonth;
+            const [curYStr, curMStr] = targetCurrentMonth.split('-');
+            const curY = parseInt(curYStr, 10);
+            const curM = parseInt(curMStr, 10);
 
             const prevM = curM === 1 ? 12 : curM - 1;
             const prevY = curM === 1 ? curY - 1 : curY;
@@ -1785,7 +1979,7 @@
 
             if (!norm || !norm.dateObj) return true;
             return isDateInRangeLocal(norm.isoDate, filterTime, customMonth);
-        }, [filterTime, customMonth]);
+        }, [filterTime, customMonth, effectiveCurrentMonth]);
 
         const sourceOrders = React.useMemo(() => {
             return orders || [];
@@ -2902,13 +3096,14 @@
                     {/* HÀNG 1: SEARCH BAR + NÚT BỘ LỌC NÂNG CAO */}
                     <div className="flex items-center gap-2">
                         <div className="flex-1 relative">
-                            <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
+                            <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"></i>
                             <input
                                 type="text"
                                 value={searchCode}
                                 onChange={e => setSearchCode(e.target.value)}
                                 placeholder="Tìm mã đơn, mã vận đơn, khách hàng, số điện thoại..."
-                                className="w-full h-10 pl-9 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
+                                style={{ paddingLeft: '2.5rem', paddingRight: searchCode ? '2.25rem' : '0.875rem' }}
+                                className="w-full h-10 pl-10 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
                             />
                             {searchCode && (
                                 <button
@@ -2996,8 +3191,31 @@
                             </div>
                         </div>
 
-                        {/* Nhóm phải: Nút Tạo Đơn + Menu Thao Tác */}
+                        {/* Nhóm phải: Nút Chọn + Tạo Đơn + Menu Thao Tác */}
                         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                            {(!isCTV || isAdmin || isBossRole) && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (isSelectMode || selectedIds.length > 0) {
+                                            setIsSelectMode(false);
+                                            setSelectedIds([]);
+                                        } else {
+                                            setIsSelectMode(true);
+                                        }
+                                    }}
+                                    className={`h-8.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                                        (isSelectMode || selectedIds.length > 0)
+                                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+                                            : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'
+                                    }`}
+                                    title={isSelectMode ? "Thoát chế độ chọn đơn" : "Bật chế độ chọn nhiều đơn"}
+                                >
+                                    <i className={`fas ${(isSelectMode || selectedIds.length > 0) ? 'fa-check-double' : 'fa-check-square'} text-[11px]`}></i>
+                                    <span>{(isSelectMode || selectedIds.length > 0) ? `Xong${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}` : 'Chọn'}</span>
+                                </button>
+                            )}
+
                             {hasPerm('ORDER_CREATE') && (
                                 <button
                                     type="button"
@@ -3770,19 +3988,23 @@
                                         <thead>
                                             <tr className="border-b border-white/[0.06] bg-[#09090b]/80 text-[11px] font-black uppercase text-zinc-400 tracking-wider h-11">
                                                 <th className="w-12 px-3 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={sortedFiltered.slice(0, renderLimit).length > 0 && sortedFiltered.slice(0, renderLimit).every(o => selectedIds.includes(o.id))}
-                                                        onChange={(e) => {
-                                                            const visibleIds = sortedFiltered.slice(0, renderLimit).map(o => o.id);
-                                                            if (e.target.checked) {
-                                                                setSelectedIds(prev => [...new Set([...prev, ...visibleIds])]);
-                                                            } else {
-                                                                setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
-                                                            }
-                                                        }}
-                                                        className="w-4 h-4 rounded accent-[#d4af37] cursor-pointer"
-                                                    />
+                                                    {(isSelectMode || selectedIds.length > 0) ? (
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={sortedFiltered.slice(0, renderLimit).length > 0 && sortedFiltered.slice(0, renderLimit).every(o => selectedIds.includes(o.id))}
+                                                            onChange={(e) => {
+                                                                const visibleIds = sortedFiltered.slice(0, renderLimit).map(o => o.id);
+                                                                if (e.target.checked) {
+                                                                    setSelectedIds(prev => [...new Set([...prev, ...visibleIds])]);
+                                                                } else {
+                                                                    setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 rounded accent-[#d4af37] cursor-pointer"
+                                                        />
+                                                    ) : (
+                                                        <i className="fas fa-star text-zinc-600 text-[10px]" title="Ưu tiên"></i>
+                                                    )}
                                                 </th>
                                                 <th className="px-3 min-w-[190px]">MÃ ĐƠN & VẬN ĐƠN</th>
                                                 <th className="px-3 w-36">KÊNH BÁN</th>
@@ -3843,12 +4065,14 @@
                                                         {/* Checkbox & Priority Star */}
                                                         <td className="px-3 text-center" onClick={e => e.stopPropagation()}>
                                                             <div className="flex items-center justify-center gap-1.5">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={() => toggleSelect(order.id)}
-                                                                    className="w-4 h-4 rounded accent-[#d4af37] cursor-pointer"
-                                                                />
+                                                                {(isSelectMode || selectedIds.length > 0) && (
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => toggleSelect(order.id)}
+                                                                        className="w-4 h-4 rounded accent-[#d4af37] cursor-pointer"
+                                                                    />
+                                                                )}
                                                                 <button
                                                                     type="button"
                                                                     onClick={(e) => handleToggleUrgent(order, e)}
@@ -4038,7 +4262,7 @@
                                                     </div>
 
                                                     <div className="flex items-center gap-2 shrink-0">
-                                                        {(!isCTV || isAdmin || isBossRole) && groupOrders.length > 0 && (
+                                                        {(isSelectMode || selectedIds.length > 0) && (!isCTV || isAdmin || isBossRole) && groupOrders.length > 0 && (
                                                             <button
                                                                 type="button"
                                                                 className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer border-0 bg-transparent"
@@ -4101,7 +4325,7 @@
                                                                     userConfigs={userConfigs}
                                                                     triggerToast={triggerToast}
                                                                     isSelected={selectedIds.includes(o.id)}
-                                                                    onToggleSelect={toggleSelect}
+                                                                    onToggleSelect={(isSelectMode || selectedIds.length > 0) ? toggleSelect : undefined}
                                                                     kpiConfig={kpiConfig}
                                                                     idx_num={originalIdx}
                                                                     handleCancelOrder={handleCancelOrder}
