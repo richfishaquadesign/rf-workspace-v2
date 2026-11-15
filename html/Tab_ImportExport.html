@@ -718,7 +718,9 @@ function ImportExportPrintModal({ ticket, onClose, triggerToast }) {
 // -------------------------------------------------------------------------
 // 2. TAB LỊCH SỬ XUẤT NHẬP TỔNG HỢP & NÚT KIỂM KHO (ImportExportTab)
 // -------------------------------------------------------------------------
-const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, isAdmin: propIsAdmin, isBoss: propIsBoss, userRole: propUserRole, currentUser: propCurrentUser, hasPerm: propHasPerm, mode, userConfigs, triggerToast }) {
+const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, pushDeltas, isAdmin: propIsAdmin, isBoss: propIsBoss, userRole: propUserRole, currentUser: propCurrentUser, hasPerm: propHasPerm, mode: propMode, userConfigs, triggerToast }) {
+    const [internalMode, setInternalMode] = React.useState(propMode || 'NHAT_KY');
+    const mode = propMode || internalMode;
     // 1. Modals & Forms State
     const [selectedProduct, setSelectedProduct] = React.useState(null);
     const [showForm, setShowForm] = React.useState(false);
@@ -1606,8 +1608,35 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, is
         setTimeout(() => { win.print(); win.close(); }, 800);
     };
 
+    const useFullStockTake = mode === 'KIEM_KHO' && typeof window !== 'undefined' && typeof window.StockTakeKiotVietView === 'function';
+
     return (
         <div className="space-y-4 sm:space-y-5 animate-fade-in pb-4 w-full max-w-full overflow-x-hidden">
+            {!propMode && (
+                <div className="grid grid-cols-2 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full">
+                    <button
+                        type="button"
+                        onClick={() => setInternalMode('NHAT_KY')}
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${mode === 'NHAT_KY' ? 'bg-[#282b33] text-white font-black' : 'bg-transparent text-zinc-400 hover:text-white'}`}
+                    >
+                        <i className="fas fa-file-invoice text-xs text-[#F46C3F]"></i>
+                        <span className="truncate">Phiếu Xuất / Nhập Kho</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setInternalMode('KIEM_KHO')}
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${mode === 'KIEM_KHO' ? 'bg-[#282b33] text-white font-black' : 'bg-transparent text-zinc-400 hover:text-white'}`}
+                    >
+                        <i className="fas fa-clipboard-check text-xs text-[#F7DC68]"></i>
+                        <span className="truncate">Phiếu Kiểm Kho</span>
+                    </button>
+                </div>
+            )}
+
+            {useFullStockTake ? (
+                <window.StockTakeKiotVietView data={data} pushData={pushData} pushDeltas={pushDeltas} userConfigs={userConfigs} currentUser={currentUser} userRole={currentRole} isAdmin={isAdmin} isBoss={isBoss} hasPerm={hasPerm} triggerToast={triggerToast} />
+            ) : (
+                <React.Fragment>
             {/* Action Buttons (Kiểm Kho / Nhập / Xuất / Đặt Hàng / Thanh Lý) - ICON GỌN GÀNG ĐỒNG BỘ */}
             <div className="bg-[#121214] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08] shadow-sm flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5 w-full">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -2262,6 +2291,8 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, is
                     })
                 )}
             </div>
+                </React.Fragment>
+            )}
 
             {/* KEEP EXISTING MODALS */}
             {showForm && (

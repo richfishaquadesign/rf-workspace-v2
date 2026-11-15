@@ -60,12 +60,34 @@ def load_image_map():
                 sku = str(p.get("sku") or "").strip()
                 imgs = p.get("images") or []
                 if sku and imgs:
-                    first = imgs[0]
+                    first = str(imgs[0]).strip()
+                    if "shopee" in first.lower() or "/images/catalog/" in first:
+                        continue
                     if first.startswith("/"):
                         first = MEDIA_BASE_URL + first
                     img_map[sku] = first
         except Exception as e:
             print("Warning loading catalog_public.json:", e)
+
+    # Bo sung anh StudioDark sach tu catalog.json (loai bo hoan toan /images/catalog/ nen trang va cf.shopee.vn)
+    wcat_path = WORKSPACE_V2_DIR / "Wedsite RF" / "public" / "catalog.json"
+    if wcat_path.exists():
+        try:
+            wcat = json.loads(wcat_path.read_text(encoding="utf-8"))
+            items = wcat if isinstance(wcat, list) else (wcat.get("products") or wcat.get("items") or [])
+            for p in items:
+                if not isinstance(p, dict):
+                    continue
+                sku = str(p.get("sku") or "").strip()
+                im = str(p.get("image") or (p.get("images") or [""])[0] or "").strip()
+                if not sku or not im or sku in img_map:
+                    continue
+                if "shopee" in im.lower() or "/images/catalog/" in im:
+                    continue
+                if im.startswith("/images/black-covers/") or im.startswith("/images/five-angle/") or im.startswith("/media-vault/"):
+                    img_map[sku] = MEDIA_BASE_URL + im
+        except Exception as e:
+            print("Warning loading catalog.json:", e)
     return img_map
 
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T10:09:15.305Z",
+  "generatedAt": "2026-11-15T10:21:49.076Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -26,8 +26,8 @@
   ],
   "hashes": {
     "Tab_Production.html": "24d498df3795c3038c696d9a7578fbfe51b213df218d6b496420d340c713a72a",
-    "Tab_Inventory.html": "26a88a1822b8388e326dcc8ca40e53e92a578445c90b14df30c42207a90dd643",
-    "Tab_ImportExport.html": "c5f7edcd25f2e4f8b40ca8de079a4ee78a371bcfb7ed3b0835abfc092d8ff74e",
+    "Tab_Inventory.html": "b79baa707a6d8586412f023211345586085e97e49b194d426bd29d10f3741ea4",
+    "Tab_ImportExport.html": "e2de9a9d9f60b6917cb6f226e0067bd26cc5bfe318cb19ba8c6b220c49f469e9",
     "Tab_Suppliers.html": "2cc2262f84ae8958aaa53248ccfce804d51b550f266f58e5e87886366d5e756c",
     "Tab_Finance.html": "a11940ae9a2e4653f95f566cedb4602ba5adab3108ce2ee418a182279e2fbfb0",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
@@ -44,10 +44,10 @@
     "Modals_Orders.html": "f14b81c49dfebad3ef91d2ff438ce1423cce48521d857693eabb42cc3f850c5f",
     "Tab_Dashboard.html": "6b1d67b3eb38955fad0e46405c62d7f87a6db200c10a6bee452d48710d4c7606",
     "Tab_Orders.html": "fe51c235be45f5028c5a75f30f07720c3e8f6e8063bc05172bae10a4db3ec795",
-    "App_Main.html": "20d54a3eb9709b7fd498cf22070d1fd9a5b24f9735d7ba9f27c5bd773d841c53"
+    "App_Main.html": "737cd13f91376da96a179a924b600cf4d75bfde086365d982725371c48fb8aae"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "aee22148e90aaf8e1db970e29381314e342c3ad50397eb61183a5b645fa93fec",
-    "Compiled_Deferred.html": "fbde6343490893e7c390d0f46eca6a336eab0e7a468260958b3bd977092266e4"
+    "Compiled_Core.html": "75e6f783b6a5e8aa581597866cb65a8d5bed5cd512d63d3643388d5386c9a833",
+    "Compiled_Deferred.html": "55e12871d0758644cfdcf81f4e0f5234315f81aeabb0e1b9231a2b311fe20c77"
   }
 }

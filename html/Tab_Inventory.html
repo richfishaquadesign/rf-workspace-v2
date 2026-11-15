@@ -2862,7 +2862,7 @@ Model ID: 287936773312
             <div className="text-[20px] sm:text-[22px] font-mono font-black text-white tracking-tight">
               {uniqueProducts.length} <span className="text-xs font-normal text-zinc-500 font-sans">mã</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-0.5">Danh mục hàng hóa chuẩn xưởng · <a href="/obsidian-catalog.html" target="_blank" rel="noopener" className="underline">Tra ảnh, giá và BOM từ Obsidian</a></p>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Danh mục hàng hóa chuẩn từ Kho Tri Thức (RF_KNOWLEDGE_OS)</p>
           </div>
 
           {/* Card 2: Cảnh Báo Chạm Ngưỡng */}
@@ -2944,21 +2944,6 @@ Model ID: 287936773312
             >
               <i className="fas fa-file-excel text-[#2E9599]"></i>
               <span className="hidden sm:inline">Xuất Tồn Kho</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof setActiveSubTab === 'function') {
-                  setActiveSubTab('NHAT_KY');
-                  if (typeof triggerToast === 'function') triggerToast('Đã chuyển sang Nhật Ký Kho Tháng. Bấm [Xuất File Tháng] để tải bảng đối soát đầu kỳ - cuối kỳ!', 'fa-calendar-alt', 'info');
-                }
-              }}
-              className="h-9 px-3 rounded-xl bg-[#202228] hover:bg-[#282b33] text-[#F46C3F] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-0 transition-all active:scale-95 cursor-pointer shadow-md"
-              title="Mở Nhật ký kho & Sổ Nhập Xuất Tồn tháng để xem đầu kỳ, cuối kỳ"
-            >
-              <i className="fas fa-history text-[#F46C3F]"></i>
-              <span className="hidden md:inline">Nhật Ký Tháng</span>
             </button>
 
             <button
@@ -3130,7 +3115,11 @@ Model ID: 287936773312
                     const min = Number(p.minStock || 0);
                     const isLow = qty <= min;
                     const isOut = qty <= 0;
-                    const imgUrl = formatImageUrl(p.image) || formatImageUrl(p.realImage);
+                    const safeDarkImg = (u) => {
+                      const s = formatImageUrl(u);
+                      return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+                    };
+                    const imgUrl = safeDarkImg(p.image) || safeDarkImg(p.realImage);
 
                     return (
                       <tr
@@ -5983,55 +5972,11 @@ Model ID: 287936773312
   // 8. MAIN COMPONENT: INVENTORY TAB WRAPPER (InventoryTab)
   // =========================================================================
   const InventoryTab = React.memo(function InventoryTab(props) {
-    const [activeSubTab, setActiveSubTab] = React.useState('KHO_HANG');
-
     return (
       <div className="w-full max-w-full flex flex-col space-y-3.5 overflow-x-hidden">
-        {/* ROYAL WORKBENCH SUB-TABS SEGMENTED CONTROL */}
-        {/* TOP SUB-TABS (FOUR SEASONS SOLID MATTE) */}
-        <div className="grid grid-cols-3 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('KHO_HANG')}
-            className={`py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'KHO_HANG'
-                ? 'bg-[#282b33] text-white font-black shadow-none'
-                : 'bg-transparent text-zinc-400 hover:text-white'
-              }`}
-          >
-            <i className="fas fa-boxes text-xs text-[#2E9599]"></i>
-            <span className="truncate">Kho Hàng</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('NHAT_KY')}
-            className={`py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'NHAT_KY'
-                ? 'bg-[#282b33] text-white font-black shadow-none'
-                : 'bg-transparent text-zinc-400 hover:text-white'
-              }`}
-          >
-            <i className="fas fa-history text-xs text-[#F46C3F]"></i>
-            <span className="truncate">Nhật Ký</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('KIEM_KHO')}
-            className={`py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'KIEM_KHO'
-                ? 'bg-[#282b33] text-white font-black shadow-none'
-                : 'bg-transparent text-zinc-400 hover:text-white'
-              }`}
-          >
-            <i className="fas fa-clipboard-check text-xs text-[#F7DC68]"></i>
-            <span className="truncate">Kiểm Kho</span>
-          </button>
-        </div>
-
-        {/* TAB CONTENT */}
+        {/* TAB KHO HÀNG THUẦN KHIẾT: LẤY TRỰC TIẾP TỪ KHO TRI THỨC (KHÔNG LẶP LẠI XUẤT NHẬP / KIỂM KHO) */}
         <div className="flex-1 w-full animate-fade-in">
-          {activeSubTab === 'KHO_HANG' && <InventoryListView {...props} setActiveSubTab={setActiveSubTab} />}
-          {activeSubTab === 'NHAT_KY' && (typeof ImportExportTab !== 'undefined' ? <ImportExportTab {...props} mode="NHAT_KY" /> : <div className="text-white text-xs p-4">Đang tải Lịch sử kho...</div>)}
-          {activeSubTab === 'KIEM_KHO' && <StockTakeKiotVietView {...props} />}
+          <InventoryListView {...props} />
         </div>
       </div>
     );
@@ -6039,5 +5984,6 @@ Model ID: 287936773312
 
   if (typeof window !== 'undefined') {
     window.InventoryTab = InventoryTab;
+    window.StockTakeKiotVietView = StockTakeKiotVietView;
   }
 </script>

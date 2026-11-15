@@ -9214,12 +9214,7 @@ function InventoryListView({
     className: "text-xs font-normal text-zinc-500 font-sans"
   }, "m\xE3")), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-zinc-400 mt-0.5"
-  }, "Danh m\u1EE5c h\xE0ng h\xF3a chu\u1EA9n x\u01B0\u1EDFng \xB7 ", /*#__PURE__*/React.createElement("a", {
-    href: "/obsidian-catalog.html",
-    target: "_blank",
-    rel: "noopener",
-    className: "underline"
-  }, "Tra \u1EA3nh, gi\xE1 v\xE0 BOM t\u1EEB Obsidian"))), /*#__PURE__*/React.createElement("div", {
+  }, "Danh m\u1EE5c h\xE0ng h\xF3a chu\u1EA9n t\u1EEB Kho Tri Th\u1EE9c (RF_KNOWLEDGE_OS)")), /*#__PURE__*/React.createElement("div", {
     className: "vision-card p-3.5 rounded-2xl relative overflow-hidden transition-all"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-1.5"
@@ -9296,20 +9291,6 @@ function InventoryListView({
   }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, "Xu\u1EA5t T\u1ED3n Kho")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => {
-      if (typeof setActiveSubTab === 'function') {
-        setActiveSubTab('NHAT_KY');
-        if (typeof triggerToast === 'function') triggerToast('Đã chuyển sang Nhật Ký Kho Tháng. Bấm [Xuất File Tháng] để tải bảng đối soát đầu kỳ - cuối kỳ!', 'fa-calendar-alt', 'info');
-      }
-    },
-    className: "h-9 px-3 rounded-xl bg-[#202228] hover:bg-[#282b33] text-[#F46C3F] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-0 transition-all active:scale-95 cursor-pointer shadow-md",
-    title: "M\u1EDF Nh\u1EADt k\xFD kho & S\u1ED5 Nh\u1EADp Xu\u1EA5t T\u1ED3n th\xE1ng \u0111\u1EC3 xem \u0111\u1EA7u k\u1EF3, cu\u1ED1i k\u1EF3"
-  }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-history text-[#F46C3F]"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "hidden md:inline"
-  }, "Nh\u1EADt K\xFD Th\xE1ng")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setShowQuickNotes(prev => !prev),
     className: `h-9 px-3 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 border-0 transition-all active:scale-95 cursor-pointer shadow-md ${showQuickNotes ? 'bg-[#F7DC68] text-zinc-950' : 'bg-[#202228] hover:bg-[#282b33] text-[#F7DC68]'}`
@@ -9453,7 +9434,11 @@ function InventoryListView({
     const min = Number(p.minStock || 0);
     const isLow = qty <= min;
     const isOut = qty <= 0;
-    const imgUrl = formatImageUrl(p.image) || formatImageUrl(p.realImage);
+    const safeDarkImg = u => {
+      const s = formatImageUrl(u);
+      return s && !/shopee|\/images\/catalog\//i.test(s) ? s : '';
+    };
+    const imgUrl = safeDarkImg(p.image) || safeDarkImg(p.realImage);
     return /*#__PURE__*/React.createElement("tr", {
       key: p.id,
       onClick: () => handleOpenProductDrawer(p),
@@ -11836,47 +11821,15 @@ const StockTakeKiotVietView = React.memo(function StockTakeKiotVietView({
 // 8. MAIN COMPONENT: INVENTORY TAB WRAPPER (InventoryTab)
 // =========================================================================
 const InventoryTab = React.memo(function InventoryTab(props) {
-  const [activeSubTab, setActiveSubTab] = React.useState('KHO_HANG');
   return /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-full flex flex-col space-y-3.5 overflow-x-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setActiveSubTab('KHO_HANG'),
-    className: `py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'KHO_HANG' ? 'bg-[#282b33] text-white font-black shadow-none' : 'bg-transparent text-zinc-400 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-boxes text-xs text-[#2E9599]"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "truncate"
-  }, "Kho H\xE0ng")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setActiveSubTab('NHAT_KY'),
-    className: `py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'NHAT_KY' ? 'bg-[#282b33] text-white font-black shadow-none' : 'bg-transparent text-zinc-400 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-history text-xs text-[#F46C3F]"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "truncate"
-  }, "Nh\u1EADt K\xFD")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setActiveSubTab('KIEM_KHO'),
-    className: `py-2.5 px-2.5 sm:px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${activeSubTab === 'KIEM_KHO' ? 'bg-[#282b33] text-white font-black shadow-none' : 'bg-transparent text-zinc-400 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-clipboard-check text-xs text-[#F7DC68]"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "truncate"
-  }, "Ki\u1EC3m Kho"))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 w-full animate-fade-in"
-  }, activeSubTab === 'KHO_HANG' && /*#__PURE__*/React.createElement(InventoryListView, _extends({}, props, {
-    setActiveSubTab: setActiveSubTab
-  })), activeSubTab === 'NHAT_KY' && (typeof ImportExportTab !== 'undefined' ? /*#__PURE__*/React.createElement(ImportExportTab, _extends({}, props, {
-    mode: "NHAT_KY"
-  })) : /*#__PURE__*/React.createElement("div", {
-    className: "text-white text-xs p-4"
-  }, "\u0110ang t\u1EA3i L\u1ECBch s\u1EED kho...")), activeSubTab === 'KIEM_KHO' && /*#__PURE__*/React.createElement(StockTakeKiotVietView, props)));
+  }, /*#__PURE__*/React.createElement(InventoryListView, props)));
 });
 if (typeof window !== 'undefined') {
   window.InventoryTab = InventoryTab;
+  window.StockTakeKiotVietView = StockTakeKiotVietView;
 }
 
 /* ═══ MODULE: Tab_ImportExport ═══ */
@@ -12563,15 +12516,18 @@ function ImportExportPrintModal({
 const ImportExportTab = React.memo(function ImportExportTab({
   data,
   pushData,
+  pushDeltas,
   isAdmin: propIsAdmin,
   isBoss: propIsBoss,
   userRole: propUserRole,
   currentUser: propCurrentUser,
   hasPerm: propHasPerm,
-  mode,
+  mode: propMode,
   userConfigs,
   triggerToast
 }) {
+  const [internalMode, setInternalMode] = React.useState(propMode || 'NHAT_KY');
+  const mode = propMode || internalMode;
   // 1. Modals & Forms State
   const [selectedProduct, setSelectedProduct] = React.useState(null);
   const [showForm, setShowForm] = React.useState(false);
@@ -13460,9 +13416,39 @@ const ImportExportTab = React.memo(function ImportExportTab({
       win.close();
     }, 800);
   };
+  const useFullStockTake = mode === 'KIEM_KHO' && typeof window !== 'undefined' && typeof window.StockTakeKiotVietView === 'function';
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-4 sm:space-y-5 animate-fade-in pb-4 w-full max-w-full overflow-x-hidden"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, !propMode && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setInternalMode('NHAT_KY'),
+    className: `py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${mode === 'NHAT_KY' ? 'bg-[#282b33] text-white font-black' : 'bg-transparent text-zinc-400 hover:text-white'}`
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-file-invoice text-xs text-[#F46C3F]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "truncate"
+  }, "Phi\u1EBFu Xu\u1EA5t / Nh\u1EADp Kho")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setInternalMode('KIEM_KHO'),
+    className: `py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${mode === 'KIEM_KHO' ? 'bg-[#282b33] text-white font-black' : 'bg-transparent text-zinc-400 hover:text-white'}`
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-clipboard-check text-xs text-[#F7DC68]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "truncate"
+  }, "Phi\u1EBFu Ki\u1EC3m Kho"))), useFullStockTake ? /*#__PURE__*/React.createElement(window.StockTakeKiotVietView, {
+    data: data,
+    pushData: pushData,
+    pushDeltas: pushDeltas,
+    userConfigs: userConfigs,
+    currentUser: currentUser,
+    userRole: currentRole,
+    isAdmin: isAdmin,
+    isBoss: isBoss,
+    hasPerm: hasPerm,
+    triggerToast: triggerToast
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "bg-[#121214] p-2.5 sm:p-3 rounded-2xl border border-white/[0.08] shadow-sm flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5 w-full"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2.5 min-w-0"
@@ -14084,7 +14070,7 @@ const ImportExportTab = React.memo(function ImportExportTab({
         }, ticketTotal.toLocaleString('vi-VN'), "\u0111")));
       })())))));
     })));
-  })), showForm && /*#__PURE__*/React.createElement(IEFormModal, {
+  }))), showForm && /*#__PURE__*/React.createElement(IEFormModal, {
     data: data,
     userConfigs: userConfigs,
     onClose: () => {

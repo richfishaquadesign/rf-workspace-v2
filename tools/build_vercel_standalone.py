@@ -109,11 +109,11 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v6') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v7') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v6', 'true');
+          localStorage.setItem('rf_db_sync_v7', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -452,20 +452,37 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
             // Đồng bộ chuẩn từ Kho Tri Thức (RF_KNOWLEDGE_OS) cho Products, BOM_Config, Config_KPI, Suppliers, Documents, Trainings, Config_NhanSu
             var kosSeed = window.__RF_KNOWLEDGE_OS_SEED__ || {};
+            var isWhiteBgImg = function(u) {
+              var s = String(u || '').toLowerCase();
+              return s.indexOf('shopee') !== -1 || s.indexOf('/images/catalog/') !== -1;
+            };
+            var kosBySku = {};
+            if (kosSeed.Products) {
+              kosSeed.Products.forEach(function(kp) {
+                if (kp && kp.sku) kosBySku[String(kp.sku).toUpperCase()] = kp;
+              });
+            }
             var effectiveProducts = (productsRaw && productsRaw.length > 0) ? productsRaw : (kosSeed.Products ? JSON.parse(JSON.stringify(kosSeed.Products)) : []);
-            if (kosSeed.Products && kosSeed.Products.length > 0 && effectiveProducts.length < kosSeed.Products.length) {
-              var existingSkus = {};
-              effectiveProducts.forEach(function(p) { if (p && p.sku) existingSkus[String(p.sku).toUpperCase()] = p; });
+            var existingSkus = {};
+            effectiveProducts.forEach(function(p) {
+              if (!p) return;
+              if (isWhiteBgImg(p.image)) p.image = '';
+              if (isWhiteBgImg(p.realImage)) p.realImage = '';
+              var kSku = String(p.sku || '').toUpperCase();
+              if (kSku) existingSkus[kSku] = p;
+              var kp = kosBySku[kSku];
+              if (kp) {
+                if (!p.image && kp.image && !isWhiteBgImg(kp.image)) p.image = kp.image;
+                if (!p.realImage && kp.realImage && !isWhiteBgImg(kp.realImage)) p.realImage = kp.realImage;
+                if (!p.costPrice && kp.costPrice) p.costPrice = kp.costPrice;
+                if (!p.price && kp.price) p.price = kp.price;
+              }
+            });
+            if (kosSeed.Products && kosSeed.Products.length > 0) {
               kosSeed.Products.forEach(function(kp) {
                 var kSku = String(kp.sku || '').toUpperCase();
-                if (!existingSkus[kSku]) {
+                if (kSku && !existingSkus[kSku]) {
                   effectiveProducts.push(Object.assign({}, kp));
-                } else {
-                  var ep = existingSkus[kSku];
-                  if (!ep.image && kp.image) ep.image = kp.image;
-                  if (!ep.realImage && kp.realImage) ep.realImage = kp.realImage;
-                  if (!ep.costPrice && kp.costPrice) ep.costPrice = kp.costPrice;
-                  if (!ep.price && kp.price) ep.price = kp.price;
                 }
               });
             }
@@ -474,6 +491,8 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               effectiveProducts.forEach(function(p) {
                 var ov = localProdOverrides[p.id] || localProdOverrides[p.sku];
                 if (ov) Object.assign(p, ov);
+                if (isWhiteBgImg(p.image)) p.image = '';
+                if (isWhiteBgImg(p.realImage)) p.realImage = '';
               });
             } catch(e) {}
 
