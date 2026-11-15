@@ -50,7 +50,7 @@
         return f(s || e);
     };
 
-    const HRTab = React.memo(function HRTab({ orders: propOrders, documents, hasPerm: propHasPerm, attendance, erpData, userConfigs, prodItems, packings, pushDeltas, triggerToast, isAdmin: propIsAdmin, isBoss: propIsBoss }) {
+    const HRTab = React.memo(function HRTab({ orders: propOrders, documents, hasPerm: propHasPerm, attendance, erpData, userConfigs, prodItems, packings, pushDeltas, triggerToast, isAdmin: propIsAdmin, isBoss: propIsBoss, tabPermissions, setTabPermissions }) {
         const currentUser = localStorage.getItem('rf_user') || '';
         const currentRole = localStorage.getItem('rf_role') || '';
         const isAdmin = propIsAdmin !== undefined ? propIsAdmin : (localStorage.getItem('rf_admin') === 'true');
@@ -4520,7 +4520,8 @@
                             { id: 'STAFF', label: 'Nhân Sự', icon: 'fa-id-card-clip', count: staffList.length },
                             { id: 'ATTENDANCE', label: 'Chấm Công', icon: 'fa-calendar-check' },
                             { id: 'KPI', label: 'Công Việc & KPI', icon: 'fa-list-check' },
-                            { id: 'PAYROLL', label: 'Bảng Lương', icon: 'fa-receipt' }
+                            { id: 'PAYROLL', label: 'Bảng Lương', icon: 'fa-receipt' },
+                            ...((isBoss || isAdmin) ? [{ id: 'PERMISSIONS', label: 'Phân Quyền Tab', icon: 'fa-user-shield' }] : [])
                         ].map(tab => {
                             const isActive = subTab === tab.id;
                             return (
@@ -4671,7 +4672,7 @@
                 </div>
 
                 {/* 2. THANH BỘ LỌC KỲ BÁO CÁO (DÙNG CHO ATTENDANCE, KPI, PAYROLL) */}
-                {subTab !== 'STAFF' && (
+                {subTab !== 'STAFF' && subTab !== 'PERMISSIONS' && (
                     <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#121214] border border-white/[0.08] px-3.5 py-2.5 rounded-2xl shadow-sm mb-4">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-zinc-400 text-xs font-bold uppercase flex items-center gap-1.5 pl-1">
@@ -8259,6 +8260,17 @@
                     );
                 })()}
 
+                {/* 5. SUBTAB PHÂN QUYỀN TAB MENU */}
+                {subTab === 'PERMISSIONS' && (isBoss || isAdmin) && (
+                    <HRTabPermissionsSubView
+                        staffList={staffList}
+                        tabPermissions={tabPermissions}
+                        setTabPermissions={setTabPermissions}
+                        pushDeltas={pushDeltas}
+                        triggerToast={triggerToast}
+                    />
+                )}
+
                 {/* MODAL THÊM MỚI / CHỈNH SỬA HỒ SƠ NHÂN SỰ */}
                 {showStaffModal && (
                     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
@@ -9597,6 +9609,224 @@
                             ĐÓNG
                         </button>
                     </div>
+                </div>
+            </div>
+        );
+    });
+
+    const HRTabPermissionsSubView = React.memo(function HRTabPermissionsSubView({ staffList, tabPermissions, setTabPermissions, pushDeltas, triggerToast }) {
+        const ALL_SYSTEM_TABS = [
+            { id: 'dashboard', label: 'Tổng Quan', icon: 'fa-home', desc: 'Bảng điều khiển trung tâm, KPI ngày và thông báo toàn xưởng' },
+            { id: 'orders', label: 'Đơn Hàng', icon: 'fa-shopping-cart', desc: 'Xử lý đơn sàn Shopee, TikTok, GHN, KiotViet và đóng gói' },
+            { id: 'production', label: 'Sản Xuất', icon: 'fa-hammer', desc: 'Dây chuyền sản xuất bể kính, layout, chấm công khoán thợ' },
+            { id: 'hr', label: 'Nhân Sự', icon: 'fa-user-clock', desc: 'Chấm công, công việc & KPI, bảng lương, hồ sơ nhân sự và phân quyền tab' },
+            { id: 'warehouse', label: 'Hàng Hóa', icon: 'fa-boxes', desc: 'Quản lý kho sản phẩm, bộ ảnh, mô tả và lịch sử xuất nhập kiểm' },
+            { id: 'import_export', label: 'Kho Vận', icon: 'fa-exchange-alt', desc: 'Phiếu xuất/nhập kho, phiếu kiểm kho và danh bạ nhà cung cấp' },
+            { id: 'cashflow', label: 'Tài Chính', icon: 'fa-chart-line', desc: 'Dòng tiền, vốn lưu động, quỹ dự phòng và cơ cấu chi phí' },
+            { id: 'cashbook', label: 'Sổ Quỹ', icon: 'fa-wallet', desc: 'Sổ quỹ thu chi tiền mặt và số dư các tài khoản ngân hàng' },
+            { id: 'analytics', label: 'Báo Cáo', icon: 'fa-chart-pie', desc: 'Phân tích P&L, biên lợi nhuận ròng và chi phí vận hành xưởng' },
+            { id: 'affiliate', label: 'Cộng Tác Viên', icon: 'fa-users', desc: 'Hệ thống hoa hồng CTV, đối soát và trả thưởng cộng tác viên' },
+            { id: 'workspaces', label: 'Phòng Ban', icon: 'fa-shield-alt', desc: 'Phân công nhiệm vụ & trách nhiệm, trạm làm việc và KPI phòng ban' },
+            { id: 'documents', label: 'Tài Liệu', icon: 'fa-folder-open', desc: 'Sổ tay quy trình tiêu chuẩn xưởng và tài liệu nội bộ' },
+            { id: 'web_editor', label: 'Tinh Chỉnh Web', icon: 'fa-globe', desc: 'Quản trị giao diện Website RF Aqua & đồng bộ kho sản phẩm' }
+        ];
+
+        const STANDARD_ROLES = [
+            { id: 'ROLE:THỢ CHÍNH', label: 'Vai trò: THỢ CHÍNH', defaultTabs: ['dashboard', 'orders', 'production', 'warehouse', 'documents'] },
+            { id: 'ROLE:THỢ PHỤ', label: 'Vai trò: THỢ PHỤ', defaultTabs: ['dashboard', 'orders', 'production', 'warehouse', 'documents'] },
+            { id: 'ROLE:KHO VẬN', label: 'Vai trò: KHO VẬN', defaultTabs: ['dashboard', 'orders', 'production', 'warehouse', 'import_export', 'documents'] },
+            { id: 'ROLE:BÁN HÀNG', label: 'Vai trò: BÁN HÀNG', defaultTabs: ['dashboard', 'orders', 'production', 'warehouse', 'affiliate', 'documents'] },
+            { id: 'ROLE:KẾ TOÁN', label: 'Vai trò: KẾ TOÁN', defaultTabs: ['dashboard', 'orders', 'production', 'hr', 'warehouse', 'import_export', 'cashflow', 'cashbook', 'analytics', 'affiliate', 'documents'] },
+            { id: 'ROLE:HỌC VIÊN', label: 'Vai trò: HỌC VIÊN', defaultTabs: ['dashboard', 'production', 'documents'] },
+            { id: 'ROLE:CỘNG TÁC VIÊN', label: 'Vai trò: CỘNG TÁC VIÊN', defaultTabs: ['orders', 'production', 'affiliate'] }
+        ];
+
+        const [localPerms, setLocalPerms] = React.useState(() => {
+            try {
+                const raw = tabPermissions && Object.keys(tabPermissions).length > 0
+                    ? tabPermissions
+                    : JSON.parse(localStorage.getItem('rf_tab_permissions') || '{}');
+                return JSON.parse(JSON.stringify(raw || {}));
+            } catch (e) {
+                return {};
+            }
+        });
+
+        React.useEffect(() => {
+            if (tabPermissions && Object.keys(tabPermissions).length > 0) {
+                setLocalPerms(JSON.parse(JSON.stringify(tabPermissions)));
+            }
+        }, [tabPermissions]);
+
+        const staffNames = React.useMemo(() => {
+            const list = (staffList || []).map(s => s.name || s['Tên Nhân Sự']).filter(Boolean);
+            return Array.from(new Set(list));
+        }, [staffList]);
+
+        const [selectedTarget, setSelectedTarget] = React.useState(() => staffNames[0] || 'ROLE:THỢ CHÍNH');
+        const isBossTarget = selectedTarget === 'Nguyễn Ngọc Tiến' || selectedTarget === 'ROLE:TỐI CAO';
+
+        const currentAllowedTabs = React.useMemo(() => {
+            if (isBossTarget) return ALL_SYSTEM_TABS.map(t => t.id);
+            if (localPerms[selectedTarget] && Array.isArray(localPerms[selectedTarget])) {
+                return localPerms[selectedTarget];
+            }
+            const roleMatch = STANDARD_ROLES.find(r => r.id === selectedTarget);
+            if (roleMatch) return roleMatch.defaultTabs;
+            const staffObj = (staffList || []).find(s => (s.name || s['Tên Nhân Sự']) === selectedTarget);
+            const staffRole = String(staffObj?.role || staffObj?.['Phân Quyền'] || '').toUpperCase();
+            if (staffRole.includes('HỌC VIÊN')) return ['dashboard', 'production', 'documents'];
+            if (staffRole.includes('CTV') || staffRole.includes('CỘNG TÁC VIÊN')) return ['orders', 'production', 'affiliate'];
+            if (staffRole.includes('KHO')) return ['dashboard', 'orders', 'production', 'warehouse', 'import_export', 'documents'];
+            if (staffRole.includes('KẾ TOÁN')) return ALL_SYSTEM_TABS.map(t => t.id).filter(id => id !== 'web_editor');
+            return ['dashboard', 'orders', 'production', 'warehouse', 'documents'];
+        }, [selectedTarget, localPerms, isBossTarget, staffList]);
+
+        const handleToggleTab = (tabId) => {
+            if (isBossTarget) return;
+            const exists = currentAllowedTabs.includes(tabId);
+            const nextTabs = exists ? currentAllowedTabs.filter(id => id !== tabId) : [...currentAllowedTabs, tabId];
+            setLocalPerms(prev => ({ ...prev, [selectedTarget]: nextTabs }));
+        };
+
+        const handleSelectAll = () => {
+            if (isBossTarget) return;
+            setLocalPerms(prev => ({ ...prev, [selectedTarget]: ALL_SYSTEM_TABS.map(t => t.id) }));
+        };
+
+        const handleSelectProductionOnly = () => {
+            if (isBossTarget) return;
+            setLocalPerms(prev => ({ ...prev, [selectedTarget]: ['dashboard', 'production'] }));
+        };
+
+        const handleSelectMinimal = () => {
+            if (isBossTarget) return;
+            setLocalPerms(prev => ({ ...prev, [selectedTarget]: ['dashboard'] }));
+        };
+
+        const handleResetDefault = () => {
+            if (isBossTarget) return;
+            setLocalPerms(prev => {
+                const next = { ...prev };
+                delete next[selectedTarget];
+                return next;
+            });
+            if (triggerToast) triggerToast(`Đã khôi phục phân quyền mặc định cho ${selectedTarget}`, 'fa-undo', 'info');
+        };
+
+        const [isSaving, setIsSaving] = React.useState(false);
+        const handleSave = async () => {
+            setIsSaving(true);
+            try {
+                if (typeof setTabPermissions === 'function') setTabPermissions(localPerms);
+                try { localStorage.setItem('rf_tab_permissions', JSON.stringify(localPerms)); } catch (e) {}
+                if (pushDeltas) {
+                    await pushDeltas({ tabPermissions: localPerms }, `Đã lưu phân quyền Tab Menu (${selectedTarget})!`, 'fa-user-shield');
+                } else if (triggerToast) {
+                    triggerToast(`Đã lưu phân quyền Tab Menu (${selectedTarget})!`, 'fa-user-shield', 'success');
+                }
+            } catch (err) {
+                if (triggerToast) triggerToast('Lỗi lưu phân quyền: ' + err.message, 'fa-times', 'danger');
+            } finally {
+                setIsSaving(false);
+            }
+        };
+
+        return (
+            <div className="bg-[#121214] border border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm animate-fade-in">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                            <i className="fas fa-user-shield text-base"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-white font-black text-sm uppercase tracking-wider">Phân Quyền Hiển Thị Tab Menu</h3>
+                            <p className="text-zinc-400 text-xs">Bật / tắt các tab trên thanh menu bên trái cho từng Nhân sự hoặc Vai trò.</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="h-9 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border-0 shadow-sm disabled:opacity-50"
+                    >
+                        {isSaving ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-save"></i>}
+                        <span>{isSaving ? 'Đang Lưu...' : 'Lưu Phân Quyền'}</span>
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#18181b] p-3.5 rounded-xl border border-white/[0.06]">
+                    <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+                        <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">
+                            <i className="fas fa-user mr-1.5 text-[#d4af37]"></i>Áp dụng cho:
+                        </span>
+                        <select
+                            value={selectedTarget}
+                            onChange={e => setSelectedTarget(e.target.value)}
+                            className="flex-1 h-9 px-3 bg-[#121214] border border-white/10 rounded-xl text-xs font-bold text-white outline-none cursor-pointer"
+                        >
+                            <optgroup label="👤 Từng Nhân Sự Cụ Thể">
+                                {staffNames.map(name => (
+                                    <option key={name} value={name}>{name} {name === 'Nguyễn Ngọc Tiến' ? '👑 (Boss)' : ''}</option>
+                                ))}
+                            </optgroup>
+                            <optgroup label="🏷️ Vai Trò Chuẩn">
+                                {STANDARD_ROLES.map(r => (
+                                    <option key={r.id} value={r.id}>{r.label}</option>
+                                ))}
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span className="px-2.5 py-1 rounded-lg bg-[#121214] text-zinc-300 border border-white/5 font-bold">
+                            Đang mở: <span className="text-emerald-400 font-black">{currentAllowedTabs.length}</span> / {ALL_SYSTEM_TABS.length} Tab
+                        </span>
+                        <button type="button" onClick={handleSelectAll} disabled={isBossTarget} className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-bold border border-emerald-500/30 cursor-pointer disabled:opacity-40">
+                            Mở Tất Cả
+                        </button>
+                        <button type="button" onClick={handleSelectProductionOnly} disabled={isBossTarget} className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-bold border border-amber-500/30 cursor-pointer disabled:opacity-40">
+                            Chỉ Sản Xuất
+                        </button>
+                        <button type="button" onClick={handleSelectMinimal} disabled={isBossTarget} className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 font-bold border border-rose-500/30 cursor-pointer disabled:opacity-40">
+                            Chỉ Tổng Quan
+                        </button>
+                        <button type="button" onClick={handleResetDefault} disabled={isBossTarget} className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold border border-white/10 cursor-pointer disabled:opacity-40">
+                            Mặc Định
+                        </button>
+                    </div>
+                </div>
+
+                {isBossTarget && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-amber-300 text-xs">
+                        <i className="fas fa-crown text-sm text-amber-400"></i>
+                        <span><strong>Boss Tối Cao</strong> luôn có quyền truy cập 100% tất cả các tab hệ thống.</span>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {ALL_SYSTEM_TABS.map(tab => {
+                        const isAllowed = isBossTarget || currentAllowedTabs.includes(tab.id);
+                        return (
+                            <div
+                                key={tab.id}
+                                onClick={() => !isBossTarget && handleToggleTab(tab.id)}
+                                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${isBossTarget ? 'opacity-90 cursor-default' : 'cursor-pointer'} ${isAllowed ? 'bg-[#18221f] border-emerald-500/40' : 'bg-[#18181b] border-white/5 opacity-60 hover:opacity-85'}`}
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 ${isAllowed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-500'}`}>
+                                        <i className={`fas ${tab.icon}`}></i>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="font-bold text-xs text-white truncate">{tab.label}</div>
+                                        <div className="text-[10px] text-zinc-400 truncate mt-0.5">{tab.desc}</div>
+                                    </div>
+                                </div>
+                                <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] shrink-0 ${isAllowed ? 'bg-emerald-500 text-black font-black' : 'bg-zinc-800 text-zinc-600 border border-white/10'}`}>
+                                    <i className={`fas ${isAllowed ? 'fa-check' : 'fa-lock'}`}></i>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );

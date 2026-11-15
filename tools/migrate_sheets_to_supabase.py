@@ -39,7 +39,6 @@ TABLE_COLUMNS = {
     "Trainings": ["id", "title", "content", "targetRole", "createdAt", "createdBy", "readUsers"],
     "Models3D": ["id", "name", "url", "createdAt", "createdBy", "productId", "materials"],
     "Monthly_Snapshots": ["id", "month", "user", "totalSalary", "totalHours", "totalAdvance", "totalDebt", "createdAt", "snapshotData"],
-    "ProfitReports": ["id", "period", "channel", "revenue", "orderCount", "platformFee", "returns", "discount", "ads", "cogs", "salary", "operation"],
     "Reimbursements": ["id", "staffName", "reason", "amount", "qrCodeUrl", "status", "createdAt"],
     "Suppliers": ["id", "name", "phone", "totalDebt", "category", "note"],
     "Tracking_Log": ["id", "Thời gian", "Tên nhân sự", "Hoàn thành", "Hỏi AI", "Ghi chú thêm"]

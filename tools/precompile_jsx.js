@@ -50,7 +50,6 @@ const DEFERRED_FILES = [
   'Tab_ImportExport',
   'Tab_Suppliers',
   'Tab_Finance',
-  'Tab_BusinessReport',
   'Tab_HR',
   'Tab_Documents',
   'Tab_Affiliate',

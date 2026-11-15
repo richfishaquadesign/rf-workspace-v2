@@ -600,7 +600,7 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               monthlySnapshots: snapRaw || [],
               reimbursements: [],
               announcement: 'Hệ thống RF Workspace V2 vận hành độc lập trên CSDL Supabase PostgreSQL.',
-              tabPermissions: {},
+              tabPermissions: (function() { try { return JSON.parse(localStorage.getItem('rf_tab_permissions') || '{}') || {}; } catch(e) { return {}; } })(),
               archiveStats: {
                 lastArchivedAt: '',
                 lastArchivedCount: 0,
@@ -765,6 +765,10 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
             // Write Models3D
             var mods = payload.Models3D || payload.models3D;
             if (mods && mods.length) await upsertToSupabase('Models3D', mods);
+
+            if (payload.tabPermissions && typeof payload.tabPermissions === 'object') {
+              try { localStorage.setItem('rf_tab_permissions', JSON.stringify(payload.tabPermissions)); } catch(e) {}
+            }
 
             // Write Config_NhanSu
             var staffDeltas = payload.Config_NhanSu || payload.configNhanSu || payload.staff;

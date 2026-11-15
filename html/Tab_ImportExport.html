@@ -1609,11 +1609,19 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, pu
     };
 
     const useFullStockTake = mode === 'KIEM_KHO' && typeof window !== 'undefined' && typeof window.StockTakeKiotVietView === 'function';
+    const useSuppliersView = mode === 'NHA_CUNG_CAP' && typeof window !== 'undefined' && typeof window.SuppliersTab !== 'undefined';
+
+    React.useEffect(() => {
+        if (window.__rfOpenSuppliersSubTab) {
+            window.__rfOpenSuppliersSubTab = false;
+            setInternalMode('NHA_CUNG_CAP');
+        }
+    }, []);
 
     return (
         <div className="space-y-4 sm:space-y-5 animate-fade-in pb-4 w-full max-w-full overflow-x-hidden">
             {!propMode && (
-                <div className="grid grid-cols-2 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full">
+                <div className="grid grid-cols-3 bg-[#202228] border-0 rounded-2xl p-1 shrink-0 gap-1 shadow-md max-w-full">
                     <button
                         type="button"
                         onClick={() => setInternalMode('NHAT_KY')}
@@ -1630,10 +1638,20 @@ const ImportExportTab = React.memo(function ImportExportTab({ data, pushData, pu
                         <i className="fas fa-clipboard-check text-xs text-[#F7DC68]"></i>
                         <span className="truncate">Phiếu Kiểm Kho</span>
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setInternalMode('NHA_CUNG_CAP')}
+                        className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 border-0 ${mode === 'NHA_CUNG_CAP' ? 'bg-[#282b33] text-white font-black' : 'bg-transparent text-zinc-400 hover:text-white'}`}
+                    >
+                        <i className="fas fa-handshake text-xs text-teal-400"></i>
+                        <span className="truncate">Nhà Cung Cấp</span>
+                    </button>
                 </div>
             )}
 
-            {useFullStockTake ? (
+            {useSuppliersView ? (
+                <window.SuppliersTab data={data || {}} pushData={pushData} isAdmin={isAdmin} isBoss={isBoss} userRole={currentRole} currentUser={currentUser} hasPerm={hasPerm} triggerToast={triggerToast} documents={documents} />
+            ) : useFullStockTake ? (
                 <window.StockTakeKiotVietView data={data} pushData={pushData} pushDeltas={pushDeltas} userConfigs={userConfigs} currentUser={currentUser} userRole={currentRole} isAdmin={isAdmin} isBoss={isBoss} hasPerm={hasPerm} triggerToast={triggerToast} />
             ) : (
                 <React.Fragment>

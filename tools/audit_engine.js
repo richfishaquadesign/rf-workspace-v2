@@ -191,7 +191,7 @@ function runAudit() {
     'Orders', 'Production', 'Packings', 'Products', 'Config_NhanSu',
     'Attendance', 'KPI_Progress', 'Config_KPI', 'BOM_Config', 'Transactions',
     'ImportExport', 'Accounts', 'BonusPenalty', 'CTV_Finance', 'Config_GiaLayout',
-    'Documents', 'Trainings', 'Models3D', 'Monthly_Snapshots', 'ProfitReports',
+    'Documents', 'Trainings', 'Models3D', 'Monthly_Snapshots',
     'Reimbursements', 'Suppliers', 'Tracking_Log'
   ];
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T12:16:42.872Z",
+  "generatedAt": "2026-11-15T12:36:09.034Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -16,7 +16,6 @@
     "Tab_ImportExport.html",
     "Tab_Suppliers.html",
     "Tab_Finance.html",
-    "Tab_BusinessReport.html",
     "Tab_HR.html",
     "Tab_Documents.html",
     "Tab_Affiliate.html",
@@ -27,11 +26,11 @@
   "hashes": {
     "Tab_Production.html": "75ed69aa0418bf08b724823d9ebef7b31c481e0ece262a951756e92166287042",
     "Tab_Inventory.html": "5f7484609c0b5fa5bfd08e18ad063ea5f3093add79691426b5dd965d2eb03187",
-    "Tab_ImportExport.html": "e2de9a9d9f60b6917cb6f226e0067bd26cc5bfe318cb19ba8c6b220c49f469e9",
+    "Tab_ImportExport.html": "67afe1509ef3e38d930eed6d3b7ad791e83ee3b450f869fedcbe3428f7d189ba",
     "Tab_Suppliers.html": "2cc2262f84ae8958aaa53248ccfce804d51b550f266f58e5e87886366d5e756c",
     "Tab_Finance.html": "a11940ae9a2e4653f95f566cedb4602ba5adab3108ce2ee418a182279e2fbfb0",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
-    "Tab_HR.html": "a88bfa23b51ced8e79b4d19bcd0abe28f521d3d63c111b5455c5950744c49fee",
+    "Tab_HR.html": "1fa402f19f717492f578f8fca815d6aea94aec076b66f33454491519468ee0f8",
     "Tab_Documents.html": "0fb59801d3c3d198a018d5aaf992de0b965592d9c7abb8ac50c9a66d1535cb4f",
     "Tab_Affiliate.html": "14d6c02efade79a6afe856e785289e2857557324f598712967eeae124794e95b",
     "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
@@ -47,7 +46,7 @@
     "App_Main.html": "737cd13f91376da96a179a924b600cf4d75bfde086365d982725371c48fb8aae"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "32799707b2f2854cd68c3cf637b4bbc339615f778845f1d34d83e1cd09c40532",
-    "Compiled_Deferred.html": "fc152394181e7054b582aa96284c9c8525d8bd3721200855393770440fd3f81b"
+    "Compiled_Core.html": "3865b2e025f9307851e70356900185196b0e6b95675dd77e2b1f013e5241c5eb",
+    "Compiled_Deferred.html": "307c4a8b86971b2d0d249c889fd6c54020e7ea3dd4ae0b04fa42f4939667ba04"
   }
 }

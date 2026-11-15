@@ -242,7 +242,7 @@
 
   function openEditorModal() {
     if (!isSupremeRole()) {
-      notify('Chỉ phân quyền TỐI CAO mới được truy cập Quản Trị Website!', 'error');
+      notify('Chỉ phân quyền TỐI CAO mới được truy cập Tinh Chỉnh Web!', 'error');
       return;
     }
     if (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href || iframe.src.indexOf('pin=') === -1) {
@@ -251,6 +251,7 @@
     }
     dialog.showModal();
   }
+  window.openWebsiteEditorModal = openEditorModal;
 
   function closeEditorModal() {
     dialog.close();
@@ -310,48 +311,8 @@
     };
   }
 
-  function attachWebsiteMenu(){
-    const sidebar = document.getElementById('rf-v6-sidebar');
-    if (!sidebar) return;
-    const existingBtn = document.getElementById('rf-website-menu-button');
-    if (!isSupremeRole()) {
-      if (existingBtn) existingBtn.remove();
-      return;
-    }
-    if (existingBtn) return;
-
-    const button = document.createElement('button');
-    button.id = 'rf-website-menu-button';
-    button.type = 'button';
-    button.setAttribute('aria-label', 'Website RF Aqua');
-    button.title = 'Website RF Aqua (Visual Editor V1.3)';
-    button.setAttribute('aria-label', 'Website & Quản trị');
-    button.title = 'Website & Quản trị KiotViet Studio';
-
-    const icon = document.createElement('span');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '◈ ';
-    icon.textContent = '🌐 ';
-
-    const label = document.createElement('span');
-    label.className = 'rf-ws-menu-label';
-    label.textContent = 'Website RF Aqua';
-    label.textContent = 'Website & Quản Trị UI/UX';
-
-    button.append(icon, label);
-    const nav = sidebar.querySelector('nav') || sidebar;
-    nav.prepend(button);
-  }
-
-  document.addEventListener('click', event => {
-    if (event.target.closest('#rf-website-menu-button')) {
-      event.stopImmediatePropagation();
-      openEditorModal();
-    }
-  }, true);
-
-  const observer = new MutationObserver(attachWebsiteMenu);
-  observer.observe(document.body, { childList: true, subtree: true });
-  attachWebsiteMenu();
+  // Nút Tinh Chỉnh Web đã được tích hợp trực tiếp vào danh sách menu chính (V6.2)
+  const legacyBtn = document.getElementById('rf-website-menu-button');
+  if (legacyBtn) legacyBtn.remove();
 })();
 </script>

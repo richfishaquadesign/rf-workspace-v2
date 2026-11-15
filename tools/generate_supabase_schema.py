@@ -304,22 +304,6 @@ CREATE TABLE IF NOT EXISTS public."Monthly_Snapshots" (
     "snapshotData" TEXT
 );
 
--- 20. ProfitReports
-CREATE TABLE IF NOT EXISTS public."ProfitReports" (
-    id TEXT PRIMARY KEY,
-    period TEXT,
-    channel TEXT,
-    revenue NUMERIC DEFAULT 0,
-    "orderCount" NUMERIC DEFAULT 0,
-    "platformFee" NUMERIC DEFAULT 0,
-    returns NUMERIC DEFAULT 0,
-    discount NUMERIC DEFAULT 0,
-    ads NUMERIC DEFAULT 0,
-    cogs NUMERIC DEFAULT 0,
-    salary NUMERIC DEFAULT 0,
-    operation NUMERIC DEFAULT 0
-);
-
 -- 21. Reimbursements
 CREATE TABLE IF NOT EXISTS public."Reimbursements" (
     id TEXT PRIMARY KEY,
@@ -408,9 +392,6 @@ CREATE POLICY "Allow public read-write Models3D" ON public."Models3D" FOR ALL US
 
 ALTER TABLE public."Monthly_Snapshots" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read-write Monthly_Snapshots" ON public."Monthly_Snapshots" FOR ALL USING (true) WITH CHECK (true);
-
-ALTER TABLE public."ProfitReports" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read-write ProfitReports" ON public."ProfitReports" FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public."Reimbursements" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read-write Reimbursements" ON public."Reimbursements" FOR ALL USING (true) WITH CHECK (true);

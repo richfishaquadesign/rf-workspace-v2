@@ -1070,7 +1070,7 @@
                         icon: 'fa-download',
                         color: 'text-sky-400',
                         title: 'Đồng Bộ Cơ Chế Tải File Thông Minh Toàn Hệ Thống',
-                        desc: 'Cập nhật Tab_BusinessReport, Tab_Affiliate, ShopeeGlobalTab sang downloadFileSmartly, triệt tiêu hoàn toàn hiện tượng trình duyệt chặn tải file ngầm.'
+                        desc: 'Cập nhật Tab_Affiliate, ShopeeGlobalTab sang downloadFileSmartly, triệt tiêu hoàn toàn hiện tượng trình duyệt chặn tải file ngầm.'
                     }
                 ]
             },
@@ -5410,7 +5410,7 @@
                 isLatest: false,
                 badge: 'BẢN CŨ',
                 badgeColor: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
-                title: 'Khắc Phục Lỗi Tính Doanh Thu Đa Kênh & Chuẩn Hóa Chi Phí P&L (Tab_Analytics & Tab_BusinessReport)',
+                title: 'Khắc Phục Lỗi Tính Doanh Thu Đa Kênh & Chuẩn Hóa Chi Phí P&L (Tab_Analytics)',
                 summary: 'Triệt tiêu hoàn toàn lỗi nhân trùng tỷ giá đối với các kênh Shopee Global (TH, SG, MA, PH, TW), chuẩn hóa cơ chế quét Chi phí Lương thực tế (Monthly_Snapshots) và khoanh vùng chính xác chi phí vận hành OPEX.',
                 categories: ['Phân Tích P&L', 'Tài Chính', 'Doanh Thu', 'Kế Toán'],
                 items: [
@@ -5418,7 +5418,7 @@
                         icon: 'fa-chart-line',
                         color: 'text-emerald-400',
                         title: 'Đồng bộ doanh thu thực tế VNĐ cho tất cả kênh bán hàng',
-                        desc: 'Loại bỏ logic nhân tỷ giá lần 2 trong Tab_Analytics.html và Tab_BusinessReport.html; phản ánh chính xác 100% doanh thu thực tế của Shopee TH, Shopee MA và toàn bộ 395 đơn hàng.'
+                        desc: 'Loại bỏ logic nhân tỷ giá lần 2 trong Tab_Analytics.html; phản ánh chính xác 100% doanh thu thực tế của Shopee TH, Shopee MA và toàn bộ 395 đơn hàng.'
                     },
                     {
                         icon: 'fa-wallet',
@@ -7246,7 +7246,7 @@
             if (t === 'cashflow' || t === 'so_quy' || t === 'soquy' || t === 'ledger' || t === 'cashbook') return 'cashflow';
             if (t === 'debt' || t === 'so_no' || t === 'cong_no' || t === 'nha_cung_cap') return 'suppliers';
             if (t === 'pnl' || t === 'lai_lo') return 'analytics';
-            if (t === 'kqkd') return 'business_report';
+            if (t === 'kqkd') return 'analytics';
             if (t === 'importexport' || t === 'nhap_xuat') return 'import_export';
             if (t === 'don_hang') return 'orders';
             if (t === 'san_xuat') return 'production';
@@ -7257,7 +7257,7 @@
 
         const handleNavigateTab = React.useCallback((tabId, tabMode) => {
             const actualTabId = normalizeTabId(tabId);
-            const actualMode = tabMode || (['warehouse', 'finance', 'cashflow', 'suppliers', 'import_export', 'analytics', 'business_report'].includes(actualTabId) ? 'ERP' : 'WORKSPACE');
+            const actualMode = tabMode || (['warehouse', 'finance', 'cashflow', 'suppliers', 'import_export', 'analytics'].includes(actualTabId) ? 'ERP' : 'WORKSPACE');
             if (activeTab === actualTabId && mode === actualMode) {
                 setIsMenuOpen(false);
                 return;
@@ -7316,7 +7316,6 @@
             Suppliers: _instantCache?.Suppliers || [],
             Transactions: _instantCache?.Transactions || [],
             ImportExport: _instantCache?.ImportExport || [],
-            ProfitReports: _instantCache?.ProfitReports || [],
             BonusPenalty: _instantCache?.BonusPenalty || [],
             KPI_Progress: _instantCache?.KPI_Progress || [],
             ThongKe_TichLuyXu: _instantCache?.ThongKe_TichLuyXu || [],
@@ -7634,7 +7633,6 @@
                 Suppliers: d.Suppliers || prev.Suppliers || [],
                 Transactions: d.Transactions || prev.Transactions || [],
                 ImportExport: d.ImportExport || prev.ImportExport || [],
-                ProfitReports: d.ProfitReports || prev.ProfitReports || [],
                 BonusPenalty: d.BonusPenalty || prev.BonusPenalty || [],
                 KPI_Progress: d.KPI_Progress || prev.KPI_Progress || [],
                 ThongKe_TichLuyXu: d.ThongKe_TichLuyXu || prev.ThongKe_TichLuyXu || [],
@@ -7671,7 +7669,6 @@
                         Suppliers: d.Suppliers || [],
                         Transactions: d.Transactions || [],
                         ImportExport: d.ImportExport || [],
-                        ProfitReports: d.ProfitReports || [],
                         BonusPenalty: d.BonusPenalty || [],
                         KPI_Progress: d.KPI_Progress || [],
                         ThongKe_TichLuyXu: d.ThongKe_TichLuyXu || [],
@@ -7703,7 +7700,6 @@
                 Suppliers: d.Suppliers ? smartMerge(prev.Suppliers, d.Suppliers) : (prev.Suppliers || []),
                 Transactions: d.Transactions ? smartMerge(prev.Transactions, d.Transactions) : (prev.Transactions || []),
                 ImportExport: d.ImportExport ? smartMerge(prev.ImportExport, d.ImportExport) : (prev.ImportExport || []),
-                ProfitReports: d.ProfitReports ? smartMerge(prev.ProfitReports, d.ProfitReports) : (prev.ProfitReports || []),
                 BonusPenalty: d.BonusPenalty ? smartMerge(prev.BonusPenalty, d.BonusPenalty) : (prev.BonusPenalty || []),
                 KPI_Progress: d.KPI_Progress ? smartMerge(prev.KPI_Progress, d.KPI_Progress) : (prev.KPI_Progress || []),
                 ThongKe_TichLuyXu: d.ThongKe_TichLuyXu ? smartMerge(prev.ThongKe_TichLuyXu, d.ThongKe_TichLuyXu) : (prev.ThongKe_TichLuyXu || []),
@@ -7732,7 +7728,6 @@
                         attendance: d.attendance || [], ctvFinance: d.ctvFinance || [], configGiaLayout: d.configGiaLayout || [],
                         Products: d.Products || [], Accounts: d.Accounts || [], Suppliers: d.Suppliers || [],
                         Transactions: d.Transactions || [], ImportExport: d.ImportExport || [],
-                        ProfitReports: d.ProfitReports || [], BonusPenalty: d.BonusPenalty || [],
                         KPI_Progress: d.KPI_Progress || [], ThongKe_TichLuyXu: d.ThongKe_TichLuyXu || [],
                         BOM_Config: d.BOM_Config || [], kpiConfig: d.kpiConfig || [],
                         documents: d.documents || [], models3D: d.models3D || [], reimbursements: d.reimbursements || []
@@ -7850,7 +7845,6 @@
                 ...(payload.Suppliers || deletes.Suppliers ? { Suppliers: optimisticMerge(prev.Suppliers, payload.Suppliers, deletes.Suppliers) } : {}),
                 ...(payload.Transactions || deletes.Transactions ? { Transactions: optimisticMerge(prev.Transactions, payload.Transactions, deletes.Transactions) } : {}),
                 ...(payload.ImportExport || deletes.ImportExport ? { ImportExport: optimisticMerge(prev.ImportExport, payload.ImportExport, deletes.ImportExport) } : {}),
-                ...(payload.ProfitReports || deletes.ProfitReports ? { ProfitReports: optimisticMerge(prev.ProfitReports, payload.ProfitReports, deletes.ProfitReports) } : {}),
                 ...(payload.BonusPenalty || deletes.BonusPenalty ? { BonusPenalty: optimisticMerge(prev.BonusPenalty, payload.BonusPenalty, deletes.BonusPenalty) } : {}),
                 ...(payload.KPI_Progress || deletes.KPI_Progress ? { KPI_Progress: optimisticMerge(prev.KPI_Progress, payload.KPI_Progress, deletes.KPI_Progress) } : {}),
                 ...(payload.ThongKe_TichLuyXu || payload.xuTransactions || deletes.ThongKe_TichLuyXu || deletes.xuTransactions ? { ThongKe_TichLuyXu: optimisticMerge(prev.ThongKe_TichLuyXu, payload.ThongKe_TichLuyXu || payload.xuTransactions, deletes.ThongKe_TichLuyXu || deletes.xuTransactions) } : {}),
@@ -8220,7 +8214,7 @@
             const h = (e) => {
                 const { tab, trigger, data, mode } = e.detail || {};
                 const targetTab = normalizeTabId(tab);
-                const targetMode = mode || (['warehouse', 'cashflow', 'suppliers', 'import_export', 'analytics', 'business_report'].includes(targetTab) ? 'ERP' : 'WORKSPACE');
+                const targetMode = mode || (['warehouse', 'cashflow', 'suppliers', 'import_export', 'analytics'].includes(targetTab) ? 'ERP' : 'WORKSPACE');
                 setMode(targetMode);
                 setActiveTab(targetTab);
                 let attempts = 0;
@@ -8403,7 +8397,6 @@
                 items: [
                     { id: 'finance', label: 'Tài Chính', icon: 'fa-scale-balanced', mode: 'ERP' },
                     { id: 'cashflow', label: 'Sổ Quỹ', icon: 'fa-wallet', mode: 'ERP' },
-                    { id: 'business_report', label: 'Báo Cáo KQKD', icon: 'fa-chart-line', mode: 'ERP' },
                     { id: 'analytics', label: 'Phân Tích P&L', icon: 'fa-chart-pie', mode: 'ERP' },
                     { id: 'warehouse', label: 'Kho Hàng', icon: 'fa-boxes', mode: 'ERP' },
                     { id: 'suppliers', label: 'Đối Tác', icon: 'fa-handshake', mode: 'ERP' }
@@ -8892,7 +8885,6 @@
                                 const CompCashLedger = (typeof window !== 'undefined' ? (window.CashLedgerTab || window.FinanceTab) : null) || (typeof CashLedgerTab !== 'undefined' ? CashLedgerTab : null);
                                 const CompFinance = CompCashLedger || CompFinanceOverview;
                                 const CompAnalytics = (typeof window !== 'undefined' ? window.AnalyticsTab : null) || (typeof AnalyticsTab !== 'undefined' ? AnalyticsTab : null);
-                                const CompBusinessReport = (typeof window !== 'undefined' ? window.BusinessReportTab : null) || (typeof BusinessReportTab !== 'undefined' ? BusinessReportTab : null);
                                 const CompSuppliers = (typeof window !== 'undefined' ? window.SuppliersTab : null) || (typeof SuppliersTab !== 'undefined' ? SuppliersTab : null);
 
                                 const tabMap = {
@@ -8910,7 +8902,6 @@
                                     finance: CompFinanceOverview,
                                     cashflow: CompCashLedger,
                                     analytics: CompAnalytics,
-                                    business_report: CompBusinessReport,
                                     suppliers: CompSuppliers
                                 };
 
@@ -8947,12 +8938,10 @@
                                         
                                         {(activeTab === 'analytics' || mountedTabs.includes('analytics')) && CompAnalytics && <div className={`w-full min-h-full ${activeTab === 'analytics' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompAnalytics data={memoizedAnalyticsData} pushData={pushErpData} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} mode={mode} userConfigs={userConfigs} /></ErrorBoundary>}</div>}
                                         
-                                        {(activeTab === 'business_report' || mountedTabs.includes('business_report')) && CompBusinessReport && <div className={`w-full min-h-full ${activeTab === 'business_report' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompBusinessReport erpData={erpData || {}} pushDeltas={pushDeltas} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} triggerToast={triggerToast} /></ErrorBoundary>}</div>}
-                                        
                                         {(activeTab === 'suppliers' || mountedTabs.includes('suppliers')) && CompSuppliers && <div className={`w-full min-h-full ${activeTab === 'suppliers' ? 'block' : 'hidden'}`}>{isCTV ? renderCTVLocked() : <ErrorBoundary><CompSuppliers data={erpData || {}} pushData={pushErpData} isAdmin={isAdmin} isBoss={isBoss} userRole={userRole} currentUser={currentUser} hasPerm={hasPerm} triggerToast={triggerToast} documents={memoizedDocuments} /></ErrorBoundary>}</div>}
 
                                         {/* LOADING FALLBACK — Hiển thị khi module chưa sẵn sàng */}
-                                        {!isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'analytics', 'business_report', 'suppliers'].includes(activeTab) && (() => {
+                                        {!isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'analytics', 'suppliers'].includes(activeTab) && (() => {
                                             const TAB_NAMES = {
                                                 dashboard: 'Tổng Quan & Bàn Làm Việc',
                                                 orders: 'Quản Lý Đơn Hàng',
@@ -8961,7 +8950,6 @@
                                                 import_export: 'Xuất Nhập Tồn',
                                                 finance: 'Tổng Quan Tài Chính',
                                                 cashflow: 'Sổ Quỹ & Ngân Hàng',
-                                                business_report: 'Báo Cáo Tài Chính P&L',
                                                 hr: 'Trung Tâm Nhân Sự & Bảng Lương',
                                                 documents: 'Tài Liệu & Quy Trình SOP',
                                                 affiliate: 'Cộng Tác Viên & Đại Lý',
@@ -9015,7 +9003,7 @@
                                         })()}
 
                                         {/* PHÒNG VỆ MÀN HÌNH ĐEN: Tự động phục hồi về dashboard nếu activeTab không hợp lệ */}
-                                        {!['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'cashflow', 'analytics', 'business_report', 'suppliers'].includes(activeTab) && (
+                                        {!['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'cashflow', 'analytics', 'suppliers'].includes(activeTab) && (
                                             <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 text-center p-6 animate-fade-in">
                                                 <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-xl mb-1">
                                                     <i className="fas fa-compass fa-spin"></i>
