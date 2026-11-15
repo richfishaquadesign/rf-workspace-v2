@@ -2742,7 +2742,7 @@ Model ID: 287936773312
       if (!p) return '';
       const safeDarkImg = (u) => {
         const s = formatImageUrl(u);
-        return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+        return (s && !/shopee/i.test(s)) ? s : '';
       };
       const detailImgs = (productDetailsMap[p?.sku]?.images || []).map(safeDarkImg).filter(Boolean);
       const l5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
@@ -2763,7 +2763,7 @@ Model ID: 287936773312
       const detail = productDetailsMap[sku] || {};
       const safeImg = (u) => {
         const s = formatImageUrl(u);
-        return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+        return (s && !/shopee/i.test(s)) ? s : '';
       };
       const seen = new Set();
       const items = [];
@@ -3234,23 +3234,22 @@ Model ID: 287936773312
           />
         )}
 
-        {/* 4. BẢNG DANH SÁCH HÀNG HÓA (6 CỘT GỌN RÕ: ẢNH, TÊN HÀNG HÓA, DANH MỤC, PHÂN LOẠI, GIÁ BÁN, TỒN KHO) */}
+        {/* 4. BẢNG DANH SÁCH HÀNG HÓA (BỎ CỘT DANH MỤC, ĐƯA TỒN KHO LÊN CẠNH TÊN HÀNG HÓA - TỐI ƯU DI ĐỘNG) */}
         <div className="overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#121214] shadow-sm">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#09090b] text-zinc-400 border-b border-white/[0.08] uppercase text-[10px] font-bold tracking-wider h-11">
-                <th className="p-3 pl-4 whitespace-nowrap w-16">Ảnh</th>
-                <th className="p-3">Tên hàng hóa</th>
-                <th className="p-3 whitespace-nowrap">Danh mục</th>
-                <th className="p-3 whitespace-nowrap">Phân loại</th>
-                <th className="p-3 text-right whitespace-nowrap">Giá bán</th>
-                <th className="p-3 text-right pr-4 whitespace-nowrap">Tồn kho</th>
+                <th className="p-2.5 sm:p-3 pl-3 sm:pl-4 whitespace-nowrap w-14 sm:w-16">Ảnh</th>
+                <th className="p-2.5 sm:p-3">Tên hàng hóa</th>
+                <th className="p-2.5 sm:p-3 text-right pr-3 sm:pr-3 whitespace-nowrap">Tồn kho</th>
+                <th className="p-3 whitespace-nowrap hidden md:table-cell">Phân loại</th>
+                <th className="p-3 text-right pr-4 whitespace-nowrap hidden sm:table-cell">Giá bán</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
               {tableDisplayRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-zinc-500 font-bold">
+                  <td colSpan={5} className="text-center py-12 text-zinc-500 font-bold">
                     <i className="fas fa-boxes text-2xl text-zinc-600 block mb-2"></i>
                     Không tìm thấy sản phẩm nào phù hợp!
                   </td>
@@ -3273,10 +3272,10 @@ Model ID: 287936773312
                         {/* Hàng cha của mẫu Layout (VD: Bonsai Ver.1): chạm vào thẻ mở Thông tin chung của Ver (có ảnh + mô tả) */}
                         <tr
                           onClick={() => handleOpenProductDrawer(rep, false, 'VER_OVERVIEW', row)}
-                          className={`hover:bg-white/[0.04] transition-colors cursor-pointer group h-14 ${isExpanded ? 'bg-white/[0.03]' : ''}`}
+                          className={`hover:bg-white/[0.04] transition-colors cursor-pointer group min-h-[3.5rem] ${isExpanded ? 'bg-white/[0.03]' : ''}`}
                         >
                           {/* 1. Ảnh */}
-                          <td className="p-2.5 pl-4 w-16">
+                          <td className="p-2 sm:p-2.5 pl-3 sm:pl-4 w-14 sm:w-16">
                             <div className="w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
                               {imgUrl ? (
                                 <img
@@ -3294,9 +3293,9 @@ Model ID: 287936773312
                           </td>
 
                           {/* 2. Tên hàng hóa (Phân loại + Ver + nút icon mũi tên xổ xuống các kích thước) */}
-                          <td className="p-2.5 font-bold text-white">
+                          <td className="p-2 sm:p-2.5 font-bold text-white">
                             <div className="flex items-center gap-2">
-                              <span className="group-hover:text-[#d4af37] transition-colors">{row.baseName}</span>
+                              <span className="group-hover:text-[#d4af37] transition-colors leading-snug text-[12.5px] sm:text-xs">{row.baseName}</span>
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -3313,22 +3312,32 @@ Model ID: 287936773312
                                 <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px]`}></i>
                               </button>
                             </div>
+                            <div className="sm:hidden flex items-center gap-1.5 mt-0.5 text-[10.5px] font-mono font-normal text-zinc-400">
+                              <span>
+                                {minPrice > 0
+                                  ? (minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ`)
+                                  : '0 đ'}
+                              </span>
+                              {row.sub_category && <span className="text-zinc-600">•</span>}
+                              {row.sub_category && <span className="text-zinc-500 font-sans truncate max-w-[120px]">{row.sub_category}</span>}
+                            </div>
                           </td>
 
-                          {/* 3. Danh mục */}
-                          <td className="p-2.5 whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]">
-                              LAYOUT
+                          {/* 3. Tồn kho (Đưa lên ngay cạnh Tên hàng hóa) */}
+                          <td className="p-2 sm:p-2.5 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-black text-[12.5px]">
+                            <span className={totalQty <= 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                              {totalQty}
                             </span>
+                            <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">Bộ</span>
                           </td>
 
                           {/* 4. Phân loại */}
-                          <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]">
+                          <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px] hidden md:table-cell">
                             {row.sub_category}
                           </td>
 
                           {/* 5. Giá bán */}
-                          <td className="p-2.5 text-right whitespace-nowrap font-mono font-bold">
+                          <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-bold hidden sm:table-cell">
                             {minPrice > 0 ? (
                               <span className="text-zinc-100">
                                 {minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ`}
@@ -3336,14 +3345,6 @@ Model ID: 287936773312
                             ) : (
                               <span className="text-zinc-500">0 đ</span>
                             )}
-                          </td>
-
-                          {/* 6. Tồn kho */}
-                          <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]">
-                            <span className={totalQty <= 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                              {totalQty}
-                            </span>
-                            <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">Bộ</span>
                           </td>
                         </tr>
 
@@ -3363,41 +3364,43 @@ Model ID: 287936773312
                                 e.stopPropagation();
                                 handleOpenProductDrawer(v, true, 'SKU_DETAIL', row);
                               }}
-                              className="bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub h-11"
+                              className="bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub min-h-[2.75rem]"
                             >
-                              <td className="p-2 pl-4 w-16 text-right pr-2">
+                              <td className="p-2 pl-3 sm:pl-4 w-14 sm:w-16 text-right pr-2">
                                 <span className="inline-block w-2 h-2 rounded-full bg-zinc-700 group-hover/sub:bg-[#d4af37] transition-colors"></span>
                               </td>
                               <td className="p-2 pl-2">
-                                <div className="flex items-center gap-2.5 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-mono font-bold text-xs text-zinc-200 group-hover/sub:text-[#d4af37] transition-colors">
                                     {vSizeText}
                                   </span>
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${
+                                  <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-mono font-semibold border ${
                                     isReadyStockSize
                                       ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                                       : 'bg-white/[0.03] text-zinc-400 border-white/[0.06]'
                                   }`}>
                                     {isReadyStockSize
-                                      ? `Min: ${vMin} • Max: ${vMax} (Sản xuất sẵn)`
-                                      : `Min: ${vMin} • Max: ${vMax} (Có đơn mới SX)`}
+                                      ? `Min:${vMin}•Max:${vMax} (Sẵn)`
+                                      : `Min:${vMin}•Max:${vMax} (Đơn)`}
                                   </span>
                                 </div>
+                                <div className="sm:hidden flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-zinc-400">
+                                  <span>{formatMoney(vPrice)} đ</span>
+                                  <span className="text-zinc-600">•</span>
+                                  <span className="text-zinc-500">{v.sku}</span>
+                                </div>
                               </td>
-                              <td className="p-2 whitespace-nowrap">
-                                <span className="text-[10px] font-mono text-zinc-500">{v.sku}</span>
-                              </td>
-                              <td className="p-2 whitespace-nowrap text-zinc-400 text-[11px]">
-                                {v.sub_category || '---'}
-                              </td>
-                              <td className="p-2 text-right whitespace-nowrap font-mono font-bold text-zinc-200 text-xs">
-                                {formatMoney(vPrice)} đ
-                              </td>
-                              <td className="p-2 text-right pr-4 whitespace-nowrap font-mono font-bold text-xs">
+                              <td className="p-2 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-bold text-xs">
                                 <span className={vQty <= 0 ? (isReadyStockSize ? 'text-rose-400' : 'text-zinc-400') : 'text-emerald-400'}>
                                   {vQty}
                                 </span>
                                 <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">Bộ</span>
+                              </td>
+                              <td className="p-2 whitespace-nowrap text-zinc-400 text-[11px] hidden md:table-cell">
+                                {v.sub_category || '---'}
+                              </td>
+                              <td className="p-2 text-right pr-4 whitespace-nowrap font-mono font-bold text-zinc-200 text-xs hidden sm:table-cell">
+                                {formatMoney(vPrice)} đ
                               </td>
                             </tr>
                           );
@@ -3409,8 +3412,8 @@ Model ID: 287936773312
                             onClick={(e) => e.stopPropagation()}
                             className="bg-[#09090b] border-t border-white/[0.03]"
                           >
-                            <td className="p-2 pl-4 w-16"></td>
-                            <td colSpan={5} className="p-2 pr-4">
+                            <td className="p-2 pl-3 sm:pl-4 w-14 sm:w-16"></td>
+                            <td colSpan={4} className="p-2 pr-3 sm:pr-4">
                               {addingSizeGroupKey === row.groupKey ? (
                                 <div className="flex items-center gap-2 flex-wrap bg-[#121214] border border-white/[0.08] rounded-xl p-2">
                                   <span className="text-[10.5px] font-bold text-zinc-300 mr-1">
@@ -3519,10 +3522,10 @@ Model ID: 287936773312
                     <tr
                       key={p.id || p.sku}
                       onClick={() => handleOpenProductDrawer(p, false, 'DEFAULT')}
-                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group h-14"
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group min-h-[3.5rem]"
                     >
                       {/* 1. Ảnh */}
-                      <td className="p-2.5 pl-4 w-16">
+                      <td className="p-2 sm:p-2.5 pl-3 sm:pl-4 w-14 sm:w-16">
                         <div className="w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
                           {imgUrl ? (
                             <img
@@ -3539,27 +3542,39 @@ Model ID: 287936773312
                         </div>
                       </td>
 
-                      {/* 2. Tên hàng hóa */}
-                      <td className="p-2.5 font-bold text-white">
-                        <div className="line-clamp-1 group-hover:text-[#d4af37] transition-colors" title={p.name}>
+                      {/* 2. Tên hàng hóa (Hiển thị rõ đầy đủ trên Di động, kèm Giá bán & Phân loại gọn bên dưới) */}
+                      <td className="p-2 sm:p-2.5 font-bold text-white">
+                        <div className="group-hover:text-[#d4af37] transition-colors leading-snug text-[12.5px] sm:text-xs" title={p.name}>
                           {p.name}
+                        </div>
+                        <div className="sm:hidden flex items-center gap-1.5 mt-0.5 text-[10.5px] font-mono font-normal text-zinc-400">
+                          {priceNum > 0 ? (
+                            <span>{formatMoney(priceNum)} đ</span>
+                          ) : (isMaterial && canViewCost && costNum > 0 ? (
+                            <span className="text-amber-300">{formatMoney(costNum)} đ</span>
+                          ) : (
+                            <span className="text-zinc-500">0 đ</span>
+                          ))}
+                          {p.sub_category && <span className="text-zinc-600">•</span>}
+                          {p.sub_category && <span className="text-zinc-500 font-sans truncate max-w-[130px]">{p.sub_category}</span>}
                         </div>
                       </td>
 
-                      {/* 3. Danh mục */}
-                      <td className="p-2.5 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]">
-                          {catDisplay}
+                      {/* 3. Tồn kho (Đưa lên ngay cạnh Tên hàng hóa) */}
+                      <td className="p-2 sm:p-2.5 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-black text-[12.5px]">
+                        <span className={!isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'}>
+                          {qty}
                         </span>
+                        <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">{unitLabel}</span>
                       </td>
 
                       {/* 4. Phân loại */}
-                      <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]">
+                      <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px] hidden md:table-cell">
                         {p.sub_category || '---'}
                       </td>
 
                       {/* 5. Giá bán */}
-                      <td className="p-2.5 text-right whitespace-nowrap font-mono font-bold">
+                      <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-bold hidden sm:table-cell">
                         {priceNum > 0 ? (
                           <span className="text-zinc-100">{formatMoney(priceNum)} đ</span>
                         ) : (isMaterial && canViewCost && costNum > 0 ? (
@@ -3569,14 +3584,6 @@ Model ID: 287936773312
                         ) : (
                           <span className="text-zinc-500">0 đ</span>
                         ))}
-                      </td>
-
-                      {/* 6. Tồn kho */}
-                      <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]">
-                        <span className={!isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'}>
-                          {qty}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">{unitLabel}</span>
                       </td>
                     </tr>
                   );

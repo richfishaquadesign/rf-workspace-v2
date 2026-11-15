@@ -9194,7 +9194,7 @@ function InventoryListView({
     if (!p) return '';
     const safeDarkImg = u => {
       const s = formatImageUrl(u);
-      return s && !/shopee|\/images\/catalog\//i.test(s) ? s : '';
+      return s && !/shopee/i.test(s) ? s : '';
     };
     const detailImgs = (productDetailsMap[p?.sku]?.images || []).map(safeDarkImg).filter(Boolean);
     const l5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
@@ -9211,7 +9211,7 @@ function InventoryListView({
     const detail = productDetailsMap[sku] || {};
     const safeImg = u => {
       const s = formatImageUrl(u);
-      return s && !/shopee|\/images\/catalog\//i.test(s) ? s : '';
+      return s && !/shopee/i.test(s) ? s : '';
     };
     const seen = new Set();
     const items = [];
@@ -9627,21 +9627,19 @@ function InventoryListView({
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     className: "bg-[#09090b] text-zinc-400 border-b border-white/[0.08] uppercase text-[10px] font-bold tracking-wider h-11"
   }, /*#__PURE__*/React.createElement("th", {
-    className: "p-3 pl-4 whitespace-nowrap w-16"
+    className: "p-2.5 sm:p-3 pl-3 sm:pl-4 whitespace-nowrap w-14 sm:w-16"
   }, "\u1EA2nh"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3"
+    className: "p-2.5 sm:p-3"
   }, "T\xEAn h\xE0ng h\xF3a"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 whitespace-nowrap"
-  }, "Danh m\u1EE5c"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 whitespace-nowrap"
+    className: "p-2.5 sm:p-3 text-right pr-3 sm:pr-3 whitespace-nowrap"
+  }, "T\u1ED3n kho"), /*#__PURE__*/React.createElement("th", {
+    className: "p-3 whitespace-nowrap hidden md:table-cell"
   }, "Ph\xE2n lo\u1EA1i"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-right whitespace-nowrap"
-  }, "Gi\xE1 b\xE1n"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-right pr-4 whitespace-nowrap"
-  }, "T\u1ED3n kho"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "p-3 text-right pr-4 whitespace-nowrap hidden sm:table-cell"
+  }, "Gi\xE1 b\xE1n"))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-white/[0.04]"
   }, tableDisplayRows.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: 6,
+    colSpan: 5,
     className: "text-center py-12 text-zinc-500 font-bold"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-boxes text-2xl text-zinc-600 block mb-2"
@@ -9660,9 +9658,9 @@ function InventoryListView({
         key: row.groupKey
       }, /*#__PURE__*/React.createElement("tr", {
         onClick: () => handleOpenProductDrawer(rep, false, 'VER_OVERVIEW', row),
-        className: `hover:bg-white/[0.04] transition-colors cursor-pointer group h-14 ${isExpanded ? 'bg-white/[0.03]' : ''}`
+        className: `hover:bg-white/[0.04] transition-colors cursor-pointer group min-h-[3.5rem] ${isExpanded ? 'bg-white/[0.03]' : ''}`
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 pl-4 w-16"
+        className: "p-2 sm:p-2.5 pl-3 sm:pl-4 w-14 sm:w-16"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0"
       }, imgUrl ? /*#__PURE__*/React.createElement("img", {
@@ -9675,11 +9673,11 @@ function InventoryListView({
       }) : /*#__PURE__*/React.createElement("i", {
         className: `fas ${getSubCategoryIcon(row.sub_category || row.baseName)} text-zinc-600 text-xs`
       }))), /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 font-bold text-white"
+        className: "p-2 sm:p-2.5 font-bold text-white"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "group-hover:text-[#d4af37] transition-colors"
+        className: "group-hover:text-[#d4af37] transition-colors leading-snug text-[12.5px] sm:text-xs"
       }, row.baseName), /*#__PURE__*/React.createElement("button", {
         type: "button",
         onClick: e => {
@@ -9693,25 +9691,27 @@ function InventoryListView({
         title: isExpanded ? 'Thu gọn danh sách kích thước' : `Mở ${variants.length} kích thước`
       }, /*#__PURE__*/React.createElement("i", {
         className: `fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px]`
-      })))), /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]"
-      }, "LAYOUT")), /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]"
-      }, row.sub_category), /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 text-right whitespace-nowrap font-mono font-bold"
-      }, minPrice > 0 ? /*#__PURE__*/React.createElement("span", {
-        className: "text-zinc-100"
-      }, minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ`) : /*#__PURE__*/React.createElement("span", {
-        className: "text-zinc-500"
-      }, "0 \u0111")), /*#__PURE__*/React.createElement("td", {
-        className: "p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]"
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "sm:hidden flex items-center gap-1.5 mt-0.5 text-[10.5px] font-mono font-normal text-zinc-400"
+      }, /*#__PURE__*/React.createElement("span", null, minPrice > 0 ? minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ` : '0 đ'), row.sub_category && /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-600"
+      }, "\u2022"), row.sub_category && /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-500 font-sans truncate max-w-[120px]"
+      }, row.sub_category))), /*#__PURE__*/React.createElement("td", {
+        className: "p-2 sm:p-2.5 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-black text-[12.5px]"
       }, /*#__PURE__*/React.createElement("span", {
         className: totalQty <= 0 ? 'text-rose-400' : 'text-emerald-400'
       }, totalQty), /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
-      }, "B\u1ED9"))), isExpanded && variants.map(v => {
+      }, "B\u1ED9")), /*#__PURE__*/React.createElement("td", {
+        className: "p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px] hidden md:table-cell"
+      }, row.sub_category), /*#__PURE__*/React.createElement("td", {
+        className: "p-2.5 text-right pr-4 whitespace-nowrap font-mono font-bold hidden sm:table-cell"
+      }, minPrice > 0 ? /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-100"
+      }, minPrice === maxPrice ? `${formatMoney(minPrice)} đ` : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)} đ`) : /*#__PURE__*/React.createElement("span", {
+        className: "text-zinc-500"
+      }, "0 \u0111"))), isExpanded && variants.map(v => {
         const vQty = Math.round(Number(v.quantity || 0) * 100) / 100;
         const vMin = Number(v.minStock ?? (String(v._sizeLabel || '').includes('30x20x20') ? 1 : 0));
         const vMax = Number(v.maxStock ?? (String(v._sizeLabel || '').includes('30x20x20') ? 1 : 0));
@@ -9724,42 +9724,44 @@ function InventoryListView({
             e.stopPropagation();
             handleOpenProductDrawer(v, true, 'SKU_DETAIL', row);
           },
-          className: "bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub h-11"
+          className: "bg-[#0b0b0d] hover:bg-white/[0.05] transition-colors cursor-pointer group/sub min-h-[2.75rem]"
         }, /*#__PURE__*/React.createElement("td", {
-          className: "p-2 pl-4 w-16 text-right pr-2"
+          className: "p-2 pl-3 sm:pl-4 w-14 sm:w-16 text-right pr-2"
         }, /*#__PURE__*/React.createElement("span", {
           className: "inline-block w-2 h-2 rounded-full bg-zinc-700 group-hover/sub:bg-[#d4af37] transition-colors"
         })), /*#__PURE__*/React.createElement("td", {
           className: "p-2 pl-2"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2.5 flex-wrap"
+          className: "flex items-center gap-2 flex-wrap"
         }, /*#__PURE__*/React.createElement("span", {
           className: "font-mono font-bold text-xs text-zinc-200 group-hover/sub:text-[#d4af37] transition-colors"
         }, vSizeText), /*#__PURE__*/React.createElement("span", {
-          className: `px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${isReadyStockSize ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-white/[0.03] text-zinc-400 border-white/[0.06]'}`
-        }, isReadyStockSize ? `Min: ${vMin} • Max: ${vMax} (Sản xuất sẵn)` : `Min: ${vMin} • Max: ${vMax} (Có đơn mới SX)`))), /*#__PURE__*/React.createElement("td", {
-          className: "p-2 whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-mono text-zinc-500"
-        }, v.sku)), /*#__PURE__*/React.createElement("td", {
-          className: "p-2 whitespace-nowrap text-zinc-400 text-[11px]"
-        }, v.sub_category || '---'), /*#__PURE__*/React.createElement("td", {
-          className: "p-2 text-right whitespace-nowrap font-mono font-bold text-zinc-200 text-xs"
-        }, formatMoney(vPrice), " \u0111"), /*#__PURE__*/React.createElement("td", {
-          className: "p-2 text-right pr-4 whitespace-nowrap font-mono font-bold text-xs"
+          className: `px-1.5 py-0.5 rounded-md text-[9.5px] font-mono font-semibold border ${isReadyStockSize ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-white/[0.03] text-zinc-400 border-white/[0.06]'}`
+        }, isReadyStockSize ? `Min:${vMin}•Max:${vMax} (Sẵn)` : `Min:${vMin}•Max:${vMax} (Đơn)`)), /*#__PURE__*/React.createElement("div", {
+          className: "sm:hidden flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-zinc-400"
+        }, /*#__PURE__*/React.createElement("span", null, formatMoney(vPrice), " \u0111"), /*#__PURE__*/React.createElement("span", {
+          className: "text-zinc-600"
+        }, "\u2022"), /*#__PURE__*/React.createElement("span", {
+          className: "text-zinc-500"
+        }, v.sku))), /*#__PURE__*/React.createElement("td", {
+          className: "p-2 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-bold text-xs"
         }, /*#__PURE__*/React.createElement("span", {
           className: vQty <= 0 ? isReadyStockSize ? 'text-rose-400' : 'text-zinc-400' : 'text-emerald-400'
         }, vQty), /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
-        }, "B\u1ED9")));
+        }, "B\u1ED9")), /*#__PURE__*/React.createElement("td", {
+          className: "p-2 whitespace-nowrap text-zinc-400 text-[11px] hidden md:table-cell"
+        }, v.sub_category || '---'), /*#__PURE__*/React.createElement("td", {
+          className: "p-2 text-right pr-4 whitespace-nowrap font-mono font-bold text-zinc-200 text-xs hidden sm:table-cell"
+        }, formatMoney(vPrice), " \u0111"));
       }), isExpanded && isAdminRole && /*#__PURE__*/React.createElement("tr", {
         onClick: e => e.stopPropagation(),
         className: "bg-[#09090b] border-t border-white/[0.03]"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-2 pl-4 w-16"
+        className: "p-2 pl-3 sm:pl-4 w-14 sm:w-16"
       }), /*#__PURE__*/React.createElement("td", {
-        colSpan: 5,
-        className: "p-2 pr-4"
+        colSpan: 4,
+        className: "p-2 pr-3 sm:pr-4"
       }, addingSizeGroupKey === row.groupKey ? /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2 flex-wrap bg-[#121214] border border-white/[0.08] rounded-xl p-2"
       }, /*#__PURE__*/React.createElement("span", {
@@ -9870,9 +9872,9 @@ function InventoryListView({
     return /*#__PURE__*/React.createElement("tr", {
       key: p.id || p.sku,
       onClick: () => handleOpenProductDrawer(p, false, 'DEFAULT'),
-      className: "hover:bg-white/[0.04] transition-colors cursor-pointer group h-14"
+      className: "hover:bg-white/[0.04] transition-colors cursor-pointer group min-h-[3.5rem]"
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 pl-4 w-16"
+      className: "p-2 sm:p-2.5 pl-3 sm:pl-4 w-14 sm:w-16"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0"
     }, imgUrl ? /*#__PURE__*/React.createElement("img", {
@@ -9885,18 +9887,30 @@ function InventoryListView({
     }) : /*#__PURE__*/React.createElement("i", {
       className: `fas ${getSubCategoryIcon(p.sub_category || p.name)} text-zinc-600 text-xs`
     }))), /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 font-bold text-white"
+      className: "p-2 sm:p-2.5 font-bold text-white"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "line-clamp-1 group-hover:text-[#d4af37] transition-colors",
+      className: "group-hover:text-[#d4af37] transition-colors leading-snug text-[12.5px] sm:text-xs",
       title: p.name
-    }, p.name)), /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 whitespace-nowrap"
+    }, p.name), /*#__PURE__*/React.createElement("div", {
+      className: "sm:hidden flex items-center gap-1.5 mt-0.5 text-[10.5px] font-mono font-normal text-zinc-400"
+    }, priceNum > 0 ? /*#__PURE__*/React.createElement("span", null, formatMoney(priceNum), " \u0111") : isMaterial && canViewCost && costNum > 0 ? /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, formatMoney(costNum), " \u0111") : /*#__PURE__*/React.createElement("span", {
+      className: "text-zinc-500"
+    }, "0 \u0111"), p.sub_category && /*#__PURE__*/React.createElement("span", {
+      className: "text-zinc-600"
+    }, "\u2022"), p.sub_category && /*#__PURE__*/React.createElement("span", {
+      className: "text-zinc-500 font-sans truncate max-w-[130px]"
+    }, p.sub_category))), /*#__PURE__*/React.createElement("td", {
+      className: "p-2 sm:p-2.5 text-right pr-3 sm:pr-3 whitespace-nowrap font-mono font-black text-[12.5px]"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]"
-    }, catDisplay)), /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]"
+      className: !isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'
+    }, qty), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
+    }, unitLabel)), /*#__PURE__*/React.createElement("td", {
+      className: "p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px] hidden md:table-cell"
     }, p.sub_category || '---'), /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 text-right whitespace-nowrap font-mono font-bold"
+      className: "p-2.5 text-right pr-4 whitespace-nowrap font-mono font-bold hidden sm:table-cell"
     }, priceNum > 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-zinc-100"
     }, formatMoney(priceNum), " \u0111") : isMaterial && canViewCost && costNum > 0 ? /*#__PURE__*/React.createElement("span", {
@@ -9904,13 +9918,7 @@ function InventoryListView({
       title: "Gi\xE1 nh\u1EADp nguy\xEAn li\u1EC7u"
     }, formatMoney(costNum), " \u0111") : /*#__PURE__*/React.createElement("span", {
       className: "text-zinc-500"
-    }, "0 \u0111")), /*#__PURE__*/React.createElement("td", {
-      className: "p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: !isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'
-    }, qty), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] text-zinc-500 font-sans font-normal ml-1"
-    }, unitLabel)));
+    }, "0 \u0111")));
   })))), selectedDrawerItem && (() => {
     const isVerOverview = drawerMode === 'VER_OVERVIEW';
     const isSkuDetail = drawerMode === 'SKU_DETAIL';
