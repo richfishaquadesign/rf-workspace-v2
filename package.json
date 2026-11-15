@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "RF Workspace V2 - Standalone App on Supabase and Vercel",
   "scripts": {
-    "build": "node tools/precompile_jsx.js && python tools/build_vercel_standalone.py"
+    "build:local": "node tools/precompile_jsx.js && python tools/build_vercel_standalone.py"
   }
 }
-

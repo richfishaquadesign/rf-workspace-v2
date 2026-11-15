@@ -1,8 +1,10 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/",
-      "destination": "/vercel_index.html"
+      "destination": "/index.html"
     }
   ],
   "headers": [
