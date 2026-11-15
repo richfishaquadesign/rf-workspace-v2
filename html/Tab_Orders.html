@@ -1372,7 +1372,7 @@
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         });
-        const [filterStatus, setFilterStatus] = React.useState('Chờ Sản Xuất');
+        const [filterStatus, setFilterStatus] = React.useState('ALL');
         const [filterChannel, setFilterChannel] = React.useState('ALL');
         const [renderLimit, setRenderLimit] = React.useState(50);
         const [viewMode, setViewMode] = React.useState('CARDS');

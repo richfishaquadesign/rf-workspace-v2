@@ -209,7 +209,7 @@ def load_image_map():
 
     def normalize_img(raw_u):
         s = str(raw_u or "").strip()
-        if not s or "shopee" in s.lower() or "/images/catalog/" in s:
+        if not s:
             return ""
         if s.startswith("/"):
             return MEDIA_BASE_URL + s
@@ -250,7 +250,7 @@ def load_image_map():
                 clean_imgs = []
                 for x in raw_imgs:
                     u = normalize_img(x)
-                    if u and ("/images/black-covers/" in u or "/images/five-angle/" in u or "/media-vault/" in u):
+                    if u and ("/images/black-covers/" in u or "/images/five-angle/" in u or "/media-vault/" in u or "/images/catalog/" in u or u.startswith("http")):
                         if u not in clean_imgs:
                             clean_imgs.append(u)
                 if clean_imgs:

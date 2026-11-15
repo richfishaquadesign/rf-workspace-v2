@@ -9929,7 +9929,7 @@ function InventoryListView({
     const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
     const activePhotoObj = drawerGallery[drawerPhotoIdx] || drawerGallery[0] || null;
     const activeImgUrl = activePhotoObj?.url || '';
-    const rawDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
+    const rawDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '').trim();
     const dDescription = isVerOverview ? rawDescription.replace(/^Layout\s+/i, '').replace(/\s*[—–-]\s*(?:Size\s*[SML]\s*)?\(\s*\d+x\d+x\d+(?:cm)?\s*\)/gi, '').replace(/\s*[—–-]\s*\d+x\d+x\d+(?:cm)?/gi, '').trim() : rawDescription;
     const dDimensions = String(selectedDrawerItem._sizeLabel || drawerDetailMeta?.dimensions || '').trim();
     const dimMatch = `${selectedDrawerItem._sizeLabel || ''} ${selectedDrawerItem.name || ''} ${dDimensions}`.match(/(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/i);
@@ -10408,7 +10408,7 @@ function InventoryListView({
     }), /*#__PURE__*/React.createElement("span", {
       className: "font-bold text-[11px] uppercase tracking-wider text-white"
     }, "M\xF4 T\u1EA3 H\xE0ng H\xF3a")), dDescription ? /*#__PURE__*/React.createElement("div", {
-      className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto custom-scrollbar"
+      className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar"
     }, dDescription) : /*#__PURE__*/React.createElement("div", {
       className: "bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[11.5px] text-zinc-500 italic"
     }, "Ch\u01B0a c\xF3 m\xF4 t\u1EA3 chi ti\u1EBFt cho h\xE0ng h\xF3a n\xE0y.")), !isVerOverview && /*#__PURE__*/React.createElement("div", {

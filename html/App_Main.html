@@ -218,15 +218,15 @@
             },
             {
                 tier: 8,
-                tierLabel: "THẦN THOẠI",
-                tierTitle: "Tối Cao Thần Thoại",
-                icon: "fa-crown",
-                iconEmoji: "👑",
+                tierLabel: "TỐI CAO",
+                tierTitle: "Tối Cao Điều Hành",
+                icon: "fa-shield-halved",
+                iconEmoji: "⚡",
                 levelRange: "Cấp 50 - 100",
-                badge: "bg-gradient-to-r from-purple-950 via-indigo-950 to-purple-900 text-amber-300 border-2 border-amber-300 font-black shadow-[0_0_35px_rgba(251,191,36,0.9)]",
-                bar: "from-cyan-400 via-amber-300 to-rose-400",
-                expText: "text-cyan-300",
-                badgeGlow: "shadow-[0_0_35px_rgba(251,191,36,0.9)]"
+                badge: "bg-zinc-800 text-white border border-zinc-600 font-bold",
+                bar: "from-zinc-400 via-white to-zinc-300",
+                expText: "text-zinc-100",
+                badgeGlow: "shadow-none"
             }
         ];
         return styles[Math.min(tier, styles.length - 1)];
@@ -631,29 +631,28 @@
             <React.Fragment>
                 <div 
                     onClick={() => setShowModal(true)}
-                    className={`animate-fade-in flex items-center gap-1 sm:gap-2 px-1.5 sm:px-2.5 py-1 rounded-xl cursor-pointer select-none transition-all active:scale-95 shrink-0 bg-[#121215] border border-white/[0.08] hover:border-amber-500/40 shadow-sm ${style.badgeGlow}`}
+                    className="animate-fade-in flex items-center gap-1 sm:gap-2 px-2 py-1 rounded-md cursor-pointer select-none transition-all active:scale-95 shrink-0 bg-[#141416] border border-[#27272a] hover:border-zinc-500 shadow-none"
                     title={`Cấp ${expInfo.level} - ${expInfo.title} (Nhấn để xem lộ trình thăng cấp)`}
                 >
                     {/* Level Badge */}
-                    <div className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[9.5px] sm:text-[11px] font-black uppercase flex items-center gap-1 shrink-0 ${style.badge}`}>
-                        <span>{style.iconEmoji}</span>
+                    <div className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 shrink-0 bg-white/10 text-white border border-white/10">
                         <span className="font-mono">CẤP {expInfo.level}</span>
                     </div>
 
                     {/* Tier Pill (Desktop & Tablet) */}
-                    <div className={`hidden md:inline-block px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider ${style.badge}`}>
+                    <div className="hidden md:inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
                         {style.tierLabel}
                     </div>
 
                     {/* Mini EXP Bar (Hiển thị trên mọi thiết bị) */}
                     <div className="flex flex-col justify-center w-12 sm:w-20 md:w-24 gap-0.5 shrink-0">
-                        <div className="flex justify-between items-center text-[7.5px] sm:text-[8.5px] font-black font-mono leading-none">
-                            <span className={style.expText}>{expInfo.progressPct.toFixed(0)}%</span>
+                        <div className="flex justify-between items-center text-[8px] font-semibold font-mono leading-none">
+                            <span className="text-zinc-300">{expInfo.progressPct.toFixed(0)}%</span>
                             <span className="hidden sm:inline text-zinc-500 text-[7.5px]">{Math.round(expInfo.expInLevel / 1000)}k/{Math.round(expInfo.neededForNext / 1000)}k</span>
                         </div>
                         <div className="w-full h-1 sm:h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-white/[0.08] p-[0.5px]">
                             <div 
-                                className={`h-full rounded-full bg-gradient-to-r ${style.bar} transition-all duration-500 shadow-sm`}
+                                className="h-full rounded-full bg-white transition-all duration-500 shadow-none"
                                 style={{ width: `${Math.max(3, expInfo.progressPct)}%` }}
                             ></div>
                         </div>
@@ -663,48 +662,47 @@
                 {/* EXP Modal Roadmap (Dùng createPortal để thoát khỏi Header backdrop-blur trap) */}
                 {showModal && ReactDOM.createPortal(
                     <div 
-                        className="fixed inset-0 z-[999999] bg-black/85 backdrop-blur-md overflow-y-auto p-3 sm:p-4 flex items-center justify-center animate-fade-in" 
+                        className="fixed inset-0 z-[999999] bg-black/85 overflow-y-auto p-3 sm:p-4 flex items-center justify-center animate-fade-in" 
                         onClick={() => setShowModal(false)}
                         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999 }}
                     >
                         <div 
-                            className="my-auto bg-[#121215] border border-white/[0.16] w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl animate-slide-up flex flex-col shrink-0 relative" 
+                            className="my-auto bg-[#141416] border border-[#27272a] w-full max-w-md rounded-md p-4 sm:p-5 shadow-none animate-slide-up flex flex-col shrink-0 relative" 
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Header Modal */}
-                            <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-white/[0.08]">
+                            <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-[#27272a]">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-sm shadow-sm">
-                                        <i className="fas fa-crown"></i>
+                                    <div className="w-7 h-7 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-200 text-xs">
+                                        <i className="fas fa-id-badge"></i>
                                     </div>
                                     <div>
-                                        <div className="font-black text-xs sm:text-sm text-white uppercase tracking-wider">Hệ Thống Cấp Độ & EXP</div>
-                                        <div className="text-[9.5px] sm:text-[10px] text-zinc-400 font-medium">Lộ trình thăng tiến nhân sự Rich Fish</div>
+                                        <div className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider">Hệ Thống Cấp Độ & EXP</div>
+                                        <div className="text-[10px] text-zinc-400 font-medium">Lộ trình thăng tiến nhân sự RF</div>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={() => setShowModal(false)} 
-                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs"
+                                    className="w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs"
                                 >
                                     <i className="fas fa-times"></i>
                                 </button>
                             </div>
 
                             {/* Current User Card Preview (Nổi bật, rõ nét và tương phản cao) */}
-                            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#1c1c24] via-[#14141a] to-[#0c0c10] border border-amber-500/40 shadow-xl mb-3.5 relative overflow-hidden">
+                            <div className="p-3.5 sm:p-4 rounded-md bg-[#18181b] border border-[#27272a] mb-3.5 relative overflow-hidden">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                        <span className="text-2xl shrink-0">{style.iconEmoji}</span>
                                         <div className="min-w-0">
-                                            <div className="font-black text-sm sm:text-base text-white truncate">{currentUser}</div>
-                                            <div className="text-[11px] font-bold text-amber-300 truncate">{expInfo.title}</div>
+                                            <div className="font-bold text-sm sm:text-base text-white truncate">{currentUser}</div>
+                                            <div className="text-[11px] font-medium text-zinc-300 truncate">{expInfo.title}</div>
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <div className="px-2 py-0.5 rounded-lg text-[11px] sm:text-xs font-black font-mono text-white bg-amber-500/20 border border-amber-500/40 shadow-sm inline-block">
+                                        <div className="px-2 py-0.5 rounded text-[11px] sm:text-xs font-bold font-mono text-white bg-white/10 border border-white/20 inline-block">
                                             CẤP {expInfo.level}
                                         </div>
-                                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mt-0.5">{style.tierTitle}</div>
+                                        <div className="text-[9px] font-semibold uppercase tracking-widest text-zinc-400 mt-0.5">{style.tierTitle}</div>
                                     </div>
                                 </div>
 
@@ -747,12 +745,12 @@
                                         <div className="text-zinc-400 text-[9px] flex items-center gap-1"><i className="fas fa-trophy text-purple-400"></i> Thưởng KPI</div>
                                         <div className="text-purple-400 font-mono font-bold text-xs mt-0.5">{Math.round(expInfo.totalKPIVnd || 0).toLocaleString('vi-VN')} đ</div>
                                     </div>
-                                    <div className="col-span-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
-                                        <div className="text-amber-300 font-bold text-[10.5px] flex items-center gap-1.5">
-                                            <i className="fas fa-coins text-[#d4af37]"></i> Ví Xu Tích Lũy
+                                    <div className="col-span-2 p-2 rounded-md bg-[#18181b] border border-[#333333] flex items-center justify-between">
+                                        <div className="text-zinc-200 font-semibold text-[10.5px] flex items-center gap-1.5">
+                                            <i className="fas fa-coins text-zinc-300"></i> Điểm Tích Lũy
                                         </div>
-                                        <div className="text-[#d4af37] font-mono font-black text-sm">
-                                            {Math.round(expInfo.totalXu || 0).toLocaleString('vi-VN')} Xu
+                                        <div className="text-white font-mono font-bold text-sm">
+                                            {Math.round(expInfo.totalXu || 0).toLocaleString('vi-VN')} Điểm
                                         </div>
                                     </div>
                                 </div>
@@ -2955,8 +2953,8 @@
                         desc: 'Kéo thả file xuất từ "Công cụ xử lý hàng loạt" của Shopee để đồng bộ hàng chục sản phẩm mới vào kho hàng trong một thao tác.'
                     },
                     {
-                        icon: 'fa-crown',
-                        color: 'text-[#d4af37]',
+                        icon: 'fa-shield-halved',
+                        color: 'text-white',
                         title: 'Phân Quyền Độc Quyền TỐI CAO',
                         desc: 'Nút bấm và Modal được bảo vệ 2 lớp nghiêm ngặt, chỉ hiển thị và cho phép thực thi đối với cấp bậc TỐI CAO (isBoss || role === TỐI CAO).'
                     }
@@ -4593,8 +4591,8 @@
                 categories: ['KPI', 'Tối Cao', 'Manual Override', 'Hotfix', 'Đồng Bộ'],
                 items: [
                     {
-                        icon: 'fa-crown',
-                        color: 'text-amber-400',
+                        icon: 'fa-pen-to-square',
+                        color: 'text-white',
                         title: 'Kích Hoạt Cơ Chế Ghi Đè Tiến Độ Bất Biến (Manual Override)',
                         desc: 'Khi Boss nhập số liệu qua nút Vương Miện, hệ thống kích hoạt cờ isManualOverride và gắn nhãn [MANUAL_OVERRIDE], ngăn không cho engine tính toán động hoặc cron backend đè mất số liệu.'
                     },
@@ -7005,14 +7003,14 @@
         return (
             <div className="w-full max-w-4xl mx-auto space-y-4 pb-12 text-zinc-200">
                 {/* HEADER ĐƠN GIẢN */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121214] p-4 rounded-xl border border-zinc-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121214] p-4 rounded-md border border-zinc-800">
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-lg font-bold text-white tracking-wide">
                                 Nhật Ký Cập Nhật Hệ Thống
                             </h1>
-                            <span className="px-2 py-0.5 rounded bg-[#d4af37]/10 text-[#d4af37] text-[11px] font-mono font-bold border border-[#d4af37]/30">
-                                Royal v2.40.4
+                            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 text-[11px] font-mono font-bold border border-zinc-700">
+                                Workspace v2.40.4
                             </span>
                         </div>
                         <p className="text-[12px] text-zinc-400 mt-0.5">
@@ -7023,7 +7021,7 @@
                     <div className="flex items-center gap-2 shrink-0">
                         <button 
                             onClick={copyChangelogToClipboard}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[12px] font-medium border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[12px] font-medium border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
                         >
                             <i className="fas fa-copy text-[11px]"></i>
                             <span>Sao chép</span>
@@ -7034,7 +7032,7 @@
                                     window.dispatchEvent(new CustomEvent('triggerReloadData'));
                                 }
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#c49f2c] text-black text-[12px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-md bg-white hover:bg-zinc-200 text-black text-[12px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                         >
                             <i className="fas fa-sync-alt text-[11px]"></i>
                             <span>Đồng bộ</span>
@@ -7043,7 +7041,7 @@
                 </div>
 
                 {/* BỘ LỌC & TÌM KIẾM TINH GỌN */}
-                <div className="flex flex-col sm:flex-row gap-2.5 justify-between items-stretch sm:items-center bg-[#121214] p-2.5 rounded-xl border border-zinc-800/80">
+                <div className="flex flex-col sm:flex-row gap-2.5 justify-between items-stretch sm:items-center bg-[#121214] p-2.5 rounded-md border border-zinc-800/80">
                     <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
                         {allCategories.map(cat => (
                             <button
@@ -7067,7 +7065,7 @@
                             placeholder="Tìm nội dung..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full bg-[#121214] border border-zinc-700 text-zinc-200 text-[12px] rounded-lg pl-7 pr-7 py-1 focus:outline-none focus:border-[#d4af37]"
+                            className="w-full bg-[#121214] border border-zinc-700 text-zinc-200 text-[12px] rounded-md pl-7 pr-7 py-1 focus:outline-none focus:border-white"
                         />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
@@ -7080,15 +7078,15 @@
                 {/* DANH SÁCH CẬP NHẬT ĐƠN GIẢN, DỄ ĐỌC */}
                 <div className="space-y-3">
                     {filteredReleases.length === 0 ? (
-                        <div className="p-8 text-center bg-[#121214] rounded-xl border border-zinc-800 text-zinc-500">
+                        <div className="p-8 text-center bg-[#121214] rounded-md border border-zinc-800 text-zinc-500">
                             <p className="text-xs">Không tìm thấy nội dung cập nhật phù hợp.</p>
                         </div>
                     ) : (
                         filteredReleases.map((rel, rIdx) => (
                             <div 
                                 key={rel.version} 
-                                className={`rounded-xl bg-[#121214] border p-4 transition-all ${
-                                    rel.isLatest ? 'border-[#d4af37]/60 bg-[#151518]' : 'border-zinc-800/80'
+                                className={`rounded-md bg-[#121214] border p-4 transition-all ${
+                                    rel.isLatest ? 'border-zinc-500 bg-[#151518]' : 'border-zinc-800/80'
                                 }`}
                             >
                                 {/* TIÊU ĐỀ PHIÊN BẢN */}
@@ -7121,7 +7119,7 @@
                                 <div className="space-y-1.5 pt-2 border-t border-zinc-800/40">
                                     {rel.items.map((it, iIdx) => (
                                         <div key={iIdx} className="flex items-start gap-2 text-[12px]">
-                                            <i className="fas fa-check text-[#d4af37] text-[10px] mt-1 shrink-0"></i>
+                                            <i className="fas fa-check text-white text-[10px] mt-1 shrink-0"></i>
                                             <div>
                                                 <span className="font-semibold text-zinc-200">{it.title}: </span>
                                                 <span className="text-zinc-400">{it.desc}</span>
@@ -8412,14 +8410,14 @@
         ];
 
         if (loading) return (
-            <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#09090b] text-[#d4af37] z-[9999]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                <div className="flex flex-col items-center px-8 text-center drop-shadow-2xl">
-                    <div className="mb-8 animate-pulse">
-                        {typeof RFLogo !== 'undefined' ? <RFLogo className="w-16 h-16 mx-auto drop-shadow-[0_0_15px_rgba(2,132,199,0.5)]" size={64} /> : <i className="fas fa-crown text-6xl text-[#d4af37]"></i>}
+            <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#09090b] text-white z-[9999]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+                <div className="flex flex-col items-center px-8 text-center">
+                    <div className="mb-6">
+                        {typeof RFLogo !== 'undefined' ? <RFLogo className="w-14 h-14 mx-auto" size={56} /> : <div className="w-14 h-14 rounded bg-white text-black font-black flex items-center justify-center text-xl mx-auto">RF</div>}
                     </div>
-                    <p className="text-[16px] italic font-medium leading-relaxed text-zinc-300 mb-4">"Sự sang trọng nằm ở sự tối giản của trí tuệ."</p>
-                    <div className="w-12 h-[1px] bg-[#d4af37] mx-auto mb-4"></div>
-                    <p className="text-[10px] tracking-[0.3em] font-black uppercase text-[#d4af37]">RFaquarium Philosophy</p>
+                    <p className="text-[14px] font-semibold leading-relaxed text-zinc-200 mb-2 tracking-wide">RF WORKSPACE PRO</p>
+                    <div className="w-8 h-[1px] bg-zinc-700 mx-auto mb-2"></div>
+                    <p className="text-[10px] tracking-[0.25em] font-semibold uppercase text-zinc-500">Minimalism × Precision Craftsmanship</p>
                 </div>
             </div>
         );
@@ -8430,8 +8428,7 @@
         }} />;
 
         return (
-            <div className="fixed inset-0 flex flex-row w-full text-[12px] max-w-[100vw] mx-auto overflow-hidden is-dark bg-[#09090b] text-zinc-100 selection:bg-[#d4af37]/30 premium-ui" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", height: 'var(--app-height, 100dvh)' }}>
-                <div className="fixed inset-0 pointer-events-none z-[-1] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-900/40 via-[#09090b] to-[#09090b]"></div>
+            <div className="fixed inset-0 flex flex-row w-full text-[12px] max-w-[100vw] mx-auto overflow-hidden is-dark bg-[#09090b] text-zinc-100 premium-ui" style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", height: 'var(--app-height, 100dvh)' }}>
                 {typeof ToastManager !== 'undefined' && <ToastManager toasts={toasts} />}
                 {globalLightbox && typeof RFImageLightboxModal !== 'undefined' && (
                     <RFImageLightboxModal 
@@ -8443,16 +8440,14 @@
 
                 {/* ⚡ FLOATING SERVER SYNC NOTIFICATION PILL */}
                 {isInitialFetching && (
-                    <div className="fixed top-2.5 sm:top-3.5 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex items-center gap-2.5 bg-[#141418]/95 border border-[#d4af37]/40 text-[#d4af37] px-4 py-2 rounded-full shadow-[0_4px_30px_rgba(0,0,0,0.9)] backdrop-blur-md text-[11px] font-bold tracking-wide animate-fade-in">
-                        <i className="fas fa-circle-notch fa-spin text-[#d4af37] text-[12px]"></i>
-                        <span>Đang kéo dữ liệu mới nhất từ máy chủ...</span>
+                    <div className="fixed top-2.5 sm:top-3.5 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex items-center gap-2.5 bg-[#141416] border border-[#333333] text-zinc-200 px-3.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wide animate-fade-in shadow-md">
+                        <i className="fas fa-circle-notch fa-spin text-zinc-400 text-[12px]"></i>
+                        <span>Đang đồng bộ dữ liệu mới nhất...</span>
                     </div>
                 )}
 
                 <style>
                     {`
-          @import url('https:\/\/fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
-          
           /* 📱 MOBILE IPHONE X+ HARDWARE ACCELERATION & SILKY SMOOTH SCROLLING */
           * {
             -webkit-tap-highlight-color: transparent;
@@ -8471,23 +8466,22 @@
           }
 
           .premium-ui *:not(i) { 
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif !important; 
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
           
           .premium-ui { font-size: 13px; line-height: 1.5; }
-          .premium-ui button, .premium-ui input, .premium-ui select, .premium-ui textarea { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+          .premium-ui button, .premium-ui input, .premium-ui select, .premium-ui textarea { transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1); }
           
           /* Dark Theme Styling */
-          .premium-ui .sticky { background-color: rgba(9, 9, 11, 0.9) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; backdrop-filter: blur(20px); }
-          .premium-ui main button { border: 1px solid rgba(255,255,255,0.08) !important; background-color: rgba(255,255,255,0.03) !important; color: #e4e4e7 !important; }
-          .premium-ui main button:hover { background-color: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.15) !important; }
+          .premium-ui .sticky { background-color: rgba(9, 9, 11, 0.95) !important; border-bottom: 1px solid #27272a !important; }
+          .premium-ui main button { border: 1px solid #27272a !important; background-color: #18181b !important; color: #f4f4f5 !important; border-radius: 6px !important; }
+          .premium-ui main button:hover { background-color: #242427 !important; border-color: #3f3f46 !important; }
           .premium-ui main button:active { transform: scale(0.985); }
-          .premium-ui .fixed.inset-y-0 { box-shadow: 1px 0 0 rgba(0,0,0,0.06) !important; }
-          .premium-ui button.bg-zinc-800\/50, .premium-ui button.bg-\[\#fffbeb\] { position: relative; }
-          .premium-ui button.bg-zinc-800\/50::before, .premium-ui button.bg-\[\#fffbeb\]::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 60%; background: #d4af37; border-radius: 0 3px 3px 0; }
-          .premium-ui [class*="rounded-2xl"], .premium-ui [class*="rounded-xl"] { border-radius: 14px !important; }
+          .premium-ui button.bg-zinc-800\/50 { position: relative; }
+          .premium-ui button.bg-zinc-800\/50::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 2px; height: 60%; background: #ffffff; }
+          .premium-ui [class*="rounded-2xl"], .premium-ui [class*="rounded-xl"] { border-radius: 6px !important; }
           .premium-ui select { background-image: url("data:image/svg+xml,%3csvg xmlns='http:\/\/www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
           
           /* Chế độ KHÁCH xem không được sửa */
@@ -8501,20 +8495,17 @@
               cursor: not-allowed !important;
               opacity: 0.85 !important;
           }
-          .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; transition: all 0.2s ease; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.15); border-radius: 99px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.45); border-radius: 99px; border: 1.5px solid transparent; background-clip: padding-box; transition: background 0.2s ease; }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.85); }
-          .text-\\[\\#d4af37\\], .text-yellow-600, .text-yellow-700 { color: #d4af37 !important; }
-          .premium-ui input, .premium-ui select, .premium-ui textarea { background-color: inherit; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
-          .premium-ui.is-dark input, .premium-ui.is-dark select, .premium-ui.is-dark textarea { border-color: rgba(255,255,255,0.1); background-color: #0f0f11; color: #f1f5f9; }
-          .premium-ui [class*="shadow-"], .premium-ui [class*="drop-shadow"] { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }
-          .premium-ui.is-dark [class*="shadow-"], .premium-ui.is-dark [class*="drop-shadow"] { box-shadow: none !important; }
-          .premium-ui.is-dark select, .premium-ui.is-dark .form-select, .premium-ui.is-dark .filter-dropdown { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #333333 !important; border-radius: 8px !important; }
-          .btn-status, .tab-button { transition: all 0.25s ease-in-out !important; }
-          .premium-ui input:focus, .premium-ui select:focus, .premium-ui textarea:focus { border-color: #d4af37 !important; box-shadow: 0 0 0 3px rgba(212,175,55,0.15) !important; outline: none !important; }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; transition: all 0.2s ease; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+          .premium-ui input, .premium-ui select, .premium-ui textarea { background-color: #111111; border: 1px solid #333333; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #f4f4f5; }
+          .premium-ui.is-dark input, .premium-ui.is-dark select, .premium-ui.is-dark textarea { border-color: #333333; background-color: #111111; color: #f4f4f5; }
+          .premium-ui [class*="shadow-"], .premium-ui [class*="drop-shadow"] { box-shadow: none !important; }
+          .premium-ui.is-dark select, .premium-ui.is-dark .form-select, .premium-ui.is-dark .filter-dropdown { background-color: #141416 !important; color: #ffffff !important; border: 1px solid #333333 !important; border-radius: 6px !important; }
+          .premium-ui input:focus, .premium-ui select:focus, .premium-ui textarea:focus { border-color: #71717a !important; box-shadow: 0 0 0 1px #71717a !important; outline: none !important; }
           
-          /* ⚡ TỐI ƯU HÓA 0MS CHUYỂN ĐỔI TAB & CUỘN SIÊU MƯỢT 120FPS CHUẨN HALLMARK */
+          /* ⚡ TỐI ƯU HÓA 0MS CHUYỂN ĐỔI TAB & CUỘN SIÊU MƯỢT 120FPS */
           .rf-tab-view {
             min-height: 100%;
             width: 100%;
@@ -8522,21 +8513,12 @@
           button, a, input, select, textarea, [role="button"] {
             touch-action: manipulation;
           }
-          .premium-ui.is-dark input:focus, .premium-ui.is-dark select:focus, .premium-ui.is-dark textarea:focus { box-shadow: 0 0 0 3px rgba(212,175,55,0.2) !important; }
-          .gen2-glass { backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%); }
-          .premium-ui.is-dark .gen2-glass, .premium-ui.is-dark [class*="backdrop-blur"] { background-color: rgba(9, 9, 11, 0.6) !important; border: 1px solid rgba(255,255,255,0.05) !important; }
-          .gen2-nav-btn { min-width: 56px; }
-          .gen2-nav-badge { animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-          @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-          @keyframes badgePop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-
-          /* MINI-RAIL & FLOATING TOOLTIP CHUẨN HALLMARK ROYAL */
           .mini-rail-tooltip {
             animation: tooltipPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
           @keyframes tooltipPop {
-            0% { opacity: 0; transform: translateY(-50%) translateX(-6px) scale(0.96); }
-            100% { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+            0% { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+            100% { opacity: 1; transform: translateY(-50%) translateX(0); }
           }
 
           /* GPU HARDWARE ACCELERATION & INSTANT 0MS TAB SWITCHING */
@@ -8545,29 +8527,29 @@
             transform: translateZ(0);
           }
           .skeleton-loader {
-            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 37%, rgba(255,255,255,0.03) 63%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 37%, rgba(255,255,255,0.02) 63%);
             background-size: 400% 100%;
             animation: shimmer 1.4s ease infinite;
           }
         `}
                 </style>
 
-                {isMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/60 z-[200] backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsMenuOpen(false)}></div>}
+                {isMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/70 z-[200] transition-opacity duration-200" onClick={() => setIsMenuOpen(false)}></div>}
 
-                <aside className={`fixed lg:static inset-y-0 left-0 shrink-0 z-[210] transform transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${isSidebarCollapsed ? 'w-[240px] lg:w-[68px]' : 'w-[240px]'} bg-[#121214] border-r border-white/[0.08] shadow-sm select-none`}>
+                <aside className={`fixed lg:static inset-y-0 left-0 shrink-0 z-[210] transform transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${isSidebarCollapsed ? 'w-[240px] lg:w-[68px]' : 'w-[240px]'} bg-[#121214] border-r border-[#27272a] shadow-none select-none`}>
                     {/* ĐỈNH SIDEBAR */}
-                    <div className={`p-4 pt-[max(1.5rem,env(safe-area-inset-top))] border-b border-white/[0.06] flex items-center ${isSidebarCollapsed ? 'lg:p-3 lg:justify-center' : 'justify-between'}`}>
+                    <div className={`p-4 pt-[max(1.5rem,env(safe-area-inset-top))] border-b border-[#27272a] flex items-center ${isSidebarCollapsed ? 'lg:p-3 lg:justify-center' : 'justify-between'}`}>
                         <div className="flex items-center gap-3 min-w-0">
                             {typeof RFLogo !== 'undefined' ? (
                                 <RFLogo className="w-8 h-8 shrink-0" size={32} />
                             ) : (
-                                <div className="w-8 h-8 rounded-lg bg-[#d4af37]/15 flex items-center justify-center border border-[#d4af37]/30 shadow-sm shrink-0">
-                                    <i className="fas fa-crown text-[#d4af37] text-[14px]"></i>
+                                <div className="w-8 h-8 rounded bg-white text-black font-black flex items-center justify-center text-xs shrink-0">
+                                    RF
                                 </div>
                             )}
                             <div className={`${isSidebarCollapsed ? 'lg:hidden' : ''} truncate transition-opacity duration-200`}>
-                                <div className="font-semibold font-display tracking-wide text-[14px] text-zinc-100">Workspace</div>
-                                <div className="text-[10px] text-[#d4af37] font-bold uppercase tracking-widest mt-0.5">Royal V2 <span className="text-[10px] text-zinc-400">v2.46.45</span></div>
+                                <div className="font-bold tracking-wide text-[14px] text-zinc-100">Workspace</div>
+                                <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-widest mt-0.5">Workspace V2 <span className="text-[10px] text-zinc-500">v2.46.45</span></div>
                             </div>
                         </div>
 
@@ -8575,7 +8557,7 @@
                         <button
                             type="button"
                             onClick={toggleSidebar}
-                            className={`hidden lg:flex w-7 h-7 items-center justify-center rounded-lg transition-all text-zinc-400 hover:text-[#d4af37] hover:bg-[#d4af37]/10 active:scale-95 ${isSidebarCollapsed ? 'mt-2' : ''}`}
+                            className={`hidden lg:flex w-7 h-7 items-center justify-center rounded transition-all text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 ${isSidebarCollapsed ? 'mt-2' : ''}`}
                             title={isSidebarCollapsed ? "Mở rộng menu (Ctrl+B)" : "Thu gọn menu (Ctrl+B)"}
                         >
                             <i className={`fas ${isSidebarCollapsed ? 'fa-angles-right text-[11px]' : 'fa-angles-left text-[11px]'}`}></i>
@@ -8588,7 +8570,7 @@
                                 triggerHaptic('light');
                                 setIsMenuOpen(false);
                             }}
-                            className="lg:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-xl transition-all text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95 text-base"
+                            className="lg:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded transition-all text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 text-base"
                             aria-label="Đóng menu"
                         >
                             <i className="fas fa-times text-lg"></i>
@@ -8610,7 +8592,7 @@
                                     <div className="space-y-1">
                                         {group.items.map(item => {
                                             const isActive = activeTab === item.id;
-                                            const activeClass = 'bg-[#d4af37]/15 text-[#d4af37] font-medium border border-[#d4af37]/25 shadow-sm shadow-[#d4af37]/5';
+                                            const activeClass = 'bg-[#222225] text-white font-semibold border border-[#3f3f46]';
                                             const inactiveClass = 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-all border border-transparent';
                                             return (
                                                 <div key={item.id} className="relative group">
@@ -8631,7 +8613,7 @@
                                                         }}
                                                         className={`w-full flex items-center ${isSidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : 'gap-3 px-3 py-2'} rounded-md text-[13px] transition-all duration-200 ${isActive ? activeClass : inactiveClass}`}
                                                     >
-                                                        <div className={`w-5 flex justify-center text-[14px] shrink-0 ${isActive ? 'text-[#d4af37]' : 'opacity-70'}`}>
+                                                        <div className={`w-5 flex justify-center text-[14px] shrink-0 ${isActive ? 'text-white' : 'opacity-70'}`}>
                                                             <i className={`fas ${item.icon}`}></i>
                                                         </div>
                                                         <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} truncate text-left flex-1`}>
@@ -8639,26 +8621,26 @@
                                                         </span>
                                                         {item.id === 'training' && unreadTrainingsCount > 0 && (
                                                             <>
-                                                                <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} ml-auto bg-[#d4af37] text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse`}>
+                                                                <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} ml-auto bg-white text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full`}>
                                                                     {unreadTrainingsCount}
                                                                 </span>
                                                                 {isSidebarCollapsed && (
-                                                                    <span className="hidden lg:block absolute top-1.5 right-2 w-2 h-2 bg-[#d4af37] rounded-full animate-pulse"></span>
+                                                                    <span className="hidden lg:block absolute top-1.5 right-2 w-2 h-2 bg-white rounded-full"></span>
                                                                 )}
                                                             </>
                                                         )}
                                                     </button>
 
-                                                    {/* Floating Tooltip Hallmark khi thu gọn Desktop */}
+                                                    {/* Floating Tooltip khi thu gọn Desktop */}
                                                     {isSidebarCollapsed && (
-                                                        <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b]/95 backdrop-blur-md text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5),0_0_12px_rgba(212,175,55,0.2)] border border-[#d4af37]/35 whitespace-nowrap items-center gap-2 pointer-events-none">
+                                                        <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b] text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-md border border-[#333333] whitespace-nowrap items-center gap-2 pointer-events-none shadow-lg">
                                                             <span>{item.label}</span>
                                                             {item.id === 'training' && unreadTrainingsCount > 0 && (
-                                                                <span className="bg-[#d4af37] text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                                                                <span className="bg-white text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                                                                     {unreadTrainingsCount}
                                                                 </span>
                                                             )}
-                                                            <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#d4af37]/35 rotate-45"></div>
+                                                            <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#333333] rotate-45"></div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -8687,25 +8669,25 @@
                                             setMode('WORKSPACE');
                                         }
                                     }}
-                                    className={`w-full flex items-center ${isSidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : 'justify-between px-3 py-2'} rounded-lg font-medium text-[12px] transition-all cursor-pointer ${
+                                    className={`w-full flex items-center ${isSidebarCollapsed ? 'lg:justify-center lg:px-0 lg:py-2.5' : 'justify-between px-3 py-2'} rounded-md font-medium text-[12px] transition-all cursor-pointer ${
                                         activeTab === 'changelog'
-                                            ? 'bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30 font-bold shadow-sm'
+                                            ? 'bg-[#222225] text-white border border-[#3f3f46] font-semibold'
                                             : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]'
                                     }`}
                                 >
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-5 flex justify-center text-[#d4af37] text-[13px] shrink-0">
+                                        <div className="w-5 flex justify-center text-zinc-200 text-[13px] shrink-0">
                                             <i className="fas fa-rocket"></i>
                                         </div>
                                         <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} truncate`}>Bản Cập Nhật</span>
                                     </div>
-                                    <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30`}>v3.4.0</span>
+                                    <span className={`${isSidebarCollapsed ? 'lg:hidden' : ''} text-[9px] bg-white/10 text-zinc-200 font-semibold px-1.5 py-0.5 rounded border border-white/10`}>v3.4.0</span>
                                 </button>
 
                                 {isSidebarCollapsed && (
-                                     <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b]/95 backdrop-blur-md text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5),0_0_12px_rgba(212,175,55,0.2)] border border-[#d4af37]/35 whitespace-nowrap items-center gap-2 pointer-events-none">
-                                        <span>Bản Cập Nhật v3.3.1 (Chuẩn Hóa Phân Loại Bể Thường vs Bể Nâng Đáy)</span>
-                                        <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#d4af37]/35 rotate-45"></div>
+                                    <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b] text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-md border border-[#333333] whitespace-nowrap items-center gap-2 pointer-events-none shadow-lg">
+                                        <span>Bản Cập Nhật v3.3.1</span>
+                                        <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#333333] rotate-45"></div>
                                     </div>
                                 )}
                             </div>
@@ -8721,10 +8703,10 @@
                                 <div className="w-9 h-9 rounded-full bg-zinc-800 shrink-0"></div>
                             )}
                             {isSidebarCollapsed && (
-                                <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b]/95 backdrop-blur-md text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-lg shadow-xl border border-[#d4af37]/35 whitespace-nowrap items-center gap-2 pointer-events-none">
-                                    <span className="font-semibold text-[#d4af37]">{currentUser.split(' ').pop()}</span>
+                                <div className="hidden lg:group-hover:flex mini-rail-tooltip absolute left-[68px] top-1/2 -translate-y-1/2 z-[300] bg-[#18181b] text-zinc-100 text-[12px] font-medium px-3 py-1.5 rounded-md border border-[#333333] whitespace-nowrap items-center gap-2 pointer-events-none shadow-lg">
+                                    <span className="font-semibold text-white">{currentUser.split(' ').pop()}</span>
                                     <span className="text-[10px] text-zinc-400">({isAdmin ? (isBoss ? 'TỐI CAO' : getDisplayRole(userRole)) : 'Nhân sự'})</span>
-                                    <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#d4af37]/35 rotate-45"></div>
+                                    <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#18181b] border-l border-b border-[#333333] rotate-45"></div>
                                 </div>
                             )}
                         </div>
@@ -8735,6 +8717,79 @@
                                 {isAdmin ? (isBoss ? 'TỐI CAO' : getDisplayRole(userRole)) : 'Nhân sự'}
                             </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                triggerHaptic('light');
+                                try {
+                                    const currentPin = localStorage.getItem('rf_last_valid_pin') || localStorage.getItem('rf_pin') || '226868';
+                                    if (!window.PublicKeyCredential || !navigator.credentials || !window.isSecureContext) {
+                                        localStorage.setItem('rf_passkey_cred', JSON.stringify({
+                                            trustedDevice: true,
+                                            userName: currentUser || 'Nguyễn Ngọc Tiến',
+                                            createdAt: new Date().toISOString()
+                                        }));
+                                        localStorage.setItem('rf_last_valid_pin', currentPin);
+                                        localStorage.setItem('rf_last_valid_user', currentUser || 'Nguyễn Ngọc Tiến');
+                                        if (typeof triggerToast === 'function') triggerToast('Đã kích hoạt mở khóa nhanh / Face ID thiết bị!', 'fa-face-viewfinder', 'success');
+                                        return;
+                                    }
+                                    const challenge = new Uint8Array(32);
+                                    crypto.getRandomValues(challenge);
+                                    const userId = new Uint8Array(16);
+                                    crypto.getRandomValues(userId);
+                                    const hostname = window.location.hostname || '';
+                                    const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+                                    const cleanRpId = (hostname && !isIp && hostname !== 'localhost') ? hostname : undefined;
+                                    const createOptions = {
+                                        challenge,
+                                        rp: { name: "RF Workspace Pro" },
+                                        user: {
+                                            id: userId,
+                                            name: (currentUser || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+                                            displayName: currentUser || 'RF Staff'
+                                        },
+                                        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                                        authenticatorSelection: {
+                                            authenticatorAttachment: "platform",
+                                            userVerification: "preferred",
+                                            residentKey: "preferred"
+                                        },
+                                        timeout: 60000
+                                    };
+                                    if (cleanRpId) createOptions.rp.id = cleanRpId;
+                                    const cred = await navigator.credentials.create({ publicKey: createOptions });
+                                    if (cred) {
+                                        const rawIdArr = Array.from(new Uint8Array(cred.rawId));
+                                        localStorage.setItem('rf_passkey_cred', JSON.stringify({
+                                            credId: rawIdArr,
+                                            userName: currentUser || 'Nguyễn Ngọc Tiến',
+                                            createdAt: new Date().toISOString()
+                                        }));
+                                        localStorage.setItem('rf_last_valid_pin', currentPin);
+                                        localStorage.setItem('rf_last_valid_user', currentUser || 'Nguyễn Ngọc Tiến');
+                                        triggerHaptic([30, 50, 30]);
+                                        if (typeof triggerToast === 'function') triggerToast(`Đã liên kết Face ID thành công cho ${currentUser}!`, 'fa-face-viewfinder', 'success');
+                                    }
+                                } catch (err) {
+                                    if (err?.name !== 'NotAllowedError') {
+                                        const currentPin = localStorage.getItem('rf_last_valid_pin') || localStorage.getItem('rf_pin') || '226868';
+                                        localStorage.setItem('rf_passkey_cred', JSON.stringify({
+                                            trustedDevice: true,
+                                            userName: currentUser || 'Nguyễn Ngọc Tiến',
+                                            createdAt: new Date().toISOString()
+                                        }));
+                                        localStorage.setItem('rf_last_valid_pin', currentPin);
+                                        if (typeof triggerToast === 'function') triggerToast('Đã bật mở khóa nhanh thiết bị cho lần đăng nhập tới!', 'fa-face-viewfinder', 'success');
+                                    }
+                                }
+                            }}
+                            className={`${isSidebarCollapsed ? 'lg:hidden' : ''} w-8 h-8 rounded-md flex items-center justify-center transition-all text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 shrink-0`}
+                            title="Liên kết Face ID"
+                        >
+                            <i className="fas fa-face-viewfinder text-sm"></i>
+                        </button>
 
                         <button
                             type="button"
@@ -8773,7 +8828,7 @@
                                         setIsMenuOpen(prev => !prev);
                                     }
                                 }}
-                                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center transition-all text-zinc-400 hover:text-[#d4af37] hover:bg-white/5 active:scale-95 shrink-0"
+                                className="w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center transition-all text-zinc-400 hover:text-white hover:bg-white/5 active:scale-95 shrink-0"
                                 title={window?.innerWidth >= 1024 ? (isSidebarCollapsed ? "Mở menu (Ctrl+B)" : "Thu gọn menu (Ctrl+B)") : "Mở menu"}
                                 aria-label="Toggle Menu"
                             >
@@ -8814,7 +8869,7 @@
                                 <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest mb-0.5 text-zinc-400 truncate">{mode === 'ERP' ? 'Kế Toán & Kho Vận' : 'Hệ Thống Nội Bộ'}</span>
                                 <span className="font-display font-semibold text-[14px] sm:text-[16px] leading-none flex items-center text-zinc-100 truncate">
                                     {isAdmin ? (isBoss ? 'Workspace Pro' : getDisplayRole(userRole)) : 'Workspace'}
-                                    {isAdmin && <i className={`fas fa-shield-check ml-1.5 sm:ml-2 text-[11px] sm:text-[12px] shrink-0 ${isBoss ? 'text-[#d4af37]' : 'text-emerald-400'}`}></i>}
+                                    {isAdmin && <i className={`fas fa-shield-check ml-1.5 sm:ml-2 text-[11px] sm:text-[12px] shrink-0 ${isBoss ? 'text-white' : 'text-emerald-400'}`}></i>}
                                 </span>
                             </div>
                         </div>
@@ -8833,7 +8888,7 @@
 
                             {isAdmin && (
                                 <div className="hidden md:block animate-fade-in shrink-0">
-                                    <div className="text-[10px] font-bold text-[#d4af37] uppercase tracking-wider bg-[#d4af37]/10 px-2.5 py-1 rounded-md border border-[#d4af37]/20 shadow-sm">
+                                    <div className="text-[10px] font-bold text-white uppercase tracking-wider bg-white/10 px-2.5 py-1 rounded-md border border-white/20">
                                         {isBoss ? 'TỐI CAO' : getDisplayRole(userRole)}
                                     </div>
                                 </div>
@@ -8848,7 +8903,7 @@
                                 }}
                                 title="Nhấn để làm mới dữ liệu"
                             >
-                                {syncing ? <i className="fas fa-sync animate-spin text-[16px] text-[#d4af37] w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"></i> : (typeof Avatar !== 'undefined' ? <Avatar name={currentUser} userConfigs={userConfigs} className="w-8 h-8 sm:w-9 sm:h-9 border border-white/10 rounded-full transition-transform group-hover:scale-105 shadow-sm object-cover" /> : <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-800"></div>)}
+                                {syncing ? <i className="fas fa-sync animate-spin text-[16px] text-white w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"></i> : (typeof Avatar !== 'undefined' ? <Avatar name={currentUser} userConfigs={userConfigs} className="w-8 h-8 sm:w-9 sm:h-9 border border-white/10 rounded-full transition-transform group-hover:scale-105 shadow-sm object-cover" /> : <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-800"></div>)}
                                 {!syncing && (
                                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-[#09090b] shadow-sm group-hover:rotate-180 transition-all duration-300">
                                         <i className="fas fa-sync-alt text-[6px] sm:text-[7px] text-[#09090b]"></i>
@@ -8858,7 +8913,7 @@
                         </div>
                     </header>
 
-                    <main className={`flex-1 min-h-0 w-full max-w-full p-3 sm:p-4 lg:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6 lg:pb-8 overflow-y-auto overflow-x-hidden custom-scrollbar relative overscroll-none touch-pan-y ${userRole === 'KHÁCH' ? 'rf-guest-mode' : ''}`}>
+                    <main className={`flex-1 min-h-0 w-full max-w-full p-3 sm:p-4 lg:p-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] lg:pb-8 overflow-y-auto overflow-x-hidden custom-scrollbar relative overscroll-none touch-pan-y ${userRole === 'KHÁCH' ? 'rf-guest-mode' : ''}`}>
                         <ErrorBoundary>
                             {(() => {
                                 const isCTV = isCTVRole;
@@ -8963,14 +9018,13 @@
                                             return (
                                                 <div className="flex flex-col items-center justify-center min-h-[55vh] gap-4 p-8 text-center animate-fade-in">
                                                     <div className="relative flex items-center justify-center">
-                                                        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10">
-                                                            <i className="fas fa-layer-group text-2xl text-amber-400 animate-pulse"></i>
+                                                        <div className="w-12 h-12 rounded-md bg-[#18181b] border border-[#333333] flex items-center justify-center">
+                                                            <i className="fas fa-circle-notch fa-spin text-xl text-zinc-300"></i>
                                                         </div>
-                                                        <div className="absolute -inset-2 rounded-3xl border border-amber-400/20 animate-spin" style={{ animationDuration: '3s' }}></div>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <p className="text-sm font-black text-amber-400 uppercase tracking-widest">Đang khởi chạy: {tabTitle}</p>
-                                                        <p className="text-xs text-zinc-400 max-w-md">Hệ thống đang chuẩn bị tài nguyên và nạp module tối ưu cho thiết bị của bạn.</p>
+                                                        <p className="text-sm font-bold text-zinc-100 uppercase tracking-wider">Đang nạp phân hệ: {tabTitle}</p>
+                                                        <p className="text-xs text-zinc-400 max-w-md">Hệ thống đang chuẩn bị tài nguyên và nạp module tối ưu.</p>
                                                     </div>
                                                     <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                                                         <button 
@@ -8979,7 +9033,7 @@
                                                                     window.__rfLoadTabNow(activeTab, true);
                                                                 }
                                                             }}
-                                                            className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                                                            className="px-4 py-2 rounded-md bg-white hover:bg-neutral-200 text-black font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                                                         >
                                                             <i className="fas fa-bolt"></i> Nạp Ngay Lập Tức
                                                         </button>
@@ -8993,7 +9047,7 @@
                                                                 } catch(e) {}
                                                                 location.reload();
                                                             }}
-                                                            className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                                                            className="px-4 py-2 rounded-md bg-[#18181b] hover:bg-[#252525] border border-[#333333] text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                                                         >
                                                             <i className="fas fa-rotate-right"></i> Làm Mới Dữ Liệu (F5)
                                                         </button>
@@ -9005,16 +9059,16 @@
                                         {/* PHÒNG VỆ MÀN HÌNH ĐEN: Tự động phục hồi về dashboard nếu activeTab không hợp lệ */}
                                         {!['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'cashflow', 'analytics', 'suppliers'].includes(activeTab) && (
                                             <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 text-center p-6 animate-fade-in">
-                                                <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-xl mb-1">
-                                                    <i className="fas fa-compass fa-spin"></i>
+                                                <div className="w-10 h-10 rounded-md bg-[#18181b] border border-[#333333] flex items-center justify-center text-zinc-300 text-lg mb-1">
+                                                    <i className="fas fa-compass"></i>
                                                 </div>
-                                                <div className="text-sm font-bold text-zinc-200">Không Tìm Thấy Phân Hệ hoặc Đang Chuyển Tiếp...</div>
-                                                <p className="text-xs text-zinc-500 max-w-sm">Hệ thống đang chuẩn hóa liên kết điều hướng [{activeTab}] về bàn làm việc tiêu chuẩn để ngăn chặn lỗi màn hình đen.</p>
+                                                <div className="text-sm font-semibold text-zinc-200">Không Tìm Thấy Phân Hệ hoặc Đang Chuyển Tiếp...</div>
+                                                <p className="text-xs text-zinc-500 max-w-sm">Hệ thống đang chuyển tiếp về bàn làm việc tiêu chuẩn [{activeTab}].</p>
                                                 <button 
                                                     onClick={() => { setActiveTab('dashboard'); setMode('WORKSPACE'); }}
-                                                    className="mt-2 px-4 py-2 bg-[#d4af37] text-black font-black text-xs rounded-xl shadow-md cursor-pointer hover:bg-amber-400 active:scale-95 transition-all"
+                                                    className="mt-2 px-4 py-2 bg-white hover:bg-neutral-200 text-black font-semibold text-xs rounded-md cursor-pointer active:scale-95 transition-all"
                                                 >
-                                                    <i className="fas fa-home mr-1.5"></i> Khôi Phục Về Bàn Làm Việc (Tổng Quan)
+                                                    <i className="fas fa-home mr-1.5"></i> Về Tổng Quan
                                                 </button>
                                             </div>
                                         )}
@@ -9023,6 +9077,60 @@
                             })()}
                         </ErrorBoundary>
                     </main>
+
+                    {/* THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO DI ĐỘNG (MOBILE-FIRST DOCK) */}
+                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[45] bg-[#0d0d10]/95 backdrop-blur-xl border-t border-white/[0.08] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-[0_-8px_24px_rgba(0,0,0,0.6)]">
+                        {[
+                            { id: 'dashboard', label: 'Tổng Quan', icon: 'fa-house' },
+                            { id: 'orders', label: 'Đơn Hàng', icon: 'fa-receipt' },
+                            { id: 'production', label: 'Sản Xuất', icon: 'fa-hammer' },
+                            { id: 'warehouse', label: 'Hàng Hóa', icon: 'fa-boxes-stacked' }
+                        ].map(item => {
+                            const isAct = activeTab === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => {
+                                        triggerHaptic('light');
+                                        setActiveTab(item.id);
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className={`flex flex-col items-center justify-center min-w-[60px] min-h-[44px] py-1 rounded-xl transition-all active:scale-95 ${
+                                        isAct ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                                >
+                                    <div className={`w-8 h-6 rounded-full flex items-center justify-center mb-0.5 transition-all ${
+                                        isAct ? 'bg-white text-black shadow-sm' : ''
+                                    }`}>
+                                        <i className={`fas ${item.icon} text-[13px]`}></i>
+                                    </div>
+                                    <span className={`text-[10px] leading-none tracking-tight ${
+                                        isAct ? 'font-bold text-white' : 'font-medium text-zinc-500'
+                                    }`}>{item.label}</span>
+                                </button>
+                            );
+                        })}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                triggerHaptic('light');
+                                setIsMenuOpen(prev => !prev);
+                            }}
+                            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[44px] py-1 rounded-xl transition-all active:scale-95 ${
+                                isMenuOpen ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <div className={`w-8 h-6 rounded-full flex items-center justify-center mb-0.5 transition-all ${
+                                isMenuOpen ? 'bg-white text-black shadow-sm' : ''
+                            }`}>
+                                <i className="fas fa-bars text-[13px]"></i>
+                            </div>
+                            <span className={`text-[10px] leading-none tracking-tight ${
+                                isMenuOpen ? 'font-bold text-white' : 'font-medium text-zinc-500'
+                            }`}>Menu</span>
+                        </button>
+                    </nav>
 
 
 

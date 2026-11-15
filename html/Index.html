@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <title>RF Workspace Pro</title>
   <meta name="mobile-web-app-capable" content="yes">
@@ -254,10 +254,10 @@
       --rf-primary: #FFFFFF;
       --rf-primary-contrast: #0B0B0B;
 
-      /* Geometric Corner Radii */
-      --rf-radius-sm: 6px;
-      --rf-radius-md: 10px;
-      --rf-radius-lg: 14px;
+      /* Geometric Corner Radii (RF Technical Standard) */
+      --rf-radius-sm: 4px;
+      --rf-radius-md: 6px;
+      --rf-radius-lg: 8px;
 
       /* Backwards-compatibility Aliases */
       --bg-canvas: #0B0B0B;
@@ -298,7 +298,7 @@
       background-color: var(--rf-bg);
       background-image: none !important;
       color: var(--rf-text);
-      font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -316,16 +316,18 @@
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
       border: 1px solid var(--rf-border) !important;
-      border-radius: var(--rf-radius-lg) !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
-      transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-      transform: translateZ(0);
+      border-radius: var(--rf-radius-md) !important;
+      box-shadow: none !important;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      transform: none !important;
     }
     .vision-card:hover,
     .spatial-glass:hover,
     .hm-card:hover,
     .rf-card:hover {
       border-color: var(--rf-border-strong) !important;
+      box-shadow: none !important;
+      transform: none !important;
     }
 
     /* Container Adapter: Chuyển container cũ sang chuẩn bề mặt tối giản */
@@ -341,23 +343,23 @@
       background: var(--rf-surface-raised);
       border: 1px solid var(--rf-border);
       border-radius: var(--rf-radius-md);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      transform: translateZ(0);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      transform: none !important;
     }
     .spatial-glass-interactive:hover {
       background: var(--rf-surface-hover);
       border-color: var(--rf-border-strong);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      transform: none !important;
+      box-shadow: none !important;
     }
 
     /* Floating Dock */
     .vision-dock {
       background: var(--rf-surface-raised) !important;
       border: 1px solid var(--rf-border) !important;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
-      border-radius: 9999px !important;
-      transform: translateZ(0);
+      box-shadow: none !important;
+      border-radius: var(--rf-radius-md) !important;
+      transform: none !important;
     }
 
     /* --- MONOCHROME STATUS BADGES & PILLS (HIGH-CONTRAST NON-COLOR WCAG AA) --- */
@@ -776,6 +778,74 @@
         gap: 8px !important;
         flex-shrink: 0 !important;
       }
+    }
+
+    /* =========================================================================
+       GLOBAL RF MINIMALISM STRICT OVERRIDES (HARMONIZE ALL TABS & MODALS)
+       Eliminates gradients, toy rounded corners, heavy shadows, and royal gold
+       ========================================================================= */
+
+    /* 1. Triệt tiêu toàn bộ gradient bề mặt */
+    [class*="bg-gradient-"] {
+      background-image: none !important;
+    }
+
+    /* 2. Ép chuẩn bo góc kỹ thuật (chống bo tròn quá đà 16px - 32px) */
+    [class*="rounded-3xl"],
+    [class*="rounded-2xl"] {
+      border-radius: 8px !important;
+    }
+    [class*="rounded-xl"] {
+      border-radius: 6px !important;
+    }
+
+    /* 3. Triệt tiêu đổ bóng giao diện (Phẳng tối giản cao cấp) */
+    [class*="shadow-2xl"],
+    [class*="shadow-xl"],
+    [class*="shadow-lg"],
+    [class*="shadow-md"],
+    [class*="shadow-[0_"] {
+      box-shadow: none !important;
+    }
+
+    /* 4. Triệt tiêu hiệu ứng làm mờ kính dày đặc */
+    [class*="backdrop-blur-xl"],
+    [class*="backdrop-blur-2xl"],
+    [class*="backdrop-blur-3xl"] {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    /* 5. Ẩn hoàn toàn biểu tượng vương miện hoàng gia fa-crown */
+    .fa-crown {
+      display: none !important;
+    }
+
+    /* 6. Chuẩn hoá màu vàng kim #d4af37 và amber sang chuẩn phẳng monochrome RF */
+    button.bg-\[\#d4af37\],
+    .bg-\[\#d4af37\] {
+      background-color: #FFFFFF !important;
+      color: #000000 !important;
+      font-weight: 600 !important;
+      border-radius: var(--rf-radius-md) !important;
+    }
+    button.bg-\[\#d4af37\]:hover,
+    .bg-\[\#d4af37\]:hover,
+    .hover\:bg-\[\#c49f2c\]:hover,
+    .hover\:bg-\[\#b8972e\]:hover {
+      background-color: #E5E5E5 !important;
+      color: #000000 !important;
+    }
+
+    .border-\[\#d4af37\],
+    .border-\[\#d4af37\]\/20,
+    .border-\[\#d4af37\]\/25,
+    .border-\[\#d4af37\]\/30,
+    .border-\[\#d4af37\]\/35,
+    .border-\[\#d4af37\]\/40,
+    .border-\[\#d4af37\]\/50,
+    .border-\[\#d4af37\]\/60 {
+      border-color: #333333 !important;
     }
   </style>
   <?!= include('RF_V6_Styles'); ?>

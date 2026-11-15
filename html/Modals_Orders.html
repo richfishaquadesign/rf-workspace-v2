@@ -3337,7 +3337,7 @@
                                             <div><label className="text-[10px] font-black text-gray-500 block mb-1 uppercase tracking-widest">Giá Bán Niêm Yết</label><input type="number" value={qaData.price} onChange={e => setQaData({ ...qaData, price: e.target.value })} className="w-full p-3.5 bg-[#141414] border border-[#333] rounded-xl text-[#10b981] font-black text-[13px] outline-none focus:border-[#10b981]" placeholder="0" /></div>
                                         </div>
                                     )}
-                                    <button onClick={submitQuickAdd} className="w-full py-4 mt-4 bg-[#d4af37] text-[#0a0a0a] font-black text-[13px] rounded-xl shadow-[0_0_15px_rgba(212,175,55,0.4)] active:scale-95 transition-all"><i className="fas fa-save mr-2"></i> LƯU & CHỌN VÀO ĐƠN</button>
+                                    <button onClick={submitQuickAdd} className="w-full py-3 mt-4 bg-white hover:bg-zinc-200 text-black font-bold text-[13px] rounded-md transition-all"><i className="fas fa-save mr-2"></i> LƯU & CHỌN VÀO ĐƠN</button>
                                 </div>
                             ) : (
                                 <>
@@ -3350,7 +3350,7 @@
                                     <div className="flex-1 overflow-y-auto overscroll-contain pb-32 p-4 custom-scrollbar bg-[#0a0a0a]">
                                         {(searchTarget === 'acc' || searchTarget === 'glass') && (
                                             <div className="space-y-2.5">
-                                                <button onClick={() => setShowQuickAdd(searchTarget)} className="w-full p-3.5 bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-[#d4af37]/20 transition-all flex items-center justify-center gap-2 mb-2"><i className="fas fa-plus-circle text-sm"></i> TẠO HÀNG MỚI</button>
+                                                <button onClick={() => setShowQuickAdd(searchTarget)} className="w-full p-3 bg-zinc-800 border border-zinc-700 text-white rounded-md font-bold text-[11px] uppercase tracking-wider hover:bg-zinc-700 transition-all flex items-center justify-center gap-2 mb-2"><i className="fas fa-plus-circle text-sm"></i> TẠO HÀNG MỚI</button>
                                                 {activeProds.length === 0 ? (<div className="text-center text-[#555] mt-10 text-[12px] font-bold"><i className="fas fa-box-open text-3xl mb-3 opacity-20 block"></i> Không tìm thấy hàng hoá</div>) : activeProds.map(p => (
                                                     <div key={p.id} onClick={() => selectProduct(p)} className="bg-[#141414] border border-[#222] p-3 rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer flex items-center justify-between hover:border-[#d4af37] group mb-2.5">
                                                         {p.image && (
