@@ -45744,7 +45744,7 @@ window.ApprenticeshipTab = ApprenticeshipTab;
 
 <script>
 (function(){
-  const EDITOR_URL = 'https://rf-aquarium.vercel.app/quan-tri';
+  const EDITOR_URL = 'https://rf-aquarium.vercel.app/quan-tri?pin=RF2026@';
 
   function sessionValue(key){
     let value = '';
@@ -45774,8 +45774,18 @@ window.ApprenticeshipTab = ApprenticeshipTab;
   const openExternalBtn = document.getElementById('rf-website-open-external');
   const syncBtn = document.getElementById('rf-website-sync-prod');
 
+  function isSupremeRole() {
+    const role = String(sessionValue('rf_role')).trim().toUpperCase();
+    const pin = String(sessionValue('rf_pin')).trim();
+    return role === 'TỐI CAO' || pin === '226868';
+  }
+
   function openEditorModal() {
-    if (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href) {
+    if (!isSupremeRole()) {
+      notify('Chỉ phân quyền TỐI CAO mới được truy cập Quản Trị Website!', 'error');
+      return;
+    }
+    if (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href || iframe.src.indexOf('pin=') === -1) {
       loader.style.display = 'flex';
       iframe.src = EDITOR_URL;
     }
@@ -45842,10 +45852,13 @@ window.ApprenticeshipTab = ApprenticeshipTab;
 
   function attachWebsiteMenu(){
     const sidebar = document.getElementById('rf-v6-sidebar');
-    if (!sidebar || document.getElementById('rf-website-menu-button')) return;
-    const role = String(sessionValue('rf_role')).trim().toUpperCase();
-    if (role !== 'TỐI CAO') return;
-    if (role && !['TỐI CAO', 'ADMIN', 'BOSS', 'QUẢN LÝ'].includes(role)) return;
+    if (!sidebar) return;
+    const existingBtn = document.getElementById('rf-website-menu-button');
+    if (!isSupremeRole()) {
+      if (existingBtn) existingBtn.remove();
+      return;
+    }
+    if (existingBtn) return;
 
     const button = document.createElement('button');
     button.id = 'rf-website-menu-button';
