@@ -1199,29 +1199,19 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
         }
       } catch(e) {}
 
-      // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & KHO TRI THỨC RF_KNOWLEDGE_OS NGAY LÚC KHỞI ĐỘNG ⚡
+      // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
+        if (localStorage.getItem('rf_db_sync_v5') !== 'true') {
+          localStorage.removeItem('rf_turbo_cache_app_data');
+          localStorage.removeItem('rf_local_products_override');
+          localStorage.setItem('rf_db_sync_v5', 'true');
+        }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
           localStorage.setItem('rf_role', 'TỐI CAO');
           localStorage.setItem('rf_title', 'Founder');
           localStorage.setItem('rf_admin', 'true');
           localStorage.setItem('rf_boss', 'true');
-        }
-        var kos = window.__RF_KNOWLEDGE_OS_SEED__;
-        if (kos && kos.Products && kos.Products.length > 0) {
-          var rawCache = localStorage.getItem('rf_turbo_cache_app_data');
-          var parsedCache = rawCache ? JSON.parse(rawCache) : {};
-          if (!parsedCache.Products || parsedCache.Products.length < kos.Products.length) {
-            parsedCache.Products = kos.Products;
-            parsedCache.BOM_Config = kos.BOM_Config || [];
-            parsedCache.kpiConfig = kos.Config_KPI || [];
-            parsedCache.Suppliers = kos.Suppliers || [];
-            parsedCache.documents = kos.Documents || [];
-            parsedCache.trainings = kos.Trainings || [];
-            parsedCache.Config_NhanSu = kos.Config_NhanSu || [];
-            localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(parsedCache));
-          }
         }
       } catch(e) {}
 
@@ -1484,13 +1474,13 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
               fetchAllFromSupabase('Orders', 'select=*&order=createdAt.desc', 4),
               fetchAllFromSupabase('Production', 'select=*&order=deadline.asc', 2),
               fetchAllFromSupabase('Packings', 'select=*&order=start.desc', 3),
-              fetchAllFromSupabase('Products', 'select=*', 2),
+              fetchAllFromSupabase('Products', 'select=*', 3),
               fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*', 3),
               fetchFromSupabaseWithRetry('Config_KPI', 'select=*', 3),
               fetchFromSupabaseWithRetry('Config_GiaLayout', 'select=*', 3),
-              fetchAllFromSupabase('BOM_Config', 'select=*', 2),
+              fetchAllFromSupabase('BOM_Config', 'select=*', 5),
               fetchAllFromSupabase('Transactions', 'select=*&order=date.desc', 3),
-              fetchAllFromSupabase('ImportExport', 'select=*&order=date.desc', 4),
+              fetchAllFromSupabase('ImportExport', 'select=*&order=date.desc', 5),
               fetchFromSupabaseWithRetry('Accounts', 'select=*', 3),
               fetchFromSupabaseWithRetry('Suppliers', 'select=*', 3),
               fetchAllFromSupabase('Attendance', 'select=*&order=date.desc', 3),
