@@ -109,11 +109,11 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v12') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v13') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v12', 'true');
+          localStorage.setItem('rf_db_sync_v13', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -600,13 +600,80 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               }
             });
 
-            // Xử lý 49 bản ghi Production: Không xóa lệnh, liên kết chặt chẽ
+            // Xử lý bản ghi Production & chuẩn hóa tên sản phẩm đồng nhất trên toàn hệ thống (Đơn Hàng, Sản Xuất, Kho)
+            var OLD_TANK_MAP = {
+              'Bể 10x10x10cm': 'Bể Mini 10x10x10cm',
+              'Bể 14x14x20cm': 'Bể Mini 14x14x20cm',
+              'Bể 15x15x15cm': 'Bể Mini 15x15x15cm',
+              'Bể 15x15x15cm NĐ': 'Bể Nâng Đáy 15x15x15cm',
+              'Bể 15x15x25cm NĐ': 'Bể Nâng Đáy 15x15x25cm',
+              'Bể 20x10x12cm 2 ngăn': 'Bể Betta 20x10x12cm',
+              'Bể Betta 20x10x12cm 2 Ngăn': 'Bể Betta 20x10x12cm',
+              'Bể 20x10x15cm NĐ': 'Bể Nâng Đáy 20x10x15cm',
+              'Bể 20x20x20cm NĐ': 'Bể Nâng Đáy 20x20x20cm',
+              'Bể 20x20x25cm': 'Bể Mini 20x20x25cm',
+              'Bể 20x20x8cm': 'Bể Mini 20x20x8cm',
+              'Bể 20x20x8cm NĐ': 'Bể Nâng Đáy 20x20x8cm',
+              'Bể 24x12x14cm 2 ngăn': 'Bể Betta 24x12x14cm',
+              'Bể Betta 24x12x14cm 2 Ngăn': 'Bể Betta 24x12x14cm',
+              'Bể 25x12x14cm': 'Bể Mini 25x12x14cm',
+              'Bể 25x15x15cm NĐ': 'Bể Nâng Đáy 25x15x15cm',
+              'Bể 30x10x12cm 3 ngăn': 'Bể Betta 30x10x12cm',
+              'Bể Betta 30x10x12cm 3 Ngăn': 'Bể Betta 30x10x12cm',
+              'Bể 30x15x15cm': 'Bể Mini 30x15x15cm',
+              'Bể 30x18x12cm NĐ': 'Bể Nâng Đáy 30x18x12cm',
+              'Bể 30x18x18cm NĐ': 'Bể Nâng Đáy 30x18x18cm',
+              'Bể 30x20x20cm': 'Bể Mini 30x20x20cm',
+              'Bể 34x18x14cm': 'Bể Bán Cạn 34x18x14cm',
+              'Bể Mini 34x18x14cm': 'Bể Bán Cạn 34x18x14cm',
+              'Bể 40x20x15cm': 'Bể Bán Cạn 40x20x15cm',
+              'Bể Mini 40x20x15cm': 'Bể Bán Cạn 40x20x15cm',
+              'Bể 40x20x20cm': 'Bể Mini 40x20x20cm',
+              'Bể Terra 18x9x16cm': 'Bể Terrarium 18x9x16cm',
+              'Bể Terra 20x20x25cm': 'Bể Terrarium 20x20x25cm'
+            };
+            var normalizeUnifiedItemName = function(rawName, rawSku, itemType) {
+              var n = String(rawName || '').trim();
+              var k = String(rawSku || '').toUpperCase().trim();
+              if (!n) return n;
+              if (k && existingSkus[k] && existingSkus[k].name) return existingSkus[k].name;
+              if (OLD_TANK_MAP[n]) return OLD_TANK_MAP[n];
+              if (n.indexOf('Bể ') === 0) {
+                var mTerra = n.match(/^Bể\s+Terra(?:rium)?\s+(\d+x\d+x\d+cm)$/i);
+                if (mTerra) return 'Bể Terrarium ' + mTerra[1].toLowerCase();
+                var mNd = n.match(/^Bể\s+(\d+x\d+x\d+cm)\s+NĐ$/i);
+                if (mNd) return 'Bể Nâng Đáy ' + mNd[1].toLowerCase();
+                var mBetta = n.match(/^Bể\s+(?:Betta\s+)?(\d+x\d+x\d+cm)\s+\d+\s*ngăn$/i);
+                if (mBetta) return 'Bể Betta ' + mBetta[1].toLowerCase();
+                return n;
+              }
+              var isLayoutItem = /^layout\s+/i.test(n) || /\bver\.?\s*\d+/i.test(n) || String(itemType || '').toUpperCase() === 'LAYOUT' || k.indexOf('LAY-') === 0 || /^(BON|CAU|DAO|HAN|HEM|NAT|RUN|STD|THU|TRA|TRU|VAC)-\d{3}/.test(k);
+              if (isLayoutItem) {
+                var s = n.replace(/^Layout\s+/i, '').replace(/\bver\.?\s*(\d+)/i, 'Ver.$1').trim();
+                var md = s.match(/(\d{2,3})\s*[xX×*]\s*(\d{2,3})\s*[xX×*]\s*(\d{2,3})/);
+                var dStr = md ? (md[1] + 'x' + md[2] + 'x' + md[3] + 'cm') : '';
+                var basePart = s.replace(/\s*[—–\-]\s*(?:(?:Size\s*)?[SML]\s*(?:\([^\)]*\))?|\d{2,3}\s*[xX×*]\s*\d{2,3}\s*[xX×*]\s*\d{2,3}\s*(?:cm)?)\s*$/i, '').trim();
+                return dStr ? (basePart + ' - ' + dStr) : basePart;
+              }
+              return n;
+            };
+
+            (effectiveOrders || []).forEach(function(o) {
+              if (Array.isArray(o.accessories)) {
+                o.accessories.forEach(function(a) {
+                  if (a && a.name) {
+                    a.name = normalizeUnifiedItemName(a.name, a.sku || '', '');
+                  }
+                });
+              }
+            });
+
             var prodItems = (prodRaw || []).map(function(p) {
               return {
                 id: p.id,
                 orderId: p.orderId,
                 type: p.type,
-                name: p.name,
+                name: normalizeUnifiedItemName(p.name, '', p.type),
                 note: p.note,
                 status: p.status,
                 deadline: p.deadline,
@@ -807,7 +874,18 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
             // Write BOM_Config
             var boms = payload.BOM_Config || payload.bomConfig;
-            if (boms && boms.length) await upsertToSupabase('BOM_Config', boms);
+            if (boms && boms.length) {
+              var cleanBoms = boms.map(function(b) {
+                return {
+                  id: String(b.id || ('BOM_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6))),
+                  layoutCode: String(b.layoutCode || b.productSku || b.productId || ''),
+                  materialSku: String(b.materialSku || b.materialId || ''),
+                  defaultQty: Number(b.defaultQty || 0),
+                  unit: String(b.unit || 'Gam')
+                };
+              });
+              await upsertToSupabase('BOM_Config', cleanBoms);
+            }
 
             // Write BonusPenalty
             var bpen = payload.BonusPenalty || payload.bonusPenalty;

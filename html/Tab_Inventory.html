@@ -1261,7 +1261,7 @@
     let cleanBase = String(baseName || '').trim()
       .replace(/^(?:LAYOUT|Layout|layout)\s+/i, '')
       .trim();
-    cleanBase = cleanBase.replace(/(?:Ver\.?|ver\.?|V)\s*(\d+)/i, (m, g1) => 'ver.' + g1);
+    cleanBase = cleanBase.replace(/(?:Ver\.?|ver\.?|V)\s*(\d+)/i, (m, g1) => 'Ver.' + g1);
 
     // B. Bóc tách kích thước dạng 6 số từ SKU (VD: 202020 -> 20x20x20cm, 402325 -> 40x23x25cm)
     let dimStr = '';
@@ -2590,30 +2590,21 @@ Model ID: 287936773312
         const targetSku = String(selectedDrawerItem.sku || selectedDrawerItem.id || '').trim();
         const existingBomTable = Array.isArray(data.BOM_Config) ? data.BOM_Config : [];
         const oldRowsForProduct = existingBomTable.filter(r =>
-          String(r.productSku || r.productId || '').trim().toUpperCase() === targetSku.toUpperCase()
+          String(r.layoutCode || r.productSku || r.productId || '').trim().toUpperCase() === targetSku.toUpperCase()
         );
         const deletedIds = oldRowsForProduct.map(r => r.id).filter(Boolean);
 
         const cleanDraft = drawerBomDraft.filter(r => String(r.materialName || r.materialSku || '').trim() && Number(r.defaultQty || 0) > 0);
         const newBomRows = cleanDraft.map((r, idx) => ({
           id: r.id && !String(r.id).startsWith('AUTO_') ? String(r.id) : `BOM_${targetSku}_${Date.now()}_${idx}`,
-          productId: String(selectedDrawerItem.id || targetSku),
-          productSku: targetSku,
-          productName: selectedDrawerItem.name || '',
-          category: selectedDrawerItem.category || '',
-          subCategory: selectedDrawerItem.sub_category || '',
-          materialId: String(r.materialSku || ''),
+          layoutCode: targetSku,
           materialSku: String(r.materialSku || ''),
-          materialName: String(r.materialName || ''),
           defaultQty: Number(r.defaultQty || 0),
-          unit: String(r.unit || 'Gam'),
-          wasteFactor: 1,
-          note: 'Cập nhật từ Chi tiết hàng hóa',
-          updatedAt: new Date().toISOString()
+          unit: String(r.unit || 'Gam')
         }));
 
         const keptRows = existingBomTable.filter(r =>
-          String(r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase()
+          String(r.layoutCode || r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase()
         );
         const nextBomTable = [...keptRows, ...newBomRows];
 

@@ -1443,11 +1443,11 @@ div[data-rf-sidebar-backdrop="true"] {
     {
       "id": "BE_BE341814",
       "sku": "BE341814",
-      "name": "Bể Mini 34x18x14cm",
+      "name": "Bể Bán Cạn 34x18x14cm",
       "unit": "Bể",
       "image": "https://rf-aquarium.vercel.app/media-vault/63f4338aff64.webp",
       "category": "BỂ KÍNH",
-      "sub_category": "BỂ MINI",
+      "sub_category": "BÁN CẠN",
       "costPrice": 133725,
       "price": 335000,
       "quantity": 10,
@@ -1461,11 +1461,11 @@ div[data-rf-sidebar-backdrop="true"] {
     {
       "id": "BE_BE402015",
       "sku": "BE402015",
-      "name": "Bể Mini 40x20x15cm",
+      "name": "Bể Bán Cạn 40x20x15cm",
       "unit": "Bể",
       "image": "https://rf-aquarium.vercel.app/media-vault/49a669dba55b.webp",
       "category": "BỂ KÍNH",
-      "sub_category": "BỂ MINI",
+      "sub_category": "BÁN CẠN",
       "costPrice": 148050,
       "price": 383000,
       "quantity": 10,
@@ -1695,7 +1695,7 @@ div[data-rf-sidebar-backdrop="true"] {
     {
       "id": "BE_BE201012",
       "sku": "BE201012",
-      "name": "Bể Betta 20x10x12cm 2 Ngăn",
+      "name": "Bể Betta 20x10x12cm",
       "unit": "Bể",
       "image": "https://rf-aquarium.vercel.app/media-vault/e4fcf3b1e786.webp",
       "category": "BỂ KÍNH",
@@ -1731,7 +1731,7 @@ div[data-rf-sidebar-backdrop="true"] {
     {
       "id": "BE_BE241214",
       "sku": "BE241214",
-      "name": "Bể Betta 24x12x14cm 2 Ngăn",
+      "name": "Bể Betta 24x12x14cm",
       "unit": "Bể",
       "image": "https://rf-aquarium.vercel.app/media-vault/7acb810f6fc3.webp",
       "category": "BỂ KÍNH",
@@ -1749,7 +1749,7 @@ div[data-rf-sidebar-backdrop="true"] {
     {
       "id": "BE_BE301012",
       "sku": "BE301012",
-      "name": "Bể Betta 30x10x12cm 3 Ngăn",
+      "name": "Bể Betta 30x10x12cm",
       "unit": "Bể",
       "image": "https://rf-aquarium.vercel.app/media-vault/fc924933d6d3.webp",
       "category": "BỂ KÍNH",
@@ -19998,11 +19998,11 @@ div[data-rf-sidebar-backdrop="true"] {
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v12') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v13') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v12', 'true');
+          localStorage.setItem('rf_db_sync_v13', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -20489,13 +20489,80 @@ div[data-rf-sidebar-backdrop="true"] {
               }
             });
 
-            // Xử lý 49 bản ghi Production: Không xóa lệnh, liên kết chặt chẽ
+            // Xử lý bản ghi Production & chuẩn hóa tên sản phẩm đồng nhất trên toàn hệ thống (Đơn Hàng, Sản Xuất, Kho)
+            var OLD_TANK_MAP = {
+              'Bể 10x10x10cm': 'Bể Mini 10x10x10cm',
+              'Bể 14x14x20cm': 'Bể Mini 14x14x20cm',
+              'Bể 15x15x15cm': 'Bể Mini 15x15x15cm',
+              'Bể 15x15x15cm NĐ': 'Bể Nâng Đáy 15x15x15cm',
+              'Bể 15x15x25cm NĐ': 'Bể Nâng Đáy 15x15x25cm',
+              'Bể 20x10x12cm 2 ngăn': 'Bể Betta 20x10x12cm',
+              'Bể Betta 20x10x12cm 2 Ngăn': 'Bể Betta 20x10x12cm',
+              'Bể 20x10x15cm NĐ': 'Bể Nâng Đáy 20x10x15cm',
+              'Bể 20x20x20cm NĐ': 'Bể Nâng Đáy 20x20x20cm',
+              'Bể 20x20x25cm': 'Bể Mini 20x20x25cm',
+              'Bể 20x20x8cm': 'Bể Mini 20x20x8cm',
+              'Bể 20x20x8cm NĐ': 'Bể Nâng Đáy 20x20x8cm',
+              'Bể 24x12x14cm 2 ngăn': 'Bể Betta 24x12x14cm',
+              'Bể Betta 24x12x14cm 2 Ngăn': 'Bể Betta 24x12x14cm',
+              'Bể 25x12x14cm': 'Bể Mini 25x12x14cm',
+              'Bể 25x15x15cm NĐ': 'Bể Nâng Đáy 25x15x15cm',
+              'Bể 30x10x12cm 3 ngăn': 'Bể Betta 30x10x12cm',
+              'Bể Betta 30x10x12cm 3 Ngăn': 'Bể Betta 30x10x12cm',
+              'Bể 30x15x15cm': 'Bể Mini 30x15x15cm',
+              'Bể 30x18x12cm NĐ': 'Bể Nâng Đáy 30x18x12cm',
+              'Bể 30x18x18cm NĐ': 'Bể Nâng Đáy 30x18x18cm',
+              'Bể 30x20x20cm': 'Bể Mini 30x20x20cm',
+              'Bể 34x18x14cm': 'Bể Bán Cạn 34x18x14cm',
+              'Bể Mini 34x18x14cm': 'Bể Bán Cạn 34x18x14cm',
+              'Bể 40x20x15cm': 'Bể Bán Cạn 40x20x15cm',
+              'Bể Mini 40x20x15cm': 'Bể Bán Cạn 40x20x15cm',
+              'Bể 40x20x20cm': 'Bể Mini 40x20x20cm',
+              'Bể Terra 18x9x16cm': 'Bể Terrarium 18x9x16cm',
+              'Bể Terra 20x20x25cm': 'Bể Terrarium 20x20x25cm'
+            };
+            var normalizeUnifiedItemName = function(rawName, rawSku, itemType) {
+              var n = String(rawName || '').trim();
+              var k = String(rawSku || '').toUpperCase().trim();
+              if (!n) return n;
+              if (k && existingSkus[k] && existingSkus[k].name) return existingSkus[k].name;
+              if (OLD_TANK_MAP[n]) return OLD_TANK_MAP[n];
+              if (n.indexOf('Bể ') === 0) {
+                var mTerra = n.match(/^Bể\s+Terra(?:rium)?\s+(\d+x\d+x\d+cm)$/i);
+                if (mTerra) return 'Bể Terrarium ' + mTerra[1].toLowerCase();
+                var mNd = n.match(/^Bể\s+(\d+x\d+x\d+cm)\s+NĐ$/i);
+                if (mNd) return 'Bể Nâng Đáy ' + mNd[1].toLowerCase();
+                var mBetta = n.match(/^Bể\s+(?:Betta\s+)?(\d+x\d+x\d+cm)\s+\d+\s*ngăn$/i);
+                if (mBetta) return 'Bể Betta ' + mBetta[1].toLowerCase();
+                return n;
+              }
+              var isLayoutItem = /^layout\s+/i.test(n) || /ver\.?\s*\d+/i.test(n) || String(itemType || '').toUpperCase() === 'LAYOUT' || k.indexOf('LAY-') === 0 || /^(BON|CAU|DAO|HAN|HEM|NAT|RUN|STD|THU|TRA|TRU|VAC)-\d{3}/.test(k);
+              if (isLayoutItem) {
+                var s = n.replace(/^Layout\s+/i, '').replace(/ver\.?\s*(\d+)/i, 'Ver.$1').trim();
+                var md = s.match(/(\d{2,3})\s*[xX×*]\s*(\d{2,3})\s*[xX×*]\s*(\d{2,3})/);
+                var dStr = md ? (md[1] + 'x' + md[2] + 'x' + md[3] + 'cm') : '';
+                var basePart = s.replace(/\s*[—–\-]\s*(?:(?:Size\s*)?[SML]\s*(?:\([^\)]*\))?|\d{2,3}\s*[xX×*]\s*\d{2,3}\s*[xX×*]\s*\d{2,3}\s*(?:cm)?)\s*$/i, '').trim();
+                return dStr ? (basePart + ' - ' + dStr) : basePart;
+              }
+              return n;
+            };
+
+            (effectiveOrders || []).forEach(function(o) {
+              if (Array.isArray(o.accessories)) {
+                o.accessories.forEach(function(a) {
+                  if (a && a.name) {
+                    a.name = normalizeUnifiedItemName(a.name, a.sku || '', '');
+                  }
+                });
+              }
+            });
+
             var prodItems = (prodRaw || []).map(function(p) {
               return {
                 id: p.id,
                 orderId: p.orderId,
                 type: p.type,
-                name: p.name,
+                name: normalizeUnifiedItemName(p.name, '', p.type),
                 note: p.note,
                 status: p.status,
                 deadline: p.deadline,
@@ -20696,7 +20763,18 @@ div[data-rf-sidebar-backdrop="true"] {
 
             // Write BOM_Config
             var boms = payload.BOM_Config || payload.bomConfig;
-            if (boms && boms.length) await upsertToSupabase('BOM_Config', boms);
+            if (boms && boms.length) {
+              var cleanBoms = boms.map(function(b) {
+                return {
+                  id: String(b.id || ('BOM_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6))),
+                  layoutCode: String(b.layoutCode || b.productSku || b.productId || ''),
+                  materialSku: String(b.materialSku || b.materialId || ''),
+                  defaultQty: Number(b.defaultQty || 0),
+                  unit: String(b.unit || 'Gam')
+                };
+              });
+              await upsertToSupabase('BOM_Config', cleanBoms);
+            }
 
             // Write BonusPenalty
             var bpen = payload.BonusPenalty || payload.bonusPenalty;
@@ -28867,7 +28945,7 @@ function standardizeWarehouseSku(rawSku, category = '', baseName = '') {
 function standardizeWarehouseName(baseName, varLabel = '', rawSku = '') {
   // A. Chuẩn hóa BaseName: loại bỏ tiền tố Layout và chuẩn hóa ver.21 viết thường
   let cleanBase = String(baseName || '').trim().replace(/^(?:LAYOUT|Layout|layout)\s+/i, '').trim();
-  cleanBase = cleanBase.replace(/(?:Ver\.?|ver\.?|V)\s*(\d+)/i, (m, g1) => 'ver.' + g1);
+  cleanBase = cleanBase.replace(/(?:Ver\.?|ver\.?|V)\s*(\d+)/i, (m, g1) => 'Ver.' + g1);
 
   // B. Bóc tách kích thước dạng 6 số từ SKU (VD: 202020 -> 20x20x20cm, 402325 -> 40x23x25cm)
   let dimStr = '';
@@ -30148,26 +30226,17 @@ function InventoryListView({
     try {
       const targetSku = String(selectedDrawerItem.sku || selectedDrawerItem.id || '').trim();
       const existingBomTable = Array.isArray(data.BOM_Config) ? data.BOM_Config : [];
-      const oldRowsForProduct = existingBomTable.filter(r => String(r.productSku || r.productId || '').trim().toUpperCase() === targetSku.toUpperCase());
+      const oldRowsForProduct = existingBomTable.filter(r => String(r.layoutCode || r.productSku || r.productId || '').trim().toUpperCase() === targetSku.toUpperCase());
       const deletedIds = oldRowsForProduct.map(r => r.id).filter(Boolean);
       const cleanDraft = drawerBomDraft.filter(r => String(r.materialName || r.materialSku || '').trim() && Number(r.defaultQty || 0) > 0);
       const newBomRows = cleanDraft.map((r, idx) => ({
         id: r.id && !String(r.id).startsWith('AUTO_') ? String(r.id) : `BOM_${targetSku}_${Date.now()}_${idx}`,
-        productId: String(selectedDrawerItem.id || targetSku),
-        productSku: targetSku,
-        productName: selectedDrawerItem.name || '',
-        category: selectedDrawerItem.category || '',
-        subCategory: selectedDrawerItem.sub_category || '',
-        materialId: String(r.materialSku || ''),
+        layoutCode: targetSku,
         materialSku: String(r.materialSku || ''),
-        materialName: String(r.materialName || ''),
         defaultQty: Number(r.defaultQty || 0),
-        unit: String(r.unit || 'Gam'),
-        wasteFactor: 1,
-        note: 'Cập nhật từ Chi tiết hàng hóa',
-        updatedAt: new Date().toISOString()
+        unit: String(r.unit || 'Gam')
       }));
-      const keptRows = existingBomTable.filter(r => String(r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase());
+      const keptRows = existingBomTable.filter(r => String(r.layoutCode || r.productSku || r.productId || '').trim().toUpperCase() !== targetSku.toUpperCase());
       const nextBomTable = [...keptRows, ...newBomRows];
       const newMaterialCost = Math.round(cleanDraft.reduce((s, r) => s + Number(r.defaultQty || 0) * Number(r.unitCost || 0), 0));
       const laborCostVal = Number(drawerBomAndCosts?.laborCost || 0);
