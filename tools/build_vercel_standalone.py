@@ -54,8 +54,15 @@ deferred_content_clean = re.sub(r'</script>\s*$', '', deferred_content_clean, fl
 output_html = re.sub(r'<\?!=\s*\(function\(\)\s*\{.*?WorkspaceWebsite.*?\}\)\(\)\s*\?>', lambda m: website_content, output_html, flags=re.DOTALL)
 output_html = re.sub(r'<\?!=\s*HtmlService\.createHtmlOutputFromFile\([\'"]WorkspaceWebsite[\'"]\).*?\?>', lambda m: website_content, output_html)
 
+# Read Knowledge OS Seed
+seed_js_path = os.path.join(root_dir, 'js', 'KnowledgeOsSeed.js')
+knowledge_seed_js = ""
+if os.path.exists(seed_js_path):
+    with open(seed_js_path, 'r', encoding='utf-8') as sf:
+        knowledge_seed_js = sf.read()
+
 # 4. Inject Turbo-Cache & Pure Supabase Database Engine at top of <head>
-bridge_script = """
+bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <script>\n  " + knowledge_seed_js + "\n  </script>\n" + """
   <!-- ⚡ RF WORKSPACE V2 PURE SUPABASE HIGH-PERFORMANCE ENGINE ⚡ -->
   <script>
     (function() {
@@ -97,6 +104,32 @@ bridge_script = """
               }
             });
           });
+        }
+      } catch(e) {}
+
+      // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & KHO TRI THỨC RF_KNOWLEDGE_OS NGAY LÚC KHỞI ĐỘNG ⚡
+      try {
+        if (localStorage.getItem('rf_pin') === '226868') {
+          localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
+          localStorage.setItem('rf_role', 'TỐI CAO');
+          localStorage.setItem('rf_title', 'Founder');
+          localStorage.setItem('rf_admin', 'true');
+          localStorage.setItem('rf_boss', 'true');
+        }
+        var kos = window.__RF_KNOWLEDGE_OS_SEED__;
+        if (kos && kos.Products && kos.Products.length > 0) {
+          var rawCache = localStorage.getItem('rf_turbo_cache_app_data');
+          var parsedCache = rawCache ? JSON.parse(rawCache) : {};
+          if (!parsedCache.Products || parsedCache.Products.length < kos.Products.length) {
+            parsedCache.Products = kos.Products;
+            parsedCache.BOM_Config = kos.BOM_Config || [];
+            parsedCache.kpiConfig = kos.Config_KPI || [];
+            parsedCache.Suppliers = kos.Suppliers || [];
+            parsedCache.documents = kos.Documents || [];
+            parsedCache.trainings = kos.Trainings || [];
+            parsedCache.Config_NhanSu = kos.Config_NhanSu || [];
+            localStorage.setItem('rf_turbo_cache_app_data', JSON.stringify(parsedCache));
+          }
         }
       } catch(e) {}
 
@@ -240,6 +273,9 @@ bridge_script = """
         if (action === 'validatePin') {
           var inputPin = String(args[0] || pin || '').trim();
           var staffRows = await fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*', 2);
+          if (!staffRows || staffRows.length === 0) {
+            staffRows = (window.__RF_KNOWLEDGE_OS_SEED__ && window.__RF_KNOWLEDGE_OS_SEED__.Config_NhanSu) || [];
+          }
           if (staffRows && staffRows.length > 0) {
             var matched = staffRows.find(function(s) {
               return String(s['Mã PIN'] || '').trim() === inputPin;
@@ -283,6 +319,9 @@ bridge_script = """
         // 2. User Config
         if (action === 'getUserConfig') {
           var staffRows = await fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*', 2);
+          if (!staffRows || staffRows.length === 0) {
+            staffRows = (window.__RF_KNOWLEDGE_OS_SEED__ && window.__RF_KNOWLEDGE_OS_SEED__.Config_NhanSu) || [];
+          }
           var cfg = {
             avatars: {},
             titles: {},
@@ -420,8 +459,42 @@ bridge_script = """
               o.discount = Number(o.discount || 0);
             });
 
+            // Đồng bộ chuẩn từ Kho Tri Thức (RF_KNOWLEDGE_OS) cho Products, BOM_Config, Config_KPI, Suppliers, Documents, Trainings, Config_NhanSu
+            var kosSeed = window.__RF_KNOWLEDGE_OS_SEED__ || {};
+            var effectiveProducts = (productsRaw && productsRaw.length > 0) ? productsRaw : (kosSeed.Products ? JSON.parse(JSON.stringify(kosSeed.Products)) : []);
+            if (kosSeed.Products && kosSeed.Products.length > 0 && effectiveProducts.length < kosSeed.Products.length) {
+              var existingSkus = {};
+              effectiveProducts.forEach(function(p) { if (p && p.sku) existingSkus[String(p.sku).toUpperCase()] = p; });
+              kosSeed.Products.forEach(function(kp) {
+                var kSku = String(kp.sku || '').toUpperCase();
+                if (!existingSkus[kSku]) {
+                  effectiveProducts.push(Object.assign({}, kp));
+                } else {
+                  var ep = existingSkus[kSku];
+                  if (!ep.image && kp.image) ep.image = kp.image;
+                  if (!ep.realImage && kp.realImage) ep.realImage = kp.realImage;
+                  if (!ep.costPrice && kp.costPrice) ep.costPrice = kp.costPrice;
+                  if (!ep.price && kp.price) ep.price = kp.price;
+                }
+              });
+            }
+            try {
+              var localProdOverrides = JSON.parse(localStorage.getItem('rf_local_products_override') || '{}');
+              effectiveProducts.forEach(function(p) {
+                var ov = localProdOverrides[p.id] || localProdOverrides[p.sku];
+                if (ov) Object.assign(p, ov);
+              });
+            } catch(e) {}
+
+            var effectiveBom = (bomRaw && bomRaw.length > 0) ? bomRaw : (kosSeed.BOM_Config || []);
+            var effectiveKpi = (kpiRaw && kpiRaw.length > 0) ? kpiRaw : (kosSeed.Config_KPI || []);
+            var effectiveStaff = (staffRaw && staffRaw.length > 0) ? staffRaw : (kosSeed.Config_NhanSu || []);
+            var effectiveSuppliers = (supRaw && supRaw.length > 0) ? supRaw : (kosSeed.Suppliers || []);
+            var effectiveDocs = (docRaw && docRaw.length > 0) ? docRaw : (kosSeed.Documents || []);
+            var effectiveTrainings = (trainRaw && trainRaw.length > 0) ? trainRaw : (kosSeed.Trainings || []);
+
             // Chuẩn hóa và bảo vệ UOM cho toàn bộ danh mục Hàng hoá & Nguyên liệu
-            (productsRaw || []).forEach(function(p) {
+            (effectiveProducts || []).forEach(function(p) {
               p.quantity = Number(p.quantity || 0);
               p.costPrice = Number(p.costPrice || 0);
               p.price = Number(p.price || 0);
@@ -501,17 +574,17 @@ bridge_script = """
               prodItems: prodItems,
               packings: packingsRaw || [],
               attendance: attRaw || [],
-              kpiConfig: kpiRaw || [],
+              kpiConfig: effectiveKpi,
               configGiaLayout: giaLayoutRaw || [],
-              Config_NhanSu: staffRaw || [],
-              Products: productsRaw || [],
-              BOM_Config: bomRaw || [],
+              Config_NhanSu: effectiveStaff,
+              Products: effectiveProducts,
+              BOM_Config: effectiveBom,
               Transactions: transRaw || [],
               ImportExport: impRaw || [],
               Accounts: accRaw || [],
-              Suppliers: supRaw || [],
-              documents: docRaw || [],
-              trainings: trainRaw || [],
+              Suppliers: effectiveSuppliers,
+              documents: effectiveDocs,
+              trainings: effectiveTrainings,
               models3D: modRaw || [],
               ctvFinance: ctvRaw || [],
               monthlySnapshots: snapRaw || [],
@@ -631,7 +704,17 @@ bridge_script = """
 
             // Write Products
             var prds = payload.Products || payload.products;
-            if (prds && prds.length) await upsertToSupabase('Products', prds);
+            if (prds && prds.length) {
+              try {
+                var localProdOv = JSON.parse(localStorage.getItem('rf_local_products_override') || '{}');
+                prds.forEach(function(p) {
+                  var key = p.id || p.sku;
+                  if (key) localProdOv[key] = Object.assign(localProdOv[key] || {}, p);
+                });
+                localStorage.setItem('rf_local_products_override', JSON.stringify(localProdOv));
+              } catch(e) {}
+              await upsertToSupabase('Products', prds);
+            }
 
             // Write Transactions
             var trans = payload.Transactions || payload.transactions;
