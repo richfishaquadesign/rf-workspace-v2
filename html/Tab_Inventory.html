@@ -2209,10 +2209,11 @@ Model ID: 287936773312
     // CHẶN BẢO MẬT: Chỉ Boss, Kế Toán, Quản Lý Kho mới được xem giá vốn. Thợ xưởng/Thủ kho/CTV bị ẩn 100%.
     const canViewCost = (hasPerm('INV_EDIT_PRODUCT') || ['QUẢN LÝ KHO VẬN', 'TỐI CAO', 'KẾ TOÁN'].includes(currentRole.toUpperCase()) || isBoss) && currentRole !== 'CTV';
 
-    // Lắng nghe sự kiện phím tắt điều hướng nhanh từ Dashboard (Tra SKU & Kiểm Hàng Hoàn)
+    // Lắng nghe sự kiện phím tắt điều hướng nhanh từ Dashboard (Tra SKU)
     React.useEffect(() => {
       const handleFocusSearch = () => {
         setActiveSegment('ALL');
+        setSubCatFilter(null);
         setTimeout(() => {
           const input = document.querySelector('input[placeholder*="Tìm kiếm tên sản phẩm"]');
           if (input) {
@@ -2221,14 +2222,9 @@ Model ID: 287936773312
           }
         }, 150);
       };
-      const handleFilterReturns = () => {
-        setActiveSegment('RETURNS');
-      };
       window.addEventListener('focusSearch', handleFocusSearch);
-      window.addEventListener('filterReturns', handleFilterReturns);
       return () => {
         window.removeEventListener('focusSearch', handleFocusSearch);
-        window.removeEventListener('filterReturns', handleFilterReturns);
       };
     }, []);
 
@@ -2361,21 +2357,25 @@ Model ID: 287936773312
 
     // Danh mục con (Sub-categories) khả dụng theo danh mục chính hiện tại
     const availableSubCategories = React.useMemo(() => {
-      if (activeSegment === 'ALL' || activeSegment === 'RETURNS') return [];
       const subMap = new Map();
-      uniqueProducts.filter(p => isItemInSegment(p, activeSegment)).forEach(p => {
+      const baseList = activeSegment === 'ALL'
+        ? uniqueProducts
+        : uniqueProducts.filter(p => isItemInSegment(p, activeSegment));
+      baseList.forEach(p => {
         const sub = String(p.sub_category || '').trim();
         if (sub) {
           subMap.set(sub, (subMap.get(sub) || 0) + 1);
         }
       });
-      return Array.from(subMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+      return Array.from(subMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     }, [uniqueProducts, activeSegment, isItemInSegment]);
 
-    // Lọc sản phẩm theo tìm kiếm và segment
+    // Lọc sản phẩm theo tìm kiếm và bộ lọc danh mục / danh mục con
     const filteredProducts = React.useMemo(() => {
       let list = uniqueProducts;
-      if (activeSegment !== 'ALL' && activeSegment !== 'RETURNS') {
+      if (activeSegment !== 'ALL') {
         list = list.filter(p => isItemInSegment(p, activeSegment));
       }
       if (subCatFilter) {
@@ -2394,22 +2394,48 @@ Model ID: 287936773312
       return list;
     }, [uniqueProducts, activeSegment, subCatFilter, deferredSearch, isItemInSegment]);
 
-    // Bộ 4 Metric Cards
-    const lowStockCount = React.useMemo(() => {
-      return uniqueProducts.filter(p => Number(p.quantity || 0) <= Number(p.minStock || 0)).length;
-    }, [uniqueProducts]);
+    // Bộ 4 Metric Cards (tính động theo danh mục & bộ lọc đang hiển thị)
+    const galleryStats = React.useMemo(() => {
+      const totalModels = filteredProducts.length;
+      const totalStock = Math.round(
+        filteredProducts.reduce((sum, p) => sum + Math.max(0, Number(p.quantity || 0)), 0) * 100
+      ) / 100;
+      const pricedItems = filteredProducts.filter(p => Number(p.price || 0) > 0);
+      const avgPrice = pricedItems.length > 0
+        ? Math.round(pricedItems.reduce((sum, p) => sum + Number(p.price || 0), 0) / pricedItems.length)
+        : 0;
+      const costItems = filteredProducts.filter(p => Number(p.costPrice || 0) > 0);
+      const avgCost = costItems.length > 0
+        ? Math.round(costItems.reduce((sum, p) => sum + Number(p.costPrice || 0), 0) / costItems.length)
+        : 0;
+      const inStockCount = filteredProducts.filter(p => Number(p.quantity || 0) > 0).length;
+      const outOfStockCount = totalModels - inStockCount;
+      return {
+        totalModels,
+        totalStock,
+        avgPrice,
+        pricedCount: pricedItems.length,
+        avgCost,
+        costCount: costItems.length,
+        inStockCount,
+        outOfStockCount
+      };
+    }, [filteredProducts]);
 
-    const totalInventoryCapital = React.useMemo(() => {
-      return uniqueProducts.reduce((sum, p) => {
-        const q = Math.max(0, Number(p.quantity || 0));
-        const c = Number(p.costPrice || 0);
-        return sum + (q * c);
-      }, 0);
-    }, [uniqueProducts]);
+    const CATEGORY_OPTIONS = [
+      { id: 'ALL', label: 'Tất Cả Danh Mục', count: segmentCounts['ALL'] },
+      { id: 'BỂ KÍNH', label: 'Bể Kính', count: segmentCounts['BỂ KÍNH'] },
+      { id: 'LAYOUT', label: 'Layout', count: segmentCounts['LAYOUT'] },
+      { id: 'PHỤ KIỆN', label: 'Phụ Kiện', count: segmentCounts['PHỤ KIỆN'] },
+      { id: 'DANH MỤC SẢN XUẤT', label: 'Nguyên Liệu', count: segmentCounts['DANH MỤC SẢN XUẤT'] }
+    ];
 
-    const totalPhysicalUnits = React.useMemo(() => {
-      return uniqueProducts.reduce((sum, p) => sum + Math.max(0, Number(p.quantity || 0)), 0);
-    }, [uniqueProducts]);
+    const activeCategoryLabel = (CATEGORY_OPTIONS.find(c => c.id === activeSegment)?.label) || 'Tất Cả Danh Mục';
+    const activeScopeText = [
+      activeCategoryLabel,
+      subCatFilter || null,
+      deferredSearch && deferredSearch.trim() ? `Từ khóa: "${deferredSearch.trim()}"` : null
+    ].filter(Boolean).join(' › ');
 
     // Xử lý xuất Excel tồn kho
     const handleExportExcel = () => {
@@ -2744,83 +2770,30 @@ Model ID: 287936773312
       };
     }, [bomLength, bomWidth, bomHeight, bomQty]);
 
+    const useCostAsMainAvg = galleryStats.pricedCount === 0 && galleryStats.costCount > 0 && canViewCost;
+
     return (
       <div className="space-y-3 pb-8 w-full max-w-full overflow-x-hidden animate-fade-in text-zinc-200">
 
-        {/* 1. SEGMENTED CONTROL 4 DANH MỤC CHUẨN CSDL GOOGLE SHEETS PRODUCTS */}
-        <div className="bg-[#202228] p-1.5 rounded-2xl flex flex-wrap items-center gap-1.5 max-w-full border-0 shadow-md">
-          {[
-            { id: 'ALL', label: 'Tất Cả', icon: 'fa-layer-group', count: segmentCounts['ALL'] },
-            { id: 'BỂ KÍNH', label: 'Bể Kính', icon: 'fa-cubes', count: segmentCounts['BỂ KÍNH'] },
-            { id: 'LAYOUT', label: 'Layout', icon: 'fa-tree', count: segmentCounts['LAYOUT'] },
-            { id: 'PHỤ KIỆN', label: 'Phụ Kiện', icon: 'fa-plug', count: segmentCounts['PHỤ KIỆN'] },
-            { id: 'DANH MỤC SẢN XUẤT', label: 'Danh Mục Sản Xuất', icon: 'fa-boxes-stacked', count: segmentCounts['DANH MỤC SẢN XUẤT'] },
-            { id: 'RETURNS', label: 'Chờ Kiểm Định Hàng Hoàn', icon: 'fa-truck-ramp-box', badge: waitingInspectionReturns.length, badgeColor: 'bg-[#A7226F] text-white font-bold' }
-          ].map(tab => {
-            const isActive = activeSegment === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => { setActiveSegment(tab.id); setSubCatFilter(null); }}
-                className={`h-9 px-3.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer active:scale-95 shrink-0 border-0 ${isActive
-                    ? 'bg-[#282b33] text-white font-black shadow-none'
-                    : 'text-zinc-400 hover:text-white bg-transparent'
-                  }`}
-              >
-                <i className={`fas ${tab.icon} text-xs`}></i>
-                <span>{tab.label}</span>
-                {tab.count !== undefined && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${isActive ? 'bg-[#d4af37] text-black font-black' : 'bg-white/10 text-zinc-300'}`}>
-                    {tab.count}
-                  </span>
-                )}
-                {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${isActive ? 'bg-black/40 text-white' : tab.badgeColor}`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* 1. GALLERY HEADER & BỘ LỌC DANH MỤC / DANH MỤC CON (DROPDOWN) */}
+        <div className="bg-[#18191f] border border-white/[0.08] rounded-2xl p-3.5 shadow-md space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0">
+                <i className="fas fa-boxes-stacked"></i>
+              </div>
+              <div>
+                <h2 className="text-[12.5px] sm:text-[13px] font-black uppercase tracking-wider text-white leading-tight">
+                  Thư Viện Sản Phẩm & Tra Cứu Kho
+                </h2>
+                <p className="text-[10.5px] text-zinc-400">
+                  Chọn danh mục và phân loại phụ bên dưới để lọc tự động số liệu và danh sách hàng hóa
+                </p>
+              </div>
+            </div>
 
-        {/* 1.1 SUB-CATEGORY PILLS (DANH MỤC CON CHUẨN GOOGLE SHEET) */}
-        {availableSubCategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 py-0.5 max-w-full">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-              <i className="fas fa-filter text-[9px] text-[#d4af37]"></i> Phân loại:
-            </span>
-            <button
-              onClick={() => setSubCatFilter(null)}
-              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all shrink-0 cursor-pointer ${!subCatFilter
-                  ? 'bg-[#d4af37] text-black font-black shadow-xs'
-                  : 'bg-[#202228] text-zinc-400 hover:text-white border-0'
-                }`}
-            >
-              Tất Cả ({segmentCounts[activeSegment] || uniqueProducts.filter(p => isItemInSegment(p, activeSegment)).length})
-            </button>
-            {availableSubCategories.map(sub => {
-              const isSubActive = subCatFilter && subCatFilter.toUpperCase() === sub.name.toUpperCase();
-              return (
-                <button
-                  key={sub.name}
-                  onClick={() => setSubCatFilter(isSubActive ? null : sub.name)}
-                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${isSubActive
-                      ? 'bg-[#d4af37] text-black font-black shadow-xs'
-                      : 'bg-[#202228] text-zinc-400 hover:text-white border-0'
-                    }`}
-                >
-                  <span>{sub.name}</span>
-                  <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${isSubActive ? 'bg-black/20 text-black font-bold' : 'bg-white/10 text-zinc-400'
-                    }`}>
-                    {sub.count}
-                  </span>
-                </button>
-              );
-            })}
-            {/* Nút hành động nhanh cho Layout: Thư viện 5 Góc & Xuất CSV Website */}
             {activeSegment === 'LAYOUT' && (
-              <div className="flex items-center gap-1.5 ml-auto shrink-0 pl-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -2829,102 +2802,168 @@ Model ID: 287936773312
                       window.openLayout5AngleViewer(cat[0].n);
                     }
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#d4af37]/25 to-amber-500/15 hover:from-[#d4af37]/35 hover:to-amber-500/25 text-[#d4af37] border border-[#d4af37]/40 text-[10px] font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37]/25 to-amber-500/15 hover:from-[#d4af37]/35 hover:to-amber-500/25 text-[#d4af37] border border-[#d4af37]/40 text-[10.5px] font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                   title="Mở Studio xem 5 góc chụp của 89 bộ layout"
                 >
                   <i className="fas fa-camera-retro text-[#d4af37] text-[10px]"></i>
-                  <span>Thư Viện 5 Góc (89 Bộ)</span>
+                  <span>Thư Viện 5 Góc</span>
                 </button>
-                <a
-                  href={'http:' + '/' + '/127.0.0.1:8000/api/layouts/export/csv'}
-                  download="export_layouts_website_sync.csv"
-                  className="px-2.5 py-1 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                  title="Tải file CSV danh mục 5 góc chụp để nhập vào website"
-                >
-                  <i className="fas fa-file-csv text-emerald-400 text-[10px]"></i>
-                  <span>Xuất CSV Web</span>
-                </a>
               </div>
             )}
           </div>
-        )}
 
-        {/* 2. METRIC CARDS DÒNG TIỀN & TỒN KHO (FROSTED GLASS & NEUTRAL PASTEL) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end">
+            {/* Bộ lọc danh mục */}
+            <div className="lg:col-span-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center gap-1.5">
+                <i className="fas fa-layer-group text-[#d4af37] text-[10px]"></i>
+                <span>Bộ lọc danh mục</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={activeSegment}
+                  onChange={(e) => { setActiveSegment(e.target.value); setSubCatFilter(null); }}
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full h-10 pl-3 pr-8 rounded-xl bg-[#0e0f13] hover:bg-[#121318] border border-white/[0.1] focus:border-[#d4af37] text-[12px] font-bold text-white outline-none transition-all cursor-pointer appearance-none"
+                >
+                  {CATEGORY_OPTIONS.map(opt => (
+                    <option key={opt.id} value={opt.id} className="bg-[#18181b] text-zinc-100">
+                      {opt.label} ({opt.count})
+                    </option>
+                  ))}
+                </select>
+                <i className="fas fa-chevron-down text-zinc-400 text-[10px] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            {/* Bộ lọc danh mục con */}
+            <div className="lg:col-span-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center gap-1.5">
+                <i className="fas fa-filter text-[#2E9599] text-[10px]"></i>
+                <span>Bộ lọc danh mục con</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={subCatFilter || ''}
+                  onChange={(e) => setSubCatFilter(e.target.value || null)}
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full h-10 pl-3 pr-8 rounded-xl bg-[#0e0f13] hover:bg-[#121318] border border-white/[0.1] focus:border-[#2E9599] text-[12px] font-bold text-white outline-none transition-all cursor-pointer appearance-none"
+                >
+                  <option value="" className="bg-[#18181b] text-zinc-100">
+                    Tất Cả Phân Loại ({activeSegment === 'ALL' ? uniqueProducts.length : (segmentCounts[activeSegment] || 0)})
+                  </option>
+                  {availableSubCategories.map(sub => (
+                    <option key={sub.name} value={sub.name} className="bg-[#18181b] text-zinc-100">
+                      {sub.name} ({sub.count})
+                    </option>
+                  ))}
+                </select>
+                <i className="fas fa-chevron-down text-zinc-400 text-[10px] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            {/* Phạm vi hiển thị */}
+            <div className="sm:col-span-2 lg:col-span-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center gap-1.5">
+                <i className="fas fa-eye text-zinc-400 text-[10px]"></i>
+                <span>Phạm vi hiển thị</span>
+              </label>
+              <div className="h-10 px-3 rounded-xl bg-[#121317] border border-white/[0.06] flex items-center justify-between gap-2">
+                <span className="text-[11.5px] font-bold text-[#d4af37] truncate" title={activeScopeText}>
+                  {activeScopeText}
+                </span>
+                {(activeSegment !== 'ALL' || subCatFilter || search) && (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveSegment('ALL'); setSubCatFilter(null); setSearch(''); }}
+                    className="text-[10px] font-bold text-zinc-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] px-2 py-0.5 rounded-lg shrink-0 cursor-pointer transition-colors"
+                    title="Đặt lại toàn bộ bộ lọc"
+                  >
+                    Đặt lại
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. 4 KPI CARDS THỐNG KÊ TỰ ĐỘNG THEO BỘ LỌC */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          {/* Card 1: Tổng Mặt Hàng */}
+          {/* Card 1: Tổng Số Mẫu Mã */}
           <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden group">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">1. Tổng SKU Quản Lý</span>
-              <div className="w-6 h-6 rounded-lg bg-white/[0.06] flex items-center justify-center text-emerald-300 text-xs border border-white/[0.08]">
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Tổng Số Mẫu Mã</span>
+              <div className="w-6 h-6 rounded-lg bg-[#d4af37]/15 flex items-center justify-center text-[#d4af37] text-xs border border-[#d4af37]/30">
                 <i className="fas fa-barcode"></i>
               </div>
             </div>
-            <div className="text-[20px] sm:text-[22px] font-mono font-black text-white tracking-tight">
-              {uniqueProducts.length} <span className="text-xs font-normal text-zinc-500 font-sans">mã</span>
+            <div className="text-[21px] sm:text-[23px] font-mono font-black text-white tracking-tight">
+              {galleryStats.totalModels} <span className="text-xs font-normal text-zinc-500 font-sans">mẫu</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-0.5">Danh mục hàng hóa chuẩn từ Kho Tri Thức (RF_KNOWLEDGE_OS)</p>
-          </div>
-
-          {/* Card 2: Cảnh Báo Chạm Ngưỡng */}
-          <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden transition-all">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">2. Chạm Ngưỡng Tồn</span>
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${lowStockCount > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.06] text-zinc-500 border border-white/[0.08]'}`}>
-                <i className="fas fa-triangle-exclamation"></i>
-              </div>
-            </div>
-            <div className="text-[20px] sm:text-[22px] font-mono font-black text-white tracking-tight">
-              {lowStockCount} <span className="text-xs font-normal text-zinc-400 font-sans">SKU cần nhập</span>
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Số lượng ≤ Định mức an toàn</p>
-          </div>
-
-          {/* Card 3: Giá Trị Vốn Hoặc Sản Lượng Vật Lý */}
-          <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">
-                {canViewCost ? '3. Vốn Tồn Kho Xưởng' : '3. Tổng Sản Lượng Tồn'}
-              </span>
-              <div className="w-6 h-6 rounded-lg bg-white/[0.06] flex items-center justify-center text-zinc-300 text-xs border border-white/[0.08]">
-                <i className={canViewCost ? 'fas fa-vault' : 'fas fa-cubes'}></i>
-              </div>
-            </div>
-            <div className="text-[19px] sm:text-[21px] font-mono font-black text-white tracking-tight truncate">
-              {canViewCost ? `${formatMoney(totalInventoryCapital)}đ` : `${formatMoney(totalPhysicalUnits)} SP`}
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-0.5">
-              {canViewCost ? 'Định giá theo giá vốn xuất xưởng' : 'Đơn vị tính vật lý tổng hợp'}
+            <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+              Trên tổng {uniqueProducts.length} SKU toàn kho
             </p>
           </div>
 
-          {/* Card 4: Kiện Hàng Hoàn Chờ Rạch Thùng (Pastel Amber) */}
-          <div
-            onClick={() => setActiveSegment('RETURNS')}
-            className={`vision-card p-3.5 rounded-2xl relative overflow-hidden cursor-pointer active:scale-95 transition-all ${waitingInspectionReturns.length > 0 ? 'border-amber-500/40 hover:border-amber-400' : ''
-              }`}
-          >
+          {/* Card 2: Tổng Tồn Kho */}
+          <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden group">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-300">4. Chờ Rạch Thùng</span>
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${waitingInspectionReturns.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.06] text-zinc-500 border border-white/[0.08]'}`}>
-                <i className="fas fa-box-open"></i>
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Tổng Tồn Kho</span>
+              <div className="w-6 h-6 rounded-lg bg-sky-500/15 flex items-center justify-center text-sky-400 text-xs border border-sky-500/30">
+                <i className="fas fa-cubes"></i>
               </div>
             </div>
-            <div className="text-[20px] sm:text-[22px] font-mono font-black text-amber-200 tracking-tight">
-              {waitingInspectionReturns.length} <span className="text-xs font-normal text-zinc-400 font-sans">kiện chờ KCS</span>
+            <div className="text-[21px] sm:text-[23px] font-mono font-black text-white tracking-tight">
+              {galleryStats.totalStock.toLocaleString('vi-VN')} <span className="text-xs font-normal text-zinc-500 font-sans">SP</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-0.5 flex items-center gap-1">
-              <i className="fas fa-shield-halved text-[9px] text-amber-400" title="Tuyệt đối cấm cộng kho tự động khi chưa rạch thùng KCS"></i>
-              <span>Kiểm định thủ công</span>
+            <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+              Tổng số lượng vật lý theo bộ lọc
+            </p>
+          </div>
+
+          {/* Card 3: Giá Bán Bình Quân (hoặc Giá Nhập Bình Quân cho Nguyên Liệu) */}
+          <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">
+                {useCostAsMainAvg ? 'Giá Nhập Bình Quân' : 'Giá Bán Bình Quân'}
+              </span>
+              <div className="w-6 h-6 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400 text-xs border border-amber-500/30">
+                <i className="fas fa-tag"></i>
+              </div>
+            </div>
+            <div className="text-[20px] sm:text-[22px] font-mono font-black text-amber-300 tracking-tight truncate">
+              {useCostAsMainAvg ? `${formatMoney(galleryStats.avgCost)} đ` : `${formatMoney(galleryStats.avgPrice)} đ`}
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+              {useCostAsMainAvg
+                ? `Trung bình ${galleryStats.costCount} vật tư có giá nhập`
+                : `Trung bình ${galleryStats.pricedCount} mẫu có giá bán`}
+            </p>
+          </div>
+
+          {/* Card 4: Sản Phẩm Còn Hàng */}
+          <div className="vision-card p-3.5 rounded-2xl relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Sản Phẩm Còn Hàng</span>
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 text-xs border border-emerald-500/30">
+                <i className="fas fa-check-circle"></i>
+              </div>
+            </div>
+            <div className="text-[21px] sm:text-[23px] font-mono font-black text-emerald-400 tracking-tight">
+              {galleryStats.inStockCount} <span className="text-xs font-normal text-zinc-400 font-sans">mẫu</span>
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+              {galleryStats.outOfStockCount > 0 ? `${galleryStats.outOfStockCount} mẫu đang hết hàng` : '100% mẫu đang còn hàng'}
             </p>
           </div>
         </div>
 
-        {/* 3. TOOLBAR TÌM KIẾM & THAO TÁC QUẢN TRỊ (FOUR SEASONS SOLID MATTE) */}
+        {/* 3. TOOLBAR TÌM KIẾM & THAO TÁC QUẢN TRỊ */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between w-full">
-          <div className="flex-1 bg-[#202228] rounded-xl flex items-center border-0 focus-within:ring-1 focus-within:ring-[#2E9599] transition-all px-3 py-0.5 shadow-md">
+          <div className="flex-1 bg-[#202228] rounded-xl flex items-center border border-white/[0.06] focus-within:ring-1 focus-within:ring-[#2E9599] transition-all px-3 py-0.5 shadow-md">
             <i className="fas fa-search text-zinc-500 text-xs mr-2.5 shrink-0"></i>
             <input
-              placeholder={activeSegment === 'RETURNS' ? 'Tìm mã vận đơn hoàn, mã đơn, khách hàng...' : 'Tìm kiếm tên sản phẩm, mã SKU, quy cách vật tư...'}
+              placeholder="Tìm kiếm tên sản phẩm, mã SKU, danh mục con..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full py-2 text-[12px] font-bold outline-none bg-transparent text-white placeholder-zinc-500 min-w-0"
@@ -3001,229 +3040,182 @@ Model ID: 287936773312
           />
         )}
 
-        {/* 4. HIGH-DENSITY DATA ROWS (DANH SÁCH NÉN CHIỀU CAO H-14) */}
-        {activeSegment === 'RETURNS' ? (
-          /* GIAO DIỆN KIỂM ĐỊNH HÀNG HOÀN ĐẢO CHIỀU (REVERSE LOGISTICS) */
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#121214] shadow-sm">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#09090b] text-zinc-400 border-b border-white/[0.06] uppercase text-[10px] font-bold tracking-wider h-11">
-                  <th className="p-3 pl-4">Mã Vận Đơn Hoàn</th>
-                  <th className="p-3">Mã Đơn Gốc</th>
-                  <th className="p-3">Khách Hàng</th>
-                  <th className="p-3">Sản Phẩm</th>
-                  <th className="p-3 text-center">Trạng Thái</th>
-                  <th className="p-3 text-center">Người Kiểm</th>
-                  <th className="p-3 text-center pr-4">Thao Tác</th>
+        {/* 4. BẢNG DANH SÁCH HÀNG HÓA CHUẨN GALLERY VIEW (DARK ROYAL THEME) */}
+        <div className="overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#121214] shadow-sm">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#09090b] text-zinc-400 border-b border-white/[0.08] uppercase text-[10px] font-bold tracking-wider h-11">
+                <th className="p-3 pl-4 whitespace-nowrap">Mã SKU</th>
+                <th className="p-3">Tên sản phẩm</th>
+                <th className="p-3 whitespace-nowrap">Danh mục</th>
+                <th className="p-3 whitespace-nowrap">Phân loại phụ</th>
+                <th className="p-3 text-center whitespace-nowrap">Xem ảnh</th>
+                <th className="p-3 text-right whitespace-nowrap">Giá bán</th>
+                <th className="p-3 text-right whitespace-nowrap">Tồn kho</th>
+                <th className="p-3 text-center whitespace-nowrap">Trạng thái</th>
+                <th className="p-3 text-center pr-4 whitespace-nowrap">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="text-center py-12 text-zinc-500 font-bold">
+                    <i className="fas fa-boxes text-2xl text-zinc-600 block mb-2"></i>
+                    Không tìm thấy sản phẩm nào phù hợp!
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {returnedOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="text-center py-12 text-zinc-500 font-bold">
-                      <i className="fas fa-clipboard-check text-2xl text-zinc-600 block mb-2"></i>
-                      Không có kiện hàng hoàn nào cần xử lý.
-                    </td>
-                  </tr>
-                ) : (
-                  returnedOrders.map(ret => {
-                    const isWaiting = ret.returnStatus === 'WAITING_INSPECTION';
-                    const isRestocked = ret.returnStatus === 'RESTOCKED';
-                    const isScrapped = ret.returnStatus === 'SCRAPPED';
+              ) : (
+                filteredProducts.map(p => {
+                  const qty = Math.round(Number(p.quantity || 0) * 100) / 100;
+                  const min = Number(p.minStock || 0);
+                  const isInStock = qty > 0;
+                  const isLow = isInStock && min > 0 && qty <= min;
+                  const safeDarkImg = (u) => {
+                    const s = formatImageUrl(u);
+                    return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+                  };
+                  const imgUrl = safeDarkImg(p.image) || safeDarkImg(p.realImage);
+                  const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
+                  const isMaterial = String(p.category || '').toUpperCase().trim() === 'DANH MỤC SẢN XUẤT';
+                  const catDisplay = isMaterial ? 'NGUYÊN LIỆU' : (p.category || 'Mặc định');
+                  const unitLabel = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(p) : (p.unit || 'Cái');
+                  const priceNum = Number(p.price || 0);
+                  const costNum = Number(p.costPrice || 0);
 
-                    return (
-                      <tr
-                        key={ret.id}
-                        onClick={() => handleOpenReturnDrawer(ret)}
-                        className="hover:bg-white/[0.02] transition-colors cursor-pointer group h-14"
-                      >
-                        <td className="p-3 pl-4 font-mono font-bold text-amber-400 group-hover:underline">
-                          {ret.returnTrackingCode}
-                        </td>
-                        <td className="p-3 font-mono font-medium text-zinc-300">
-                          {ret.orderCode}
-                        </td>
-                        <td className="p-3 font-bold text-white">
-                          {ret.customer}
-                        </td>
-                        <td className="p-3 text-zinc-400 max-w-xs truncate" title={typeof ret.productSummary === 'string' ? ret.productSummary : ''}>
-                          {typeof ret.productSummary === 'string' ? ret.productSummary : (ret.productSummary ? JSON.stringify(ret.productSummary) : '---')}
-                        </td>
-                        <td className="p-3 text-center">
-                          {isWaiting && (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5 animate-pulse">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Chờ Rạch Thùng
-                            </span>
-                          )}
-                          {isRestocked && (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1.5">
-                              <i className="fas fa-check text-[9px]"></i> Đã Nhập Kho
-                            </span>
-                          )}
-                          {isScrapped && (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1.5">
-                              <i className="fas fa-dumpster text-[9px]"></i> Đã Thanh Lý
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center text-zinc-400 font-medium">
-                          {ret.inspectedBy || '---'}
-                        </td>
-                        <td className="p-3 text-center pr-4">
+                  return (
+                    <tr
+                      key={p.id || p.sku}
+                      onClick={() => handleOpenProductDrawer(p)}
+                      className="hover:bg-white/[0.03] transition-colors cursor-pointer group h-12"
+                    >
+                      {/* Mã SKU */}
+                      <td className="p-2.5 pl-4 whitespace-nowrap">
+                        <span className="font-mono font-bold text-[#d4af37] text-[11px] group-hover:underline">
+                          {p.sku || 'N/A'}
+                        </span>
+                      </td>
+
+                      {/* Tên sản phẩm */}
+                      <td className="p-2.5 font-bold text-white min-w-[200px]">
+                        <div className="truncate max-w-md" title={p.name}>{p.name}</div>
+                      </td>
+
+                      {/* Danh mục */}
+                      <td className="p-2.5 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]">
+                          {catDisplay}
+                        </span>
+                      </td>
+
+                      {/* Phân loại phụ */}
+                      <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]">
+                        {p.sub_category || '---'}
+                      </td>
+
+                      {/* Xem ảnh */}
+                      <td className="p-2.5 text-center whitespace-nowrap">
+                        {(layout5 || imgUrl) ? (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenReturnDrawer(ret); }}
-                            className="h-8 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-[10.5px] font-bold border border-amber-500/30 transition-all cursor-pointer"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (layout5 && typeof window.openLayout5AngleViewer === 'function') {
+                                window.openLayout5AngleViewer(layout5);
+                              } else if (imgUrl) {
+                                setZoomDrawerImage(imgUrl);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#1c1e24] hover:bg-[#282b34] text-sky-300 hover:text-sky-200 border border-sky-500/25 text-[10.5px] font-bold transition-all cursor-pointer active:scale-95"
+                            title={layout5 ? 'Xem 5 góc chụp Layout' : 'Phóng to ảnh sản phẩm'}
                           >
-                            Kiểm Định
+                            {imgUrl ? (
+                              <img
+                                src={imgUrl}
+                                alt=""
+                                className="w-5 h-5 rounded object-cover border border-white/10 shrink-0"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <i className="fas fa-image text-[10px] text-sky-400"></i>
+                            )}
+                            <span>Xem ảnh</span>
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* GIAO DIỆN BẢNG TỒN KHO NÉN H-14 */
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#121214] shadow-sm">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#09090b] text-zinc-400 border-b border-white/[0.06] uppercase text-[10px] font-bold tracking-wider h-11">
-                  <th className="p-3 pl-4">SKU & Hình Ảnh</th>
-                  <th className="p-3">Tên Mặt Hàng</th>
-                  <th className="p-3">Danh Mục</th>
-                  <th className="p-3">Đơn Vị (UOM)</th>
-                  <th className="p-3 text-center">Tồn Thực Tế</th>
-                  <th className="p-3 text-center">Định Mức An Toàn</th>
-                  {canViewCost && <th className="p-3 text-right">Giá Vốn</th>}
-                  <th className="p-3 text-center">Trạng Thái</th>
-                  <th className="p-3 text-center pr-4">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {filteredProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={canViewCost ? 9 : 8} className="text-center py-12 text-zinc-500 font-bold">
-                      <i className="fas fa-boxes text-2xl text-zinc-600 block mb-2"></i>
-                      Không tìm thấy sản phẩm nào phù hợp!
-                    </td>
-                  </tr>
-                ) : (
-                  filteredProducts.map(p => {
-                    const qty = Number(p.quantity || 0);
-                    const min = Number(p.minStock || 0);
-                    const isLow = qty <= min;
-                    const isOut = qty <= 0;
-                    const safeDarkImg = (u) => {
-                      const s = formatImageUrl(u);
-                      return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
-                    };
-                    const imgUrl = safeDarkImg(p.image) || safeDarkImg(p.realImage);
-
-                    return (
-                      <tr
-                        key={p.id}
-                        onClick={() => handleOpenProductDrawer(p)}
-                        className="hover:bg-white/[0.02] transition-colors cursor-pointer group h-14"
-                      >
-                        {/* SKU & Hình ảnh */}
-                        <td className="p-3 pl-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
-                              {imgUrl ? (
-                                <img src={imgUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))} />
-                              ) : (
-                                <i className={`fas ${getSubCategoryIcon(p.name)} text-zinc-600 text-xs`}></i>
-                              )}
-                            </div>
-                            <span className="font-mono font-bold text-zinc-200 text-[11px] group-hover:text-white">
-                              {p.sku || 'N/A'}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Tên Mặt Hàng */}
-                        <td className="p-3 font-bold text-white">
-                          <div className="truncate max-w-sm" title={p.name}>{p.name}</div>
-                          {p.sub_category && <div className="text-[10px] text-zinc-400 font-normal">{p.sub_category}</div>}
-                        </td>
-
-                        {/* Danh Mục */}
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#18191d] text-zinc-300 border-0">
-                            {p.category || 'Mặc định'}
-                          </span>
-                        </td>
-
-                        {/* Đơn vị tính */}
-                        <td className="p-3 font-medium text-zinc-300">
-                          {typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(p) : (p.unit || 'Cái')}
-                        </td>
-
-                        {/* Tồn thực tế */}
-                        <td className="p-3 text-center font-mono font-black text-sm">
-                          <span className={isOut ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-white'}>
-                            {Math.round(qty * 100) / 100}
-                          </span>
-                        </td>
-
-                        {/* Định mức an toàn */}
-                        <td className="p-3 text-center font-mono text-zinc-400 text-xs">
-                          {min > 0 ? min : '---'}
-                        </td>
-
-                        {/* Giá vốn (Chỉ Admin/Kế toán) */}
-                        {canViewCost && (
-                          <td className="p-3 text-right font-mono text-zinc-300 font-bold">
-                            {formatMoney(p.costPrice)}đ
-                          </td>
+                        ) : (
+                          <span className="text-[10.5px] text-zinc-600 font-medium">Chưa có</span>
                         )}
+                      </td>
 
-                        {/* Trạng thái */}
-                        <td className="p-3 text-center">
-                          {isOut ? (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#18191d] text-rose-400 border-0">
-                              Cháy Hàng
-                            </span>
-                          ) : isLow ? (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#18191d] text-amber-400 border-0">
-                              Cảnh Báo
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#18191d] text-zinc-300 border-0">
-                              An Toàn
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Thao tác */}
-                        <td className="p-3 text-center pr-4">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleOpenProductDrawer(p); }}
-                              className="h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-[10px] font-bold border border-white/[0.08] transition-all cursor-pointer"
-                            >
-                              Thẻ Kho
-                            </button>
-                            {isAdminRole && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setEditProd(p); }}
-                                className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-[10px] border border-white/[0.08] transition-all cursor-pointer"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
+                      {/* Giá bán */}
+                      <td className="p-2.5 text-right whitespace-nowrap font-mono font-bold">
+                        {priceNum > 0 ? (
+                          <div>
+                            <span className="text-zinc-100">{formatMoney(priceNum)} đ</span>
+                            {canViewCost && costNum > 0 && (
+                              <div className="text-[9.5px] text-zinc-500 font-normal">Vốn: {formatMoney(costNum)}đ</div>
                             )}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        ) : (isMaterial && canViewCost && costNum > 0 ? (
+                          <div>
+                            <span className="text-amber-300">{formatMoney(costNum)} đ</span>
+                            <div className="text-[9px] text-zinc-500 font-normal uppercase">Giá nhập</div>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500">0 đ</span>
+                        ))}
+                      </td>
+
+                      {/* Tồn kho */}
+                      <td className="p-2.5 text-right whitespace-nowrap font-mono font-black text-[12.5px]">
+                        <span className={!isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-white'}>
+                          {qty}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">{unitLabel}</span>
+                      </td>
+
+                      {/* Trạng thái */}
+                      <td className="p-2.5 text-center whitespace-nowrap">
+                        {isInStock ? (
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold border ${isLow
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            }`}>
+                            {isLow ? 'Sắp hết' : 'Còn hàng'}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                            Hết hàng
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Thao tác */}
+                      <td className="p-2.5 text-center pr-4 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenProductDrawer(p); }}
+                            className="h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-[10px] font-bold border border-white/[0.08] transition-all cursor-pointer"
+                          >
+                            Thẻ Kho
+                          </button>
+                          {isAdminRole && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditProd(p); }}
+                              className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-[10px] border border-white/[0.08] transition-all cursor-pointer"
+                              title="Chỉnh sửa sản phẩm"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* 5. SIDE DRAWER ĐIỀU HÀNH KHO & KIỂM ĐỊNH HÀNG HOÀN (SLIDE-OVER PANEL) */}
         {(selectedDrawerItem || selectedDrawerReturn) && (
