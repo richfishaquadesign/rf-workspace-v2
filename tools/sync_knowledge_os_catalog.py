@@ -9,6 +9,7 @@ vào RF Workspace V2 (Products, BOM_Config, Config_KPI, Suppliers, Documents, Tr
 import os
 import re
 import json
+import hashlib
 import yaml
 from pathlib import Path
 
@@ -53,19 +54,31 @@ def parse_md(file_path: Path):
 
 def load_image_map():
     img_map = {}
+    gallery_map = {}
+    desc_map = {}
+
+    def normalize_img(raw_u):
+        s = str(raw_u or "").strip()
+        if not s or "shopee" in s.lower() or "/images/catalog/" in s:
+            return ""
+        if s.startswith("/"):
+            return MEDIA_BASE_URL + s
+        return s
+
     if CATALOG_PUBLIC_JSON.exists():
         try:
             data = json.loads(CATALOG_PUBLIC_JSON.read_text(encoding="utf-8"))
             for p in data.get("products", []):
                 sku = str(p.get("sku") or "").strip()
-                imgs = p.get("images") or []
-                if sku and imgs:
-                    first = str(imgs[0]).strip()
-                    if "shopee" in first.lower() or "/images/catalog/" in first:
-                        continue
-                    if first.startswith("/"):
-                        first = MEDIA_BASE_URL + first
-                    img_map[sku] = first
+                if not sku:
+                    continue
+                imgs = [u for u in (normalize_img(x) for x in (p.get("images") or [])) if u]
+                if imgs:
+                    img_map[sku] = imgs[0]
+                    gallery_map[sku] = imgs
+                wdesc = str(p.get("web_description") or p.get("meta_description") or "").strip()
+                if wdesc:
+                    desc_map[sku] = wdesc
         except Exception as e:
             print("Warning loading catalog_public.json:", e)
 
@@ -79,16 +92,65 @@ def load_image_map():
                 if not isinstance(p, dict):
                     continue
                 sku = str(p.get("sku") or "").strip()
-                im = str(p.get("image") or (p.get("images") or [""])[0] or "").strip()
-                if not sku or not im or sku in img_map:
+                if not sku:
                     continue
-                if "shopee" in im.lower() or "/images/catalog/" in im:
-                    continue
-                if im.startswith("/images/black-covers/") or im.startswith("/images/five-angle/") or im.startswith("/media-vault/"):
-                    img_map[sku] = MEDIA_BASE_URL + im
+                raw_imgs = list(p.get("images") or [])
+                if p.get("image"):
+                    raw_imgs.insert(0, p.get("image"))
+                clean_imgs = []
+                for x in raw_imgs:
+                    u = normalize_img(x)
+                    if u and ("/images/black-covers/" in u or "/images/five-angle/" in u or "/media-vault/" in u):
+                        if u not in clean_imgs:
+                            clean_imgs.append(u)
+                if clean_imgs:
+                    if sku not in img_map:
+                        img_map[sku] = clean_imgs[0]
+                    existing = gallery_map.setdefault(sku, [])
+                    for u in clean_imgs:
+                        if u not in existing:
+                            existing.append(u)
         except Exception as e:
             print("Warning loading catalog.json:", e)
-    return img_map
+    return img_map, gallery_map, desc_map
+
+
+def extract_md_gallery_and_desc(front: dict, body: str, media_vault_dir: Path):
+    imgs = []
+    for m in re.finditer(r"\[\[(07_MEDIA_BAN_VE/[^\]|#]+)", body or ""):
+        rel = m.group(1).strip()
+        if rel.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            key = hashlib.sha1(rel.encode("utf-8")).hexdigest()[:12]
+            dst = media_vault_dir / f"{key}.webp"
+            if dst.exists():
+                url = f"{MEDIA_BASE_URL}/media-vault/{key}.webp"
+                if url not in imgs:
+                    imgs.append(url)
+
+    m_seo = re.search(r"##\s*(?:2\.\s*)?Mô tả chuẩn Web \(SEO\)\s*\n+([\s\S]*?)(?=\n<details>|\n##\s|\Z)", body or "")
+    desc = m_seo.group(1).strip() if m_seo else ""
+    if not desc:
+        desc = str(front.get("meta_description") or "").strip()
+    if not desc and body:
+        # Clean fallback summary from body (skip details/tables/headings if short)
+        clean_lines = []
+        in_details = False
+        for line in body.splitlines():
+            st = line.strip()
+            if st.startswith("<details"):
+                in_details = True
+                continue
+            if st.startswith("</details"):
+                in_details = False
+                continue
+            if in_details or st.startswith("#") or st.startswith("|") or st.startswith("![") or st == "---":
+                continue
+            if st:
+                clean_lines.append(st)
+            if len("\n".join(clean_lines)) > 800:
+                break
+        desc = "\n".join(clean_lines).strip()
+    return imgs, desc
 
 
 def extract_boms():
@@ -192,12 +254,36 @@ def calc_layout_labor(design_group: str, size: str):
     return k1 + k2 + dg + 15000  # +15k bao bì thùng hộp
 
 
-def extract_products(img_map, glass_bom_meta, layout_bom_meta):
+def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_meta):
     products = []
+    product_details = {}
+    media_vault_dir = WORKSPACE_V2_DIR / "Wedsite RF" / "public" / "media-vault"
+
+    def register_detail(sku, front, body, fallback_img=""):
+        md_imgs, md_desc = extract_md_gallery_and_desc(front, body, media_vault_dir)
+        merged_imgs = []
+        for u in list(gallery_map.get(sku) or []) + md_imgs + ([fallback_img] if fallback_img else []):
+            if u and u not in merged_imgs:
+                merged_imgs.append(u)
+        final_desc = desc_map.get(sku) or md_desc
+        dims = ""
+        raw_dim = front.get("dimensions") or front.get("dimensions_cm")
+        if isinstance(raw_dim, dict):
+            l, w, h = raw_dim.get("length_cm"), raw_dim.get("width_cm"), raw_dim.get("height_cm")
+            if l and w and h:
+                dims = f"{l}x{w}x{h}cm"
+        elif raw_dim:
+            dims = str(raw_dim).strip()
+        product_details[sku] = {
+            "images": merged_imgs,
+            "description": final_desc,
+            "dimensions": dims,
+            "status": str(front.get("status") or "").strip(),
+        }
 
     # 1. BỂ KÍNH (01_SAN_PHAM/02_BE_KINH)
     for f in sorted((KNOWLEDGE_OS_DIR / "01_SAN_PHAM" / "02_BE_KINH").rglob("*.md")):
-        front, _ = parse_md(f)
+        front, body = parse_md(f)
         sku = str(front.get("sku") or f.stem).strip()
         if not sku:
             continue
@@ -208,6 +294,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
         price = int(front.get("price_shopee_vnd") or bom_info.get("price_vnd") or 0)
         cost = int(bom_info.get("cost_vnd") or front.get("cost_vnd") or round(price * 0.42))
         img = img_map.get(sku, "")
+        register_detail(sku, front, body, img)
         products.append({
             "id": f"BE_{sku}",
             "sku": sku,
@@ -229,7 +316,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
 
     # 2. LAYOUT (01_SAN_PHAM/01_LAYOUT)
     for f in sorted((KNOWLEDGE_OS_DIR / "01_SAN_PHAM" / "01_LAYOUT").rglob("*.md")):
-        front, _ = parse_md(f)
+        front, body = parse_md(f)
         sku = str(front.get("sku") or front.get("id") or f.stem).strip()
         if not sku:
             continue
@@ -242,6 +329,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
         cost = mat_cost + labor_and_pack
         price = int(front.get("listed_price_vnd") or front.get("price_shopee_vnd") or round(cost * 2.4))
         img = img_map.get(sku, "")
+        register_detail(sku, front, body, img)
         products.append({
             "id": f"LAY_{sku}",
             "sku": sku,
@@ -263,7 +351,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
 
     # 3. PHỤ KIỆN (01_SAN_PHAM/03_PHU_KIEN)
     for f in sorted((KNOWLEDGE_OS_DIR / "01_SAN_PHAM" / "03_PHU_KIEN").rglob("*.md")):
-        front, _ = parse_md(f)
+        front, body = parse_md(f)
         sku = str(front.get("sku") or front.get("id") or f.stem).strip()
         if not sku:
             continue
@@ -273,6 +361,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
         price = int(front.get("price_shopee_vnd") or front.get("listed_price_vnd") or 0)
         cost = int(front.get("cost_vnd") or front.get("purchase_price_vnd") or round(price * 0.45))
         img = img_map.get(sku, "")
+        register_detail(sku, front, body, img)
         products.append({
             "id": f"PK_{sku}",
             "sku": sku,
@@ -294,7 +383,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
 
     # 4. DANH MỤC SẢN XUẤT (03_KHO_VAT_TU/Danh_Muc_Vat_Tu)
     for f in sorted((KNOWLEDGE_OS_DIR / "03_KHO_VAT_TU" / "Danh_Muc_Vat_Tu").rglob("*.md")):
-        front, _ = parse_md(f)
+        front, body = parse_md(f)
         sku = str(front.get("sku") or f.stem).strip()
         if not sku:
             continue
@@ -309,6 +398,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
             or front.get("production_unit_price_vnd")
             or 0
         )))
+        register_detail(sku, front, body, "")
         products.append({
             "id": f"VT_{sku}",
             "sku": sku,
@@ -328,7 +418,7 @@ def extract_products(img_map, glass_bom_meta, layout_bom_meta):
             "model3D": "",
         })
 
-    return products
+    return products, product_details
 
 
 def extract_documents_and_trainings():
@@ -429,9 +519,9 @@ def get_config_nhan_su():
 
 def main():
     print("🚀 Đang trích xuất 100% CSDL chuẩn từ Kho Tri Thức (RF_KNOWLEDGE_OS)...")
-    img_map = load_image_map()
+    img_map, gallery_map, desc_map = load_image_map()
     glass_bom_meta, layout_bom_meta, bom_rows = extract_boms()
-    products = extract_products(img_map, glass_bom_meta, layout_bom_meta)
+    products, product_details = extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_meta)
     docs, trainings = extract_documents_and_trainings()
     suppliers = get_suppliers()
     kpis = get_config_kpi()
@@ -450,6 +540,7 @@ def main():
 
     seed_payload = {
         "Products": products,
+        "ProductDetails": product_details,
         "BOM_Config": bom_rows,
         "Config_KPI": kpis,
         "Suppliers": suppliers,

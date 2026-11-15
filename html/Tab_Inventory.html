@@ -2162,29 +2162,9 @@ Model ID: 287936773312
     const [showQuickNotes, setShowQuickNotes] = React.useState(false);
     const [showShopeeImport, setShowShopeeImport] = React.useState(false);
 
-    // Side Drawer state
+    // Side Drawer state (Chi tiết hàng hóa)
     const [selectedDrawerItem, setSelectedDrawerItem] = React.useState(null);
-    const [selectedDrawerReturn, setSelectedDrawerReturn] = React.useState(null);
-    const [drawerActiveTab, setDrawerActiveTab] = React.useState('STOCK_CARD'); // 'STOCK_CARD' | 'BOM_CALC' | 'RETURN_INSPECT'
-    const [drawerAngleKey, setDrawerAngleKey] = React.useState('front');
-
-    // Quick Stock Adjustment in Drawer
-    const [stockAdjType, setStockAdjType] = React.useState('IN'); // 'IN' (Nhập) | 'OUT' (Xuất)
-    const [stockAdjQty, setStockAdjQty] = React.useState('');
-    const [stockAdjUnit, setStockAdjUnit] = React.useState('DEFAULT'); // 'DEFAULT' | 'LARGE_SHEET' | 'SQM' | 'BOX'
-    const [stockAdjNote, setStockAdjNote] = React.useState('');
-    const [isSubmittingAdj, setIsSubmittingAdj] = React.useState(false);
-
-    // Glass BOM Calculator State (+5% hao hụt chuẩn Hiến pháp)
-    const [bomLength, setBomLength] = React.useState(30);
-    const [bomWidth, setBomWidth] = React.useState(20);
-    const [bomHeight, setBomHeight] = React.useState(20);
-    const [bomQty, setBomQty] = React.useState(1);
-
-    // Return Inspection State
-    const [inspectPhoto, setInspectPhoto] = React.useState('');
-    const [inspectNote, setInspectNote] = React.useState('');
-    const [isProcessingReturn, setIsProcessingReturn] = React.useState(false);
+    const [drawerPhotoIdx, setDrawerPhotoIdx] = React.useState(0);
 
     // Product Image Upload & Lightbox State in Drawer
     const [isUploadingProductPhoto, setIsUploadingProductPhoto] = React.useState(false);
@@ -2248,65 +2228,6 @@ Model ID: 287936773312
       });
       return Array.from(map.values());
     }, [data.Products]);
-
-    // Danh sách kiện hàng hoàn từ Orders
-    const returnedOrders = React.useMemo(() => {
-      const allOrders = data.Orders || [];
-      return allOrders.filter(o => {
-        const st = String(o.status || '').toUpperCase().trim();
-        const retSt = String(o.returnStatus || '').toUpperCase().trim();
-        return st === 'HÀNG HOÀN' || st.includes('HOÀN') || retSt === 'WAITING_INSPECTION' || retSt === 'SCRAPPED' || retSt === 'RESTOCKED';
-      }).map(o => {
-        let summaryStr = '';
-        if (o.accessories) {
-          let accList = [];
-          if (Array.isArray(o.accessories)) {
-            accList = o.accessories;
-          } else if (typeof o.accessories === 'string') {
-            const trimmed = o.accessories.trim();
-            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-              try {
-                const parsed = JSON.parse(trimmed);
-                accList = Array.isArray(parsed) ? parsed : [parsed];
-              } catch (e) {
-                summaryStr = trimmed;
-              }
-            } else {
-              summaryStr = trimmed;
-            }
-          }
-          if (accList && accList.length > 0) {
-            summaryStr = accList.map(a => {
-              if (!a) return '';
-              if (typeof a === 'string') return a;
-              const aName = a.name || a.Name || a.title || a.productName || 'Sản phẩm';
-              const qty = a.quantity || a.Quantity || a.qty || 1;
-              return `${aName} (x${qty})`;
-            }).filter(Boolean).join(', ');
-          }
-        }
-        if (!summaryStr) {
-          summaryStr = typeof o.note === 'string' && o.note.trim() ? o.note.trim() : 'Sản phẩm hoàn';
-        }
-        return {
-          id: o.id,
-          orderCode: o.orderCode || o.id,
-          customer: o.customer || 'Khách hàng',
-          phone: o.phone || '',
-          productSummary: summaryStr,
-          returnTrackingCode: o.returnTrackingCode || o.trackingCode || `RET-${o.orderCode || o.id}`,
-          returnStatus: o.returnStatus || (String(o.status || '').toUpperCase().includes('HOÀN') ? 'WAITING_INSPECTION' : 'WAITING_INSPECTION'),
-          inspectedBy: o.inspectedBy || '',
-          inspectedAt: o.inspectedAt || '',
-          inspectionPhoto: o.inspectionPhoto || '',
-          inspectionNote: o.inspectionNote || o.note || ''
-        };
-      });
-    }, [data.Orders]);
-
-    const waitingInspectionReturns = React.useMemo(() => {
-      return returnedOrders.filter(r => r.returnStatus === 'WAITING_INSPECTION');
-    }, [returnedOrders]);
 
     // Phân loại danh mục chuẩn 100% khớp CSDL Google Sheets Products
     const isItemInSegment = React.useCallback((p, segment) => {
@@ -2466,47 +2387,137 @@ Model ID: 287936773312
       }
     };
 
-    // Drawer Handler: Mở Drawer cho sản phẩm
+    // Drawer Handler: Mở Chi tiết hàng hóa
     const handleOpenProductDrawer = (prod) => {
       setSelectedDrawerItem(prod);
-      setSelectedDrawerReturn(null);
-      setDrawerActiveTab('STOCK_CARD');
-      setStockAdjQty('');
-      setStockAdjNote('');
+      setDrawerPhotoIdx(0);
+      setShowProductPhotoUrlInput(false);
+      setProductPhotoUrlVal('');
     };
 
-    // Drawer Handler: Mở Drawer cho đơn hàng hoàn
-    const handleOpenReturnDrawer = (retItem) => {
-      setSelectedDrawerReturn(retItem);
-      setSelectedDrawerItem(null);
-      setDrawerActiveTab('RETURN_INSPECT');
-      setInspectPhoto(retItem.inspectionPhoto || '');
-      setInspectNote(retItem.inspectionNote || '');
-    };
-
-    // Lắng nghe phím ESC để đóng Drawer an toàn
+    // Lắng nghe phím ESC để đóng Drawer / Lightbox an toàn
     React.useEffect(() => {
       const handleKey = (e) => {
         if (e.key === 'Escape') {
           if (zoomDrawerImage) {
             setZoomDrawerImage(null);
-          } else if (selectedDrawerItem || selectedDrawerReturn) {
+          } else if (selectedDrawerItem) {
             handleCloseDrawer();
           }
         }
       };
       window.addEventListener('keydown', handleKey);
       return () => window.removeEventListener('keydown', handleKey);
-    }, [selectedDrawerItem, selectedDrawerReturn, zoomDrawerImage]);
+    }, [selectedDrawerItem, zoomDrawerImage]);
 
     // Đóng Drawer
     const handleCloseDrawer = () => {
       setSelectedDrawerItem(null);
-      setSelectedDrawerReturn(null);
       setShowProductPhotoUrlInput(false);
       setProductPhotoUrlVal('');
       setZoomDrawerImage(null);
+      setDrawerPhotoIdx(0);
     };
+
+    const productDetailsMap = (typeof window !== 'undefined' && window.__RF_KNOWLEDGE_OS_SEED__?.ProductDetails) || {};
+
+    const getProductCleanThumb = React.useCallback((p) => {
+      const safeDarkImg = (u) => {
+        const s = formatImageUrl(u);
+        return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+      };
+      const detailImgs = (productDetailsMap[p?.sku]?.images || []).map(safeDarkImg).filter(Boolean);
+      return safeDarkImg(p?.image) || safeDarkImg(p?.realImage) || detailImgs[0] || '';
+    }, [productDetailsMap]);
+
+    const drawerDetailMeta = React.useMemo(() => {
+      if (!selectedDrawerItem) return {};
+      return productDetailsMap[String(selectedDrawerItem.sku || '').trim()] || {};
+    }, [selectedDrawerItem, productDetailsMap]);
+
+    const drawerGallery = React.useMemo(() => {
+      if (!selectedDrawerItem) return [];
+      const sku = String(selectedDrawerItem.sku || '').trim();
+      const detail = productDetailsMap[sku] || {};
+      const safeImg = (u) => {
+        const s = formatImageUrl(u);
+        return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
+      };
+      const seen = new Set();
+      const items = [];
+      const addItem = (url, label = '') => {
+        const clean = safeImg(url);
+        if (!clean || seen.has(clean)) return;
+        seen.add(clean);
+        items.push({ url: clean, label });
+      };
+
+      const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
+      if (layout5 && layout5.angles) {
+        ['front', 'distant', 'left', 'right', 'top'].forEach(k => {
+          const a = layout5.angles[k];
+          if (a?.url) addItem(a.url, a.label || a.shortLabel || k);
+        });
+      }
+      (detail.images || []).forEach((u, idx) => addItem(u, `Ảnh ${idx + 1}`));
+      addItem(selectedDrawerItem.image, 'Ảnh đại diện');
+      addItem(selectedDrawerItem.realImage, 'Ảnh thực tế');
+      return items;
+    }, [selectedDrawerItem, productDetailsMap]);
+
+    const drawerStockLogs = React.useMemo(() => {
+      if (!selectedDrawerItem) return [];
+      const logsSrc = data?.ImportExport || [];
+      const result = [];
+      const prodSkuUpper = String(selectedDrawerItem.sku || '').trim().toUpperCase();
+      const prodId = String(selectedDrawerItem.id || '').trim();
+      const prodNameClean = String(selectedDrawerItem.name || '').trim().toLowerCase();
+
+      logsSrc.forEach(log => {
+        if (!log || log.type === 'Đặt Hàng' || log.type === 'ORDERED') return;
+        try {
+          const items = typeof log.itemsData === 'string'
+            ? JSON.parse(log.itemsData)
+            : (Array.isArray(log.itemsData) ? log.itemsData : []);
+          if (!Array.isArray(items)) return;
+
+          const match = items.find(i => {
+            const iSku = String(i.sku || '').trim().toUpperCase();
+            const iId = String(i.id || '').trim();
+            const iName = String(i.name || '').trim().toLowerCase();
+            return (iSku && prodSkuUpper && iSku === prodSkuUpper) ||
+                   (iId && prodId && iId === prodId) ||
+                   (iName && prodNameClean && iName === prodNameClean);
+          });
+
+          if (match) {
+            const rawQty = match.qty !== undefined
+              ? match.qty
+              : (match.deductedQty !== undefined ? match.deductedQty : (parseFloat(match.quantity) || 0));
+            result.push({
+              ...log,
+              changedQty: Math.round(Number(rawQty || 0) * 1000) / 1000,
+              price: match.price || match.costPrice || 0
+            });
+          }
+        } catch (e) {}
+      });
+
+      result.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      let currentBal = Number(selectedDrawerItem.quantity || 0);
+      result.forEach(log => {
+        log.balanceAfter = Math.round(currentBal * 1000) / 1000;
+        if (log.type === 'Nhập' || log.type === 'Cân Tăng') {
+          currentBal -= Number(log.changedQty || 0);
+        } else if (log.type === 'Xuất' || log.type === 'Thanh Lý' || log.type === 'Cân Giảm') {
+          currentBal += Number(log.changedQty || 0);
+        }
+        currentBal = Math.round(currentBal * 1000) / 1000;
+      });
+
+      return result;
+    }, [selectedDrawerItem, data?.ImportExport]);
 
     // Upload ảnh hàng hóa trực tiếp từ Drawer lên máy chủ Google Drive
     const handleUploadProductPhoto = async (file) => {
@@ -2630,145 +2641,6 @@ Model ID: 287936773312
         setIsUploadingProductPhoto(false);
       }
     };
-
-    // Xử lý Thao tác Kho 1 Chạm (+ Nhập Kho / - Xuất SX) kèm Quy Đổi UOM
-    const handleExecuteStockAdj = async () => {
-      if (!selectedDrawerItem) return;
-      const rawNum = parseFloat(stockAdjQty);
-      if (isNaN(rawNum) || rawNum <= 0) {
-        return triggerToast('Vui lòng nhập số lượng hợp lệ (> 0)!', 'fa-exclamation-triangle', 'warning');
-      }
-
-      const uomConfig = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : { baseUnit: 'Cái', importUnit: 'Cái', conversionRate: 1 };
-      const baseUnit = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : (selectedDrawerItem.unit || 'Cái');
-
-      let convertedQty = rawNum;
-      let conversionDescription = `${rawNum} ${baseUnit}`;
-
-      // Quy đổi UOM tự động & chính xác hệ số:
-      if (stockAdjUnit === 'IMPORT_UNIT' || stockAdjUnit === 'BOX' || stockAdjUnit === 'BAG') {
-        const rate = Number(uomConfig.conversionRate) > 0 ? Number(uomConfig.conversionRate) : 1;
-        convertedQty = Math.round(rawNum * rate * 1000) / 1000;
-        conversionDescription = `${rawNum} ${uomConfig.importUnit} (= ${convertedQty} ${baseUnit})`;
-      } else if (stockAdjUnit === 'LARGE_SHEET') {
-        convertedQty = Math.round(rawNum * 3.6 * 100) / 100;
-        conversionDescription = `${rawNum} Tấm lớn (= ${convertedQty} m²)`;
-      } else if (stockAdjUnit === 'BOM_GRAM' || stockAdjUnit === 'GRAM') {
-        convertedQty = Math.round((rawNum / 1000) * 1000) / 1000;
-        conversionDescription = `${rawNum} Gam (= ${convertedQty} Kg)`;
-      }
-
-      setIsSubmittingAdj(true);
-      try {
-        const deltaQty = stockAdjType === 'IN' ? convertedQty : -convertedQty;
-        const newQty = Math.max(0, Number(selectedDrawerItem.quantity || 0) + deltaQty);
-
-        const updatedProd = {
-          ...selectedDrawerItem,
-          quantity: newQty
-        };
-
-        // Ghi nhận chứng từ vào ImportExport
-        const newTicket = {
-          id: 'IE_' + Date.now(),
-          type: stockAdjType === 'IN' ? 'Nhập' : 'Xuất',
-          target: stockAdjType === 'IN' ? 'Nhập bổ sung kho' : 'Xuất phục vụ sản xuất',
-          date: new Date().toISOString().replace('T', ' ').slice(0, 19),
-          note: `[1-Chạm] ${stockAdjType === 'IN' ? 'Nhập' : 'Xuất'} ${conversionDescription} (${selectedDrawerItem.name}). Lý do: ${stockAdjNote || 'Điều chỉnh tức thì'}`,
-          totalAmount: (Number(selectedDrawerItem.costPrice || 0) * convertedQty),
-          itemsData: JSON.stringify([{
-            id: selectedDrawerItem.id,
-            sku: selectedDrawerItem.sku,
-            name: selectedDrawerItem.name,
-            qty: convertedQty,
-            unit: selectedDrawerItem.unit,
-            price: selectedDrawerItem.costPrice || 0
-          }])
-        };
-
-        const payload = {
-          Products: [updatedProd],
-          ImportExport: [newTicket]
-        };
-
-        await pushDeltas(payload, `Đã ${stockAdjType === 'IN' ? 'nhập' : 'xuất'} ${conversionDescription}!`, 'fa-box-archive');
-        setSelectedDrawerItem(updatedProd);
-        setStockAdjQty('');
-        setStockAdjNote('');
-      } catch (err) {
-        triggerToast('Lỗi khi điều chỉnh tồn kho: ' + err.message, 'fa-times', 'danger');
-      } finally {
-        setIsSubmittingAdj(false);
-      }
-    };
-
-    // Xử lý Kiểm Định Hàng Hoàn Đảo Chiều (Reverse Logistics)
-    const handleResolveReturn = async (decision) => {
-      if (!selectedDrawerReturn) return;
-      setIsProcessingReturn(true);
-      try {
-        const isRestock = decision === 'RESTOCK';
-        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
-
-        // 1. Cập nhật trạng thái đơn hàng trong Orders
-        const updatedOrder = {
-          id: selectedDrawerReturn.id,
-          returnStatus: isRestock ? 'RESTOCKED' : 'SCRAPPED',
-          inspectedBy: currentUser || 'Thủ kho',
-          inspectedAt: nowStr,
-          inspectionPhoto: inspectPhoto || selectedDrawerReturn.inspectionPhoto,
-          inspectionNote: inspectNote || (isRestock ? 'Hàng nguyên vẹn đạt chuẩn - Đã nhập lại kho thành phẩm' : 'Hàng vỡ nát / phế liệu - Đã chuyển thanh lý tiêu hủy')
-        };
-
-        let payload = {
-          Orders: [updatedOrder]
-        };
-
-        // 2. Nếu HÀNG NGUYÊN VẸN -> Tự động tìm SKU thành phẩm để cộng lại kho
-        if (isRestock) {
-          const matchedSku = selectedDrawerItem?.sku || null;
-          if (matchedSku) {
-            const targetProd = uniqueProducts.find(p => p.sku === matchedSku);
-            if (targetProd) {
-              payload.Products = [{
-                ...targetProd,
-                quantity: Number(targetProd.quantity || 0) + 1
-              }];
-            }
-          }
-        }
-
-        const msg = isRestock
-          ? `🟢 ĐÃ NHẬP KHO THÀNH PHẨM! Kiện ${selectedDrawerReturn.returnTrackingCode} nguyên vẹn.`
-          : `🔴 ĐÃ XÁC NHẬN PHẾ LIỆU! Kiện ${selectedDrawerReturn.returnTrackingCode} chuyển thanh lý, không cộng kho.`;
-
-        await pushDeltas(payload, msg, isRestock ? 'fa-check-circle' : 'fa-dumpster');
-        handleCloseDrawer();
-      } catch (err) {
-        triggerToast('Lỗi khi xử lý kiểm định: ' + err.message, 'fa-times', 'danger');
-      } finally {
-        setIsProcessingReturn(false);
-      }
-    };
-
-    // Tính toán diện tích kính theo công thức chuẩn Hiến pháp: S = (DxR + 2DC + 2RC) x 1.05 m²
-    const computedGlassArea = React.useMemo(() => {
-      const L = (parseFloat(bomLength) || 0) / 100;
-      const W = (parseFloat(bomWidth) || 0) / 100;
-      const H = (parseFloat(bomHeight) || 0) / 100;
-      const qty = parseInt(bomQty, 10) || 1;
-
-      const singleArea = (L * W + 2 * L * H + 2 * W * H) * 1.05; // 5% hao hụt chuẩn
-      const totalArea = singleArea * qty;
-      const sheetCount = totalArea / 3.6; // 1 tấm khổ 180x200cm = 3.6 m²
-
-      return {
-        singleArea: Math.round(singleArea * 1000) / 1000,
-        totalArea: Math.round(totalArea * 1000) / 1000,
-        sheetCount: Math.round(sheetCount * 100) / 100,
-        perimeterMeters: Math.round(((L + W) * 2 * qty) * 100) / 100
-      };
-    }, [bomLength, bomWidth, bomHeight, bomQty]);
 
     const useCostAsMainAvg = galleryStats.pricedCount === 0 && galleryStats.costCount > 0 && canViewCost;
 
@@ -3040,26 +2912,23 @@ Model ID: 287936773312
           />
         )}
 
-        {/* 4. BẢNG DANH SÁCH HÀNG HÓA CHUẨN GALLERY VIEW (DARK ROYAL THEME) */}
+        {/* 4. BẢNG DANH SÁCH HÀNG HÓA (6 CỘT GỌN RÕ: ẢNH, TÊN HÀNG HÓA, DANH MỤC, PHÂN LOẠI, GIÁ BÁN, TỒN KHO) */}
         <div className="overflow-x-auto rounded-2xl border border-white/[0.06] bg-[#121214] shadow-sm">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#09090b] text-zinc-400 border-b border-white/[0.08] uppercase text-[10px] font-bold tracking-wider h-11">
-                <th className="p-3 pl-4 whitespace-nowrap">Mã SKU</th>
-                <th className="p-3">Tên sản phẩm</th>
+                <th className="p-3 pl-4 whitespace-nowrap w-16">Ảnh</th>
+                <th className="p-3">Tên hàng hóa</th>
                 <th className="p-3 whitespace-nowrap">Danh mục</th>
-                <th className="p-3 whitespace-nowrap">Phân loại phụ</th>
-                <th className="p-3 text-center whitespace-nowrap">Xem ảnh</th>
+                <th className="p-3 whitespace-nowrap">Phân loại</th>
                 <th className="p-3 text-right whitespace-nowrap">Giá bán</th>
-                <th className="p-3 text-right whitespace-nowrap">Tồn kho</th>
-                <th className="p-3 text-center whitespace-nowrap">Trạng thái</th>
-                <th className="p-3 text-center pr-4 whitespace-nowrap">Thao tác</th>
+                <th className="p-3 text-right pr-4 whitespace-nowrap">Tồn kho</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-zinc-500 font-bold">
+                  <td colSpan={6} className="text-center py-12 text-zinc-500 font-bold">
                     <i className="fas fa-boxes text-2xl text-zinc-600 block mb-2"></i>
                     Không tìm thấy sản phẩm nào phù hợp!
                   </td>
@@ -3070,12 +2939,7 @@ Model ID: 287936773312
                   const min = Number(p.minStock || 0);
                   const isInStock = qty > 0;
                   const isLow = isInStock && min > 0 && qty <= min;
-                  const safeDarkImg = (u) => {
-                    const s = formatImageUrl(u);
-                    return (s && !/shopee|\/images\/catalog\//i.test(s)) ? s : '';
-                  };
-                  const imgUrl = safeDarkImg(p.image) || safeDarkImg(p.realImage);
-                  const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(p) : null;
+                  const imgUrl = getProductCleanThumb(p);
                   const isMaterial = String(p.category || '').toUpperCase().trim() === 'DANH MỤC SẢN XUẤT';
                   const catDisplay = isMaterial ? 'NGUYÊN LIỆU' : (p.category || 'Mặc định');
                   const unitLabel = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(p) : (p.unit || 'Cái');
@@ -3086,128 +2950,64 @@ Model ID: 287936773312
                     <tr
                       key={p.id || p.sku}
                       onClick={() => handleOpenProductDrawer(p)}
-                      className="hover:bg-white/[0.03] transition-colors cursor-pointer group h-12"
+                      className="hover:bg-white/[0.04] transition-colors cursor-pointer group h-14"
                     >
-                      {/* Mã SKU */}
-                      <td className="p-2.5 pl-4 whitespace-nowrap">
-                        <span className="font-mono font-bold text-[#d4af37] text-[11px] group-hover:underline">
-                          {p.sku || 'N/A'}
-                        </span>
+                      {/* 1. Ảnh */}
+                      <td className="p-2.5 pl-4 w-16">
+                        <div className="w-10 h-10 rounded-xl bg-black/50 border border-white/[0.08] overflow-hidden flex items-center justify-center shrink-0">
+                          {imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt={p.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
+                            />
+                          ) : (
+                            <i className={`fas ${getSubCategoryIcon(p.sub_category || p.name)} text-zinc-600 text-xs`}></i>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Tên sản phẩm */}
-                      <td className="p-2.5 font-bold text-white min-w-[200px]">
-                        <div className="truncate max-w-md" title={p.name}>{p.name}</div>
+                      {/* 2. Tên hàng hóa */}
+                      <td className="p-2.5 font-bold text-white">
+                        <div className="line-clamp-1 group-hover:text-[#d4af37] transition-colors" title={p.name}>
+                          {p.name}
+                        </div>
                       </td>
 
-                      {/* Danh mục */}
+                      {/* 3. Danh mục */}
                       <td className="p-2.5 whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#1d1f26] text-zinc-300 border border-white/[0.06]">
                           {catDisplay}
                         </span>
                       </td>
 
-                      {/* Phân loại phụ */}
+                      {/* 4. Phân loại */}
                       <td className="p-2.5 whitespace-nowrap text-zinc-300 font-semibold text-[11px]">
                         {p.sub_category || '---'}
                       </td>
 
-                      {/* Xem ảnh */}
-                      <td className="p-2.5 text-center whitespace-nowrap">
-                        {(layout5 || imgUrl) ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (layout5 && typeof window.openLayout5AngleViewer === 'function') {
-                                window.openLayout5AngleViewer(layout5);
-                              } else if (imgUrl) {
-                                setZoomDrawerImage(imgUrl);
-                              }
-                            }}
-                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#1c1e24] hover:bg-[#282b34] text-sky-300 hover:text-sky-200 border border-sky-500/25 text-[10.5px] font-bold transition-all cursor-pointer active:scale-95"
-                            title={layout5 ? 'Xem 5 góc chụp Layout' : 'Phóng to ảnh sản phẩm'}
-                          >
-                            {imgUrl ? (
-                              <img
-                                src={imgUrl}
-                                alt=""
-                                className="w-5 h-5 rounded object-cover border border-white/10 shrink-0"
-                                referrerPolicy="no-referrer"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                              />
-                            ) : (
-                              <i className="fas fa-image text-[10px] text-sky-400"></i>
-                            )}
-                            <span>Xem ảnh</span>
-                          </button>
-                        ) : (
-                          <span className="text-[10.5px] text-zinc-600 font-medium">Chưa có</span>
-                        )}
-                      </td>
-
-                      {/* Giá bán */}
+                      {/* 5. Giá bán */}
                       <td className="p-2.5 text-right whitespace-nowrap font-mono font-bold">
                         {priceNum > 0 ? (
-                          <div>
-                            <span className="text-zinc-100">{formatMoney(priceNum)} đ</span>
-                            {canViewCost && costNum > 0 && (
-                              <div className="text-[9.5px] text-zinc-500 font-normal">Vốn: {formatMoney(costNum)}đ</div>
-                            )}
-                          </div>
+                          <span className="text-zinc-100">{formatMoney(priceNum)} đ</span>
                         ) : (isMaterial && canViewCost && costNum > 0 ? (
-                          <div>
-                            <span className="text-amber-300">{formatMoney(costNum)} đ</span>
-                            <div className="text-[9px] text-zinc-500 font-normal uppercase">Giá nhập</div>
-                          </div>
+                          <span className="text-amber-300" title="Giá nhập nguyên liệu">
+                            {formatMoney(costNum)} đ
+                          </span>
                         ) : (
                           <span className="text-zinc-500">0 đ</span>
                         ))}
                       </td>
 
-                      {/* Tồn kho */}
-                      <td className="p-2.5 text-right whitespace-nowrap font-mono font-black text-[12.5px]">
-                        <span className={!isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-white'}>
+                      {/* 6. Tồn kho */}
+                      <td className="p-2.5 text-right pr-4 whitespace-nowrap font-mono font-black text-[12.5px]">
+                        <span className={!isInStock ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'}>
                           {qty}
                         </span>
                         <span className="text-[10px] text-zinc-500 font-sans font-normal ml-1">{unitLabel}</span>
-                      </td>
-
-                      {/* Trạng thái */}
-                      <td className="p-2.5 text-center whitespace-nowrap">
-                        {isInStock ? (
-                          <span className={`px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold border ${isLow
-                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            }`}>
-                            {isLow ? 'Sắp hết' : 'Còn hàng'}
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-                            Hết hàng
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Thao tác */}
-                      <td className="p-2.5 text-center pr-4 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenProductDrawer(p); }}
-                            className="h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-[10px] font-bold border border-white/[0.08] transition-all cursor-pointer"
-                          >
-                            Thẻ Kho
-                          </button>
-                          {isAdminRole && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditProd(p); }}
-                              className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-[10px] border border-white/[0.08] transition-all cursor-pointer"
-                              title="Chỉnh sửa sản phẩm"
-                            >
-                              <i className="fas fa-edit"></i>
-                            </button>
-                          )}
-                        </div>
                       </td>
                     </tr>
                   );
@@ -3217,255 +3017,112 @@ Model ID: 287936773312
           </table>
         </div>
 
-        {/* 5. SIDE DRAWER ĐIỀU HÀNH KHO & KIỂM ĐỊNH HÀNG HOÀN (SLIDE-OVER PANEL) */}
-        {(selectedDrawerItem || selectedDrawerReturn) && (
-          <div className="fixed inset-0 z-[9999] overflow-hidden flex justify-end animate-fade-in">
-            {/* Backdrop Blur */}
-            <div
-              onClick={handleCloseDrawer}
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity cursor-pointer"
-              title="Nhấn vào nền tối hoặc bấm Esc để đóng"
-            ></div>
+        {/* 5. DRAWER CHI TIẾT HÀNG HÓA (RENDER QUA PORTAL TRÊN BODY ĐỂ KHÔNG BỊ HEADER CHE) */}
+        {selectedDrawerItem && (() => {
+          const dQty = Math.round(Number(selectedDrawerItem.quantity || 0) * 100) / 100;
+          const dMin = Number(selectedDrawerItem.minStock || 0);
+          const dMax = Number(selectedDrawerItem.maxStock || 0);
+          const dIsOut = dQty <= 0;
+          const dIsLow = !dIsOut && dMin > 0 && dQty <= dMin;
+          const dUnit = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : (selectedDrawerItem.unit || 'Cái');
+          const dIsMaterial = String(selectedDrawerItem.category || '').toUpperCase().trim() === 'DANH MỤC SẢN XUẤT';
+          const dCatDisplay = dIsMaterial ? 'NGUYÊN LIỆU' : (selectedDrawerItem.category || 'Mặc định');
+          const dPrice = Number(selectedDrawerItem.price || 0);
+          const dCost = Number(selectedDrawerItem.costPrice || 0);
+          const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
+          const activePhotoObj = drawerGallery[drawerPhotoIdx] || drawerGallery[0] || null;
+          const activeImgUrl = activePhotoObj?.url || '';
+          const dDescription = String(drawerDetailMeta?.description || selectedDrawerItem.description || '').trim();
+          const dDimensions = String(drawerDetailMeta?.dimensions || '').trim();
 
-            {/* Drawer Surface */}
-            <div className="relative w-full max-w-xl bg-[#18181b] backdrop-blur-xl border-l border-white/[0.08] shadow-2xl h-full flex flex-col z-10 animate-slide-in-right overflow-hidden">
-              {/* Drawer Header - Cố định trên cùng, z-20, không bị bất kỳ thành phần nào che lấp */}
-              <div className="p-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-white/[0.08] flex items-center justify-between bg-[#121214] shrink-0 sticky top-0 z-20 shadow-md">
-                <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                  <div className="w-9 h-9 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0 shadow-sm">
-                    <i className={selectedDrawerReturn ? 'fas fa-truck-ramp-box' : 'fas fa-boxes'}></i>
+          const drawerUi = (
+            <div className="fixed inset-0 z-[99999] overflow-hidden flex justify-end animate-fade-in">
+              {/* Backdrop Blur */}
+              <div
+                onClick={handleCloseDrawer}
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity cursor-pointer"
+                title="Nhấn vào nền tối hoặc bấm Esc để đóng"
+              ></div>
+
+              {/* Drawer Surface */}
+              <div className="relative w-full max-w-xl bg-[#18181b] border-l border-white/[0.1] shadow-2xl h-full flex flex-col z-10 animate-slide-in-right overflow-hidden">
+                {/* Drawer Header */}
+                <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-[#121214] shrink-0 z-20 shadow-md gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-sm shrink-0">
+                      <i className="fas fa-box-open"></i>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black text-white uppercase tracking-wide truncate" title={selectedDrawerItem.name}>
+                        {selectedDrawerItem.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-[11px] font-mono font-bold text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/30 px-2 py-0.5 rounded-md">
+                          SKU: {selectedDrawerItem.sku || 'N/A'}
+                        </span>
+                        <span className="text-[10.5px] font-bold text-zinc-400">
+                          {dCatDisplay} {selectedDrawerItem.sub_category ? `• ${selectedDrawerItem.sub_category}` : ''}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-black text-white uppercase tracking-wider truncate" title={selectedDrawerReturn ? 'Kiểm Định Kiện Hàng Hoàn' : selectedDrawerItem?.name}>
-                      {selectedDrawerReturn ? 'Kiểm Định Kiện Hàng Hoàn' : selectedDrawerItem?.name}
-                    </h3>
-                    <p className="text-[11px] text-amber-400/90 font-mono font-bold truncate">
-                      {selectedDrawerReturn ? `Mã vận đơn: ${selectedDrawerReturn.returnTrackingCode}` : `SKU: ${selectedDrawerItem?.sku || 'N/A'}`}
-                    </p>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isAdminRole && (
+                      <button
+                        type="button"
+                        onClick={() => setEditProd(selectedDrawerItem)}
+                        className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-[#d4af37]/20 text-zinc-200 hover:text-[#d4af37] border border-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                        title="Chỉnh sửa thông tin sản phẩm"
+                      >
+                        <i className="fas fa-edit"></i>
+                        <span className="hidden sm:inline">Sửa</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleCloseDrawer}
+                      className="w-9 h-9 rounded-xl bg-white/[0.06] hover:bg-rose-500/20 text-zinc-300 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                      title="Đóng cửa sổ (Esc)"
+                      aria-label="Đóng"
+                    >
+                      <i className="fas fa-times text-sm font-bold"></i>
+                    </button>
                   </div>
                 </div>
 
-                {/* NÚT X ĐÓNG DRAWER - To bản, rõ ràng, luôn hiển thị 100% */}
-                <button
-                  type="button"
-                  onClick={handleCloseDrawer}
-                  className="w-9 h-9 rounded-xl bg-white/[0.06] hover:bg-rose-500/20 text-zinc-300 hover:text-rose-400 border border-white/10 hover:border-rose-500/30 flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-90 shadow-sm"
-                  title="Đóng cửa sổ (Esc)"
-                  aria-label="Đóng"
-                >
-                  <i className="fas fa-times text-sm font-bold"></i>
-                </button>
-              </div>
+                {/* Drawer Body Content */}
+                <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs">
 
-              {/* Drawer Sub-Tabs Control */}
-              <div className="p-2.5 bg-[#121214] border-b border-white/[0.06] flex items-center gap-1.5 shrink-0">
-                {selectedDrawerItem && (
-                  <>
-                    <button
-                      onClick={() => setDrawerActiveTab('STOCK_CARD')}
-                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${drawerActiveTab === 'STOCK_CARD' ? 'bg-[#d4af37] text-zinc-950 font-black shadow-sm' : 'text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      <i className="fas fa-clipboard-list text-xs"></i>
-                      <span>Thẻ Kho 1-Chạm</span>
-                    </button>
-                    <button
-                      onClick={() => setDrawerActiveTab('BOM_CALC')}
-                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${drawerActiveTab === 'BOM_CALC' ? 'bg-[#d4af37] text-zinc-950 font-black shadow-sm' : 'text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      <i className="fas fa-calculator text-xs"></i>
-                      <span>BOM Bể Kính (+5%)</span>
-                    </button>
-                  </>
-                )}
-                {selectedDrawerReturn && (
-                  <button
-                    onClick={() => setDrawerActiveTab('RETURN_INSPECT')}
-                    className="flex-1 py-1.5 rounded-xl text-[11px] font-black uppercase bg-amber-500 text-zinc-950 shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <i className="fas fa-shield-halved text-xs"></i>
-                    <span>Quy Trình Kiểm Định Hàng Hoàn</span>
-                  </button>
-                )}
-              </div>
+                  {/* 1. BỘ ẢNH CỦA HÀNG HÓA */}
+                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-images text-[#d4af37] text-sm"></i>
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">
+                          Bộ Ảnh Hàng Hóa ({drawerGallery.length})
+                        </span>
+                      </div>
 
-              {/* Drawer Body Content */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs">
-
-                {/* TAB 1: THẺ KHO & XUẤT NHẬP 1 CHẠM */}
-                {drawerActiveTab === 'STOCK_CARD' && selectedDrawerItem && (
-                  <div className="space-y-4 animate-fade-in">
-
-                    {/* KHU VỰC ẢNH HÀNG HOÁ & TẢI ẢNH (CAMERA / UPLOAD / LINK / 5 GÓC STUDIO) */}
-                    {(() => {
-                      const layout5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(selectedDrawerItem) : null;
-                      const activeLayoutAngle = layout5 ? (layout5.angles[drawerAngleKey] || layout5.angles.front) : null;
-                      const drawerImgUrl = activeLayoutAngle?.url || selectedDrawerItem.realImage || selectedDrawerItem.image || '';
-                      return (
-                        <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <i className="fas fa-image text-[#d4af37] text-sm"></i>
-                              <span className="font-bold text-[11px] uppercase tracking-wider text-white">Ảnh Hàng Hoá Thực Tế</span>
-                              {layout5 ? (
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-black bg-gradient-to-r from-[#d4af37]/20 to-amber-500/20 text-[#d4af37] border border-[#d4af37]/40 shadow-xs flex items-center gap-1">
-                                  <i className="fas fa-camera-retro text-[8.5px]"></i> 5 Góc Studio
-                                </span>
-                              ) : drawerImgUrl ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                  Đã Có Ảnh
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {/* Nút Xem 5 Góc Studio Fullscreen */}
-                              {layout5 && (
-                                <button
-                                  type="button"
-                                  onClick={() => window.openLayout5AngleViewer(layout5)}
-                                  className="h-7 px-2.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] text-zinc-950 font-black text-[10.5px] uppercase flex items-center gap-1.5 transition-all shadow-sm cursor-pointer hover:brightness-110 active:scale-95"
-                                  title="Mở Studio xem chi tiết 5 góc chụp ảnh"
-                                >
-                                  <i className="fas fa-expand text-[10px]"></i>
-                                  <span>Xem 5 Góc</span>
-                                </button>
-                              )}
-
-                              {/* Nút Upload / Chụp ảnh */}
-                              <label
-                                className={`h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/10 font-bold text-[10.5px] uppercase flex items-center gap-1.5 transition-all shadow-sm ${isUploadingProductPhoto ? 'opacity-50 pointer-events-none' : 'cursor-pointer active:scale-95'
-                                  }`}
-                                title="Chụp ảnh bằng camera hoặc chọn ảnh từ máy"
-                              >
-                                <i className={`fas ${isUploadingProductPhoto ? 'fa-spinner fa-spin' : 'fa-camera'}`}></i>
-                                <span className="hidden sm:inline">{isUploadingProductPhoto ? 'Đang tải...' : (drawerImgUrl ? 'Đổi Ảnh' : 'Tải Ảnh Lên')}</span>
-                                <input
-                                  type="file"
-                                  accept="image/png, image/jpeg, image/jpg, image/webp"
-                                  className="hidden"
-                                  disabled={isUploadingProductPhoto}
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      handleUploadProductPhoto(e.target.files[0]);
-                                      e.target.value = '';
-                                    }
-                                  }}
-                                />
-                              </label>
-
-                              {/* Nút Dán Link URL */}
-                              <button
-                                type="button"
-                                onClick={() => setShowProductPhotoUrlInput(prev => !prev)}
-                                className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-[11px] transition-all cursor-pointer"
-                                title="Dán link URL ảnh sản phẩm"
-                              >
-                                <i className="fas fa-link"></i>
-                              </button>
-
-                              {/* Nút Xóa ảnh nếu đã có */}
-                              {drawerImgUrl && !layout5 && (
-                                <button
-                                  type="button"
-                                  onClick={handleRemoveProductPhoto}
-                                  disabled={isUploadingProductPhoto}
-                                  className="h-7 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] transition-all cursor-pointer"
-                                  title="Gỡ ảnh này"
-                                >
-                                  <i className="fas fa-trash-can"></i>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Thanh chọn 5 góc chụp nhanh trong Drawer */}
-                          {layout5 && (
-                            <div className="flex items-center gap-1 p-1 bg-black/60 rounded-xl border border-white/[0.06] overflow-x-auto no-scrollbar">
-                              {['front', 'distant', 'left', 'right', 'top'].map((k) => {
-                                const a = layout5.angles[k];
-                                const isSel = drawerAngleKey === k;
-                                return (
-                                  <button
-                                    key={k}
-                                    type="button"
-                                    onClick={() => setDrawerAngleKey(k)}
-                                    className={`flex-1 min-w-[55px] py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${isSel
-                                        ? 'bg-gradient-to-r from-[#d4af37] to-[#f59e0b] text-zinc-950 font-black shadow-xs'
-                                        : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
-                                      }`}
-                                    title={a?.label}
-                                  >
-                                    <i className={`fas ${a?.icon} text-[9px]`}></i>
-                                    <span>{a?.shortLabel}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Input nhập link URL dán vào */}
-                          {showProductPhotoUrlInput && (
-                            <div className="p-2.5 rounded-xl bg-[#09090b] border border-[#d4af37]/30 flex items-center gap-2 animate-fade-in">
-                              <input
-                                type="text"
-                                value={productPhotoUrlVal}
-                                onChange={(e) => setProductPhotoUrlVal(e.target.value)}
-                                placeholder="Dán link ảnh trực tiếp (Google Drive hoặc URL)..."
-                                className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 outline-none font-mono"
-                              />
-                              <button
-                                type="button"
-                                onClick={handleSaveProductPhotoUrl}
-                                disabled={!productPhotoUrlVal.trim() || isUploadingProductPhoto}
-                                className="px-3 py-1 bg-[#d4af37] text-zinc-950 font-bold text-xs rounded-lg disabled:opacity-40 cursor-pointer active:scale-95"
-                              >
-                                Lưu
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setShowProductPhotoUrlInput(false)}
-                                className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white text-xs cursor-pointer"
-                              >
-                                <i className="fas fa-times"></i>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Khung hiển thị Preview ảnh hoặc Dropzone trống */}
-                          {drawerImgUrl ? (
-                            <div className="relative rounded-xl overflow-hidden bg-black/50 border border-white/[0.08] group h-44 sm:h-52 flex items-center justify-center">
-                              <img
-                                src={formatImageUrl(drawerImgUrl)}
-                                alt={selectedDrawerItem.name}
-                                className="w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                                referrerPolicy="no-referrer"
-                                onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
-                                onClick={() => {
-                                  if (layout5) {
-                                    window.openLayout5AngleViewer(layout5);
-                                  } else {
-                                    setZoomDrawerImage(formatImageUrl(drawerImgUrl));
-                                  }
-                                }}
-                                title={layout5 ? "Bấm để mở Studio 5 Góc Chụp toàn màn hình" : "Nhấn để phóng to xem ảnh chi tiết"}
-                              />
-                              <div className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[10px] text-zinc-300 pointer-events-none flex items-center gap-1.5 shadow-md">
-                                <i className={`fas ${layout5 ? 'fa-camera-retro text-[#d4af37]' : 'fa-magnifying-glass-plus text-[#d4af37]'}`}></i>
-                                <span>{layout5 ? activeLayoutAngle?.label : 'Phóng to'}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <label className="border-2 border-dashed border-white/15 hover:border-[#d4af37]/50 bg-white/[0.02] hover:bg-[#d4af37]/5 p-5 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all group block">
-                              <div className="w-11 h-11 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform">
-                                <i className="fas fa-cloud-arrow-up"></i>
-                              </div>
-                              <span className="text-zinc-200 font-bold text-xs group-hover:text-[#d4af37] transition-colors">
-                                Chưa Có Ảnh Hàng Hoá
-                              </span>
-                              <p className="text-[10px] text-zinc-400 mt-1 max-w-xs">
-                                Bấm vào đây để tải ảnh chụp mẫu từ máy hoặc chụp trực tiếp bằng camera
-                              </p>
+                      <div className="flex items-center gap-1.5">
+                        {layout5 && (
+                          <button
+                            type="button"
+                            onClick={() => window.openLayout5AngleViewer(layout5)}
+                            className="h-7 px-2.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f0ca5e] text-zinc-950 font-black text-[10.5px] uppercase flex items-center gap-1.5 transition-all cursor-pointer hover:brightness-110 active:scale-95"
+                          >
+                            <i className="fas fa-expand text-[10px]"></i>
+                            <span>5 Góc Studio</span>
+                          </button>
+                        )}
+                        {isAdminRole && (
+                          <>
+                            <label
+                              className={`h-7 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/10 font-bold text-[10.5px] flex items-center gap-1.5 transition-all ${isUploadingProductPhoto ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+                              title="Tải ảnh lên"
+                            >
+                              <i className={`fas ${isUploadingProductPhoto ? 'fa-spinner fa-spin' : 'fa-camera'}`}></i>
+                              <span className="hidden sm:inline">{isUploadingProductPhoto ? 'Đang tải...' : 'Đổi ảnh'}</span>
                               <input
                                 type="file"
                                 accept="image/png, image/jpeg, image/jpg, image/webp"
@@ -3479,352 +3136,304 @@ Model ID: 287936773312
                                 }}
                               />
                             </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowProductPhotoUrlInput(prev => !prev)}
+                              className="h-7 px-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-[11px] cursor-pointer"
+                              title="Dán link URL ảnh"
+                            >
+                              <i className="fas fa-link"></i>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {showProductPhotoUrlInput && (
+                      <div className="p-2.5 rounded-xl bg-[#09090b] border border-[#d4af37]/30 flex items-center gap-2 animate-fade-in">
+                        <input
+                          type="text"
+                          value={productPhotoUrlVal}
+                          onChange={(e) => setProductPhotoUrlVal(e.target.value)}
+                          placeholder="Dán link ảnh trực tiếp (Google Drive hoặc URL)..."
+                          className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveProductPhotoUrl}
+                          disabled={!productPhotoUrlVal.trim() || isUploadingProductPhoto}
+                          className="px-3 py-1 bg-[#d4af37] text-zinc-950 font-bold text-xs rounded-lg disabled:opacity-40 cursor-pointer"
+                        >
+                          Lưu
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowProductPhotoUrlInput(false)}
+                          className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white text-xs cursor-pointer"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </div>
+                    )}
+
+                    {activeImgUrl ? (
+                      <div className="space-y-2.5">
+                        {/* Ảnh chính */}
+                        <div className="relative rounded-xl overflow-hidden bg-black/60 border border-white/[0.08] group h-56 sm:h-64 flex items-center justify-center">
+                          <img
+                            src={activeImgUrl}
+                            alt={selectedDrawerItem.name}
+                            className="w-full h-full object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => (typeof window.handleImageError === 'function' ? window.handleImageError(e) : (e.target.style.display = 'none'))}
+                            onClick={() => setZoomDrawerImage(activeImgUrl)}
+                            title="Nhấn để phóng to toàn màn hình"
+                          />
+                          {drawerGallery.length > 1 && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx - 1 + drawerGallery.length) % drawerGallery.length); }}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
+                              >
+                                <i className="fas fa-chevron-left text-xs"></i>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setDrawerPhotoIdx((drawerPhotoIdx + 1) % drawerGallery.length); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center cursor-pointer transition-all"
+                              >
+                                <i className="fas fa-chevron-right text-xs"></i>
+                              </button>
+                            </>
                           )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Tồn hiện tại card */}
-                    <div className="bg-[#121214] p-4 rounded-2xl border border-white/[0.06] flex items-center justify-between">
-                      <div>
-                        <span className="text-[10.5px] uppercase font-bold text-zinc-400 block mb-1">Tồn Kho Hiện Tại</span>
-                        <div className="text-2xl font-mono font-black text-white">
-                          {selectedDrawerItem.quantity} <span className="text-xs font-normal text-zinc-400 font-sans">{typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : (selectedDrawerItem.unit || 'Cái')}</span>
-                        </div>
-                      </div>
-                      {canViewCost && (
-                        <div className="text-right">
-                          <span className="text-[10.5px] uppercase font-bold text-zinc-400 block mb-1">Giá Vốn Xuất Xưởng</span>
-                          <div className="text-xl font-mono font-bold text-[#d4af37]">
-                            {formatMoney(selectedDrawerItem.costPrice)}đ
+                          <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10 text-[10px] text-zinc-200 pointer-events-none">
+                            {activePhotoObj?.label ? `${activePhotoObj.label} • ` : ''}{drawerPhotoIdx + 1}/{drawerGallery.length}
+                          </div>
+                          <div className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/10 text-[10px] text-[#d4af37] pointer-events-none flex items-center gap-1">
+                            <i className="fas fa-magnifying-glass-plus"></i>
+                            <span>Phóng to</span>
                           </div>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Bảng quy đổi UOM tự động */}
-                    <div className="bg-[#121214] p-4 rounded-2xl border border-white/[0.06] space-y-3">
-                      <div className="font-bold text-[11px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <i className="fas fa-scale-unbalanced"></i>
-                        <span>Thao Tác Kho 1-Chạm & Quy Đổi Đơn Vị Tính (UOM)</span>
-                      </div>
-
-                      {/* Loại thao tác: Nhập hay Xuất */}
-                      <div className="grid grid-cols-2 gap-2 bg-[#09090b] p-1 rounded-xl border border-white/[0.06]">
-                        <button
-                          onClick={() => setStockAdjType('IN')}
-                          className={`py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stockAdjType === 'IN' ? 'bg-emerald-500 text-zinc-950 font-black shadow-sm' : 'text-zinc-400 hover:text-white'
-                            }`}
-                        >
-                          <i className="fas fa-plus-circle"></i> Nhập Kho (+)
-                        </button>
-                        <button
-                          onClick={() => setStockAdjType('OUT')}
-                          className={`py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stockAdjType === 'OUT' ? 'bg-rose-500 text-white font-black shadow-sm' : 'text-zinc-400 hover:text-white'
-                            }`}
-                        >
-                          <i className="fas fa-minus-circle"></i> Xuất Sản Xuất (-)
-                        </button>
-                      </div>
-
-                      {/* Chọn đơn vị tính đầu vào */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Đơn Vị Quy Đổi Nhập/Xuất:</label>
-                        <select
-                          value={stockAdjUnit}
-                          onChange={(e) => setStockAdjUnit(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white font-bold outline-none"
-                        >
-                          <option value="DEFAULT">Đơn vị tồn kho chuẩn ({typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : 'Cái'})</option>
-                          {(() => {
-                            const uom = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : null;
-                            if (!uom) return null;
-                            return (
-                              <React.Fragment>
-                                {uom.importUnit && uom.importUnit !== uom.baseUnit && (
-                                  <option value="IMPORT_UNIT">
-                                    Đơn vị nhập: {uom.importUnit} (x{uom.conversionRate} {uom.baseUnit})
-                                  </option>
-                                )}
-                                {(uom.baseUnit === 'Kg' || String(selectedDrawerItem.name || '').toLowerCase().includes('rêu')) && (
-                                  <option value="BOM_GRAM">Gam sản xuất (1.000 Gam = 1 Kg)</option>
-                                )}
-                                {uom.baseUnit === 'm²' && (
-                                  <option value="LARGE_SHEET">Tấm lớn nguyên khổ (180x200cm = 3.6 m²)</option>
-                                )}
-                                {String(selectedDrawerItem.name || '').toLowerCase().includes('502') && (
-                                  <option value="BOX">Thùng nguyên (162 chai)</option>
-                                )}
-                              </React.Fragment>
-                            );
-                          })()}
-                        </select>
-                      </div>
-
-                      {/* Nhập số lượng */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Số Lượng Thực Tế:</label>
-                        <input
-                          type="number"
-                          placeholder="Nhập số lượng..."
-                          value={stockAdjQty}
-                          onChange={(e) => setStockAdjQty(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white font-mono font-bold text-base outline-none focus:border-[#d4af37]"
-                        />
-                      </div>
-
-                      {/* Xem trước quy đổi */}
-                      {stockAdjQty && parseFloat(stockAdjQty) > 0 && (() => {
-                        const uom = typeof getStandardMaterialUom === 'function' ? getStandardMaterialUom(selectedDrawerItem) : null;
-                        const baseU = typeof getProductDisplayUnit === 'function' ? getProductDisplayUnit(selectedDrawerItem) : 'Cái';
-                        let previewStr = `${stockAdjQty} ${baseU}`;
-                        if (stockAdjUnit === 'IMPORT_UNIT' || stockAdjUnit === 'BOX') {
-                          const rate = Number(uom?.conversionRate) > 0 ? Number(uom?.conversionRate) : 1;
-                          previewStr = `${stockAdjQty} ${uom?.importUnit || 'Đơn vị'} = ${(parseFloat(stockAdjQty) * rate).toFixed(2)} ${baseU}`;
-                        } else if (stockAdjUnit === 'LARGE_SHEET') {
-                          previewStr = `${stockAdjQty} Tấm lớn = ${(parseFloat(stockAdjQty) * 3.6).toFixed(2)} m² kính`;
-                        } else if (stockAdjUnit === 'BOM_GRAM') {
-                          previewStr = `${stockAdjQty} Gam = ${(parseFloat(stockAdjQty) / 1000).toFixed(3)} Kg`;
-                        }
-                        return (
-                          <div className="p-2.5 rounded-xl bg-[#09090b] border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-center justify-between">
-                            <span>Hệ thống sẽ {stockAdjType === 'IN' ? 'cộng' : 'trừ'}:</span>
-                            <b className="text-white text-xs">{previewStr}</b>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Lý do / Ghi chú */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Lý Do / Ghi Chú:</label>
-                        <input
-                          type="text"
-                          placeholder="Nhập lý do xuất/nhập..."
-                          value={stockAdjNote}
-                          onChange={(e) => setStockAdjNote(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white outline-none focus:border-[#d4af37]"
-                        />
-                      </div>
-
-                      {/* Nút xác nhận */}
-                      <button
-                        onClick={handleExecuteStockAdj}
-                        disabled={isSubmittingAdj}
-                        className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md ${stockAdjType === 'IN'
-                            ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950'
-                            : 'bg-rose-500 hover:bg-rose-400 text-white'
-                          }`}
-                      >
-                        <i className={`fas ${isSubmittingAdj ? 'fa-spinner fa-spin' : 'fa-check-circle'}`}></i>
-                        <span>{isSubmittingAdj ? 'Đang Lưu Phiếu...' : `Xác Nhận ${stockAdjType === 'IN' ? 'Nhập Kho' : 'Xuất Kho'}`}</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: ĐỊNH MỨC TIÊU HAO SẢN XUẤT (BOM CALCULATOR) */}
-                {drawerActiveTab === 'BOM_CALC' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="bg-[#121214] p-4 rounded-2xl border border-white/[0.06] space-y-3">
-                      <div className="font-bold text-[11px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <i className="fas fa-calculator"></i>
-                        <span>Định Mức Tiêu Hao Bể Kính Tử Diện (+5% Hao Hụt)</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400 leading-relaxed">
-                        Công thức chuẩn Hiến pháp: $S = (D \times R + 2DC + 2RC) \times 1.05\text{m}^2$ (đã tính 5% hao hụt do đường cắt và cấn mài).
-                      </p>
-
-                      {/* Kích thước D x R x C */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Dài (L - cm):</label>
-                          <input
-                            type="number"
-                            value={bomLength}
-                            onChange={e => setBomLength(e.target.value)}
-                            className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-1.5 text-white font-mono font-bold text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Rộng (W - cm):</label>
-                          <input
-                            type="number"
-                            value={bomWidth}
-                            onChange={e => setBomWidth(e.target.value)}
-                            className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-1.5 text-white font-mono font-bold text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Cao (H - cm):</label>
-                          <input
-                            type="number"
-                            value={bomHeight}
-                            onChange={e => setBomHeight(e.target.value)}
-                            className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-2.5 py-1.5 text-white font-mono font-bold text-center"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Số lượng bể cần làm (chiếc):</label>
-                        <input
-                          type="number"
-                          value={bomQty}
-                          onChange={e => setBomQty(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white font-mono font-bold text-base"
-                        />
-                      </div>
-
-                      {/* Kết quả tính toán */}
-                      <div className="p-3.5 rounded-xl bg-[#09090b] border border-white/[0.06] space-y-2 font-mono text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">Diện tích 1 chiếc (+5% hao hụt):</span>
-                          <b className="text-emerald-400">{computedGlassArea.singleArea} m²</b>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">Tổng diện tích kính cần trừ kho:</span>
-                          <b className="text-[#d4af37] text-sm font-black">{computedGlassArea.totalArea} m²</b>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
-                          <span className="text-zinc-400">Tương đương tấm kính lớn (1.8x2m):</span>
-                          <b className="text-sky-400">{computedGlassArea.sheetCount} tấm nguyên</b>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">Chu vi mài vi tính:</span>
-                          <b className="text-zinc-300">{computedGlassArea.perimeterMeters} mét</b>
-                        </div>
-                      </div>
-
-                      {/* Nút trừ kho trực tiếp */}
-                      <button
-                        onClick={() => {
-                          setStockAdjType('OUT');
-                          setStockAdjUnit('DEFAULT');
-                          setStockAdjQty(String(computedGlassArea.totalArea));
-                          setStockAdjNote(`Xuất kính làm ${bomQty} bể ${bomLength}x${bomWidth}x${bomHeight}cm (+5% hao hụt)`);
-                          setDrawerActiveTab('STOCK_CARD');
-                        }}
-                        className="w-full py-2.5 rounded-xl bg-[#d4af37] hover:brightness-110 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-sm"
-                      >
-                        <i className="fas fa-arrow-right"></i>
-                        <span>Đưa Vào Thẻ Kho Để Trừ Tồn ({computedGlassArea.totalArea} m²)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: QUY TRÌNH KIỂM ĐỊNH HÀNG HOÀN (REVERSE LOGISTICS) */}
-                {drawerActiveTab === 'RETURN_INSPECT' && selectedDrawerReturn && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="bg-[#121214] p-4 rounded-2xl border border-amber-500/40 space-y-3">
-                      <div className="font-bold text-[11px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <i className="fas fa-box-open"></i>
-                        <span>Kiểm Tra Vật Lý Kiện Hàng Sau Khi Rạch Thùng</span>
-                      </div>
-
-                      {/* Thông tin đơn */}
-                      <div className="bg-[#09090b] p-3 rounded-xl border border-white/[0.06] space-y-1.5 font-mono text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-zinc-400">Mã vận đơn hoàn:</span>
-                          <b className="text-amber-400">{selectedDrawerReturn.returnTrackingCode}</b>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-400">Mã đơn hàng gốc:</span>
-                          <b className="text-white">{selectedDrawerReturn.orderCode}</b>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-400">Khách hàng:</span>
-                          <b className="text-zinc-300">{selectedDrawerReturn.customer}</b>
-                        </div>
-                        <div className="border-t border-white/[0.06] pt-1.5 text-zinc-400">
-                          <span>Sản phẩm: </span><span className="text-zinc-200 font-sans">{typeof selectedDrawerReturn.productSummary === 'string' ? selectedDrawerReturn.productSummary : (selectedDrawerReturn.productSummary ? JSON.stringify(selectedDrawerReturn.productSummary) : '---')}</span>
-                        </div>
-                      </div>
-
-                      {/* Ảnh chụp kiểm định vật lý */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Link Ảnh Hiện Trạng Vật Lý Sau Rạch Thùng:</label>
-                        <input
-                          type="text"
-                          placeholder="Dán link ảnh chụp thực tế kiện hàng..."
-                          value={inspectPhoto}
-                          onChange={e => setInspectPhoto(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-amber-400"
-                        />
-                        {inspectPhoto && (
-                          <div className="mt-2 w-full h-40 rounded-xl overflow-hidden bg-black/50 border border-white/[0.08] flex items-center justify-center">
-                            <img src={formatImageUrl(inspectPhoto)} alt="Hiện trạng hàng hoàn" className="w-full h-full object-contain" />
+                        {/* Dải thumbnail bộ ảnh */}
+                        {drawerGallery.length > 1 && (
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                            {drawerGallery.map((g, idx) => {
+                              const isActive = idx === drawerPhotoIdx;
+                              return (
+                                <button
+                                  key={g.url}
+                                  type="button"
+                                  onClick={() => setDrawerPhotoIdx(idx)}
+                                  className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 bg-black/50 cursor-pointer transition-all ${isActive
+                                      ? 'border-[#d4af37] ring-2 ring-[#d4af37]/30 scale-[1.03]'
+                                      : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
+                                    }`}
+                                  title={g.label || `Ảnh ${idx + 1}`}
+                                >
+                                  <img
+                                    src={g.url}
+                                    alt={g.label || ''}
+                                    className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
-
-                      {/* Ghi chú tình trạng */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-zinc-400 mb-1 block">Ghi Chú Đánh Giá Vật Lý:</label>
-                        <textarea
-                          rows="3"
-                          placeholder="Bể nguyên vẹn, keo không nứt hở... hoặc Kính đáy bể vỡ nát do vận chuyển..."
-                          value={inspectNote}
-                          onChange={e => setInspectNote(e.target.value)}
-                          className="w-full bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-white text-xs outline-none focus:border-amber-400"
-                        />
+                    ) : (
+                      <div className="p-6 rounded-xl bg-[#09090b] border border-dashed border-white/10 text-center text-zinc-500">
+                        <i className="fas fa-image text-2xl text-zinc-600 block mb-1.5"></i>
+                        Chưa có ảnh cho hàng hóa này
                       </div>
+                    )}
+                  </div>
 
-                      {/* 2 NÚT QUYẾT ĐỊNH SINH TỬ CỦA THỦ KHO */}
-                      <div className="space-y-2 pt-2 border-t border-white/[0.06]">
-                        <button
-                          onClick={() => handleResolveReturn('RESTOCK')}
-                          disabled={isProcessingReturn}
-                          className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:brightness-110 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-lg shadow-emerald-950/40"
-                        >
-                          <i className="fas fa-check-circle text-sm"></i>
-                          <span>🟢 HÀNG NGUYÊN VẸN ➔ NHẬP LẠI KHO THÀNH PHẨM</span>
-                        </button>
+                  {/* 2. THÔNG TIN CHI TIẾT (SKU, TỒN KHO, ĐỊNH MỨC, GIÁ BÁN, GIÁ VỐN, TRẠNG THÁI) */}
+                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-circle-info text-[#d4af37] text-xs"></i>
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">Thông Tin Chi Tiết</span>
+                      </div>
+                      {dIsOut ? (
+                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">Hết hàng</span>
+                      ) : dIsLow ? (
+                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Sắp hết</span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Còn hàng</span>
+                      )}
+                    </div>
 
-                        <button
-                          onClick={() => handleResolveReturn('SCRAP')}
-                          disabled={isProcessingReturn}
-                          className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-700 to-rose-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-lg shadow-rose-950/40"
-                        >
-                          <i className="fas fa-dumpster text-sm"></i>
-                          <span>🔴 HÀNG VỠ NÁT ➔ THANH LÝ PHẾ LIỆU / TIÊU HỦY</span>
-                        </button>
-                        <p className="text-[10px] text-zinc-400 text-center italic">
-                          *Hàng vỡ nát sẽ được hạch toán vào Chi phí rủi ro vận chuyển, tuyệt đối không cộng tồn kho.
-                        </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Mã SKU</span>
+                        <span className="font-mono font-black text-[#d4af37] text-[12.5px] break-all">{selectedDrawerItem.sku || 'N/A'}</span>
+                      </div>
+                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Tồn Kho Hiện Tại</span>
+                        <span className={`font-mono font-black text-[14px] ${dIsOut ? 'text-rose-400' : dIsLow ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {dQty} <span className="text-[11px] text-zinc-400 font-sans font-normal">{dUnit}</span>
+                        </span>
+                      </div>
+                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Định Mức Tồn</span>
+                        <span className="font-mono font-bold text-zinc-200 text-[12px]">
+                          Min {dMin || 0} / Max {dMax || 0}
+                        </span>
+                      </div>
+                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">Giá Bán</span>
+                        <span className="font-mono font-black text-emerald-400 text-[13px]">
+                          {dPrice > 0 ? `${formatMoney(dPrice)} đ` : '---'}
+                        </span>
+                      </div>
+                      {canViewCost && (
+                        <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                          <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
+                            {dIsMaterial ? 'Giá Nhập' : 'Giá Vốn'}
+                          </span>
+                          <span className="font-mono font-bold text-amber-300 text-[13px]">
+                            {dCost > 0 ? `${formatMoney(dCost)} đ` : '---'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="bg-[#0c0c0f] border border-white/[0.06] rounded-xl p-2.5">
+                        <span className="text-[9.5px] uppercase font-bold text-zinc-400 block mb-0.5">
+                          {dDimensions ? 'Kích Thước' : 'Đơn Vị Nhập'}
+                        </span>
+                        <span className="font-mono font-bold text-zinc-200 text-[12px]">
+                          {dDimensions || `${selectedDrawerItem.importUnit || dUnit}${Number(selectedDrawerItem.conversionRate) > 1 ? ` (x${selectedDrawerItem.conversionRate})` : ''}`}
+                        </span>
                       </div>
                     </div>
                   </div>
-                )}
 
+                  {/* 3. MÔ TẢ HÀNG HÓA */}
+                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2">
+                    <div className="flex items-center gap-2">
+                      <i className="fas fa-align-left text-[#d4af37] text-xs"></i>
+                      <span className="font-bold text-[11px] uppercase tracking-wider text-white">Mô Tả Hàng Hóa</span>
+                    </div>
+                    {dDescription ? (
+                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[12px] text-zinc-300 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto custom-scrollbar">
+                        {dDescription}
+                      </div>
+                    ) : (
+                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 text-[11.5px] text-zinc-500 italic">
+                        Chưa có mô tả chi tiết cho hàng hóa này.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. LỊCH SỬ XUẤT - NHẬP - KIỂM CỦA HÀNG HÓA */}
+                  <div className="bg-[#121214] p-3.5 rounded-2xl border border-white/[0.06] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-history text-[#2E9599] text-xs"></i>
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-white">
+                          Lịch Sử Xuất - Nhập - Kiểm ({drawerStockLogs.length})
+                        </span>
+                      </div>
+                    </div>
+
+                    {drawerStockLogs.length === 0 ? (
+                      <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-5 text-center text-zinc-500 text-[11.5px]">
+                        <i className="fas fa-clipboard-list text-xl text-zinc-600 block mb-1.5"></i>
+                        Chưa có phát sinh xuất, nhập hoặc kiểm kho nào cho mã này.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-0.5">
+                        {drawerStockLogs.map((log, idx) => {
+                          const t = String(log.type || '');
+                          const isIn = t === 'Nhập' || t === 'Cân Tăng';
+                          const isOut = t === 'Xuất' || t === 'Thanh Lý' || t === 'Cân Giảm';
+                          const isCheck = t.includes('Kiểm') || t.includes('KIEM') || t.includes('Cân');
+                          const badgeCls = isCheck
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                            : isIn
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+
+                          return (
+                            <div key={log.id || idx} className="bg-[#09090b] border border-white/[0.06] rounded-xl p-2.5 flex items-start justify-between gap-2.5">
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeCls}`}>
+                                    {t || 'Giao dịch'}
+                                  </span>
+                                  <span className="font-mono text-[10.5px] font-bold text-zinc-400">
+                                    {log.id || '---'}
+                                  </span>
+                                  {log.date && (
+                                    <span className="text-[10px] font-mono text-zinc-500">
+                                      • {String(log.date).slice(0, 16)}
+                                    </span>
+                                  )}
+                                </div>
+                                {(log.target || log.note) && (
+                                  <p className="text-[11px] text-zinc-300 leading-snug break-words">
+                                    {log.target ? <span className="text-zinc-400 font-semibold">{log.target}: </span> : null}
+                                    {log.note || ''}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className={`font-mono font-black text-[13px] ${isIn ? 'text-emerald-400' : isOut ? 'text-rose-400' : 'text-amber-300'}`}>
+                                  {isIn ? '+' : isOut ? '-' : ''}{log.changedQty}
+                                </div>
+                                <div className="text-[10px] font-mono text-zinc-500">
+                                  Tồn: <b className="text-zinc-300">{log.balanceAfter}</b>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+
+          return (typeof ReactDOM !== 'undefined' && typeof ReactDOM.createPortal === 'function')
+            ? ReactDOM.createPortal(drawerUi, document.body)
+            : drawerUi;
+        })()}
 
         {/* LIGHTBOX PHÓNG TO ẢNH HÀNG HOÁ */}
-        {zoomDrawerImage && (
-          <div
-            onClick={() => setZoomDrawerImage(null)}
-            className="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in cursor-pointer"
-          >
-            <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
-              <img
-                src={zoomDrawerImage}
-                alt="Ảnh phóng to"
-                className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/20"
-              />
-              <button
-                type="button"
-                onClick={() => setZoomDrawerImage(null)}
-                className="mt-3 px-4 py-2 rounded-xl bg-white/10 hover:bg-rose-500/20 text-white hover:text-rose-300 font-bold text-xs flex items-center gap-2 cursor-pointer transition-all border border-white/15 active:scale-95 shadow-lg"
-              >
-                <i className="fas fa-times"></i>
-                <span>Đóng Phóng To (Esc)</span>
-              </button>
+        {zoomDrawerImage && (() => {
+          const lightboxUi = (
+            <div
+              onClick={() => setZoomDrawerImage(null)}
+              className="fixed inset-0 z-[100000] bg-black/92 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in cursor-pointer"
+            >
+              <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+                <img
+                  src={zoomDrawerImage}
+                  alt="Ảnh phóng to"
+                  className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setZoomDrawerImage(null)}
+                  className="mt-3 px-4 py-2 rounded-xl bg-white/10 hover:bg-rose-500/20 text-white hover:text-rose-300 font-bold text-xs flex items-center gap-2 cursor-pointer transition-all border border-white/15 active:scale-95 shadow-lg"
+                >
+                  <i className="fas fa-times"></i>
+                  <span>Đóng Phóng To (Esc)</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+          return (typeof ReactDOM !== 'undefined' && typeof ReactDOM.createPortal === 'function')
+            ? ReactDOM.createPortal(lightboxUi, document.body)
+            : lightboxUi;
+        })()}
 
         {/* RENDER CÁC MODAL QUẢN TRỊ KHO NÂNG CAO */}
         {editProd && (
