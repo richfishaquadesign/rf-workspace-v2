@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T19:22:20.643Z",
+  "generatedAt": "2026-11-15T19:43:02.637Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -43,10 +43,10 @@
     "Modals_Orders.html": "9d5fd7ee37cdd69ddc58c3cf8f1f257407d2a6ee963d06936eaa7b54fd036bfd",
     "Tab_Dashboard.html": "94b6e77dbbc431d365858de643e80e236860ebcb5202728366995648142b6651",
     "Tab_Orders.html": "851bb105a9fef5ba7670f2df9249fe37896d06bfcc2df87f380ffe8157e9a568",
-    "App_Main.html": "2958968fe58395ece68ef6e100e1a1df5fd8ab9680df48ad26d06e79f594d52e"
+    "App_Main.html": "720579fef2546e3eb69a7e854f31217af9626e01497bfbc86b18807243305778"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "c30870e57b062ecdc4368e9d59e1bd510b356c641f0a5a20081994389f8ca4cb",
+    "Compiled_Core.html": "c7566d02c501a6fe82b166e69849ea7568ac892ed7ff25551f87072b49df844f",
     "Compiled_Deferred.html": "202ae02d6f6217e2a2826b31de4539ed4207959fc5ba6e8a34779c90d0b5dbb4"
   }
 }

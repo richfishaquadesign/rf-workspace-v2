@@ -32755,6 +32755,28 @@ function App() {
   const [trainings, setTrainings] = React.useState([]);
   const [models3D, setModels3D] = React.useState([]);
   const [reimbursements, setReimbursements] = React.useState([]);
+  const [tabPermissions, setTabPermissions] = React.useState(() => {
+    try {
+      const cached = localStorage.getItem('rf_tab_permissions');
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  React.useEffect(() => {
+    const handleTabPermUpdate = () => {
+      try {
+        const cached = localStorage.getItem('rf_tab_permissions');
+        if (cached) setTabPermissions(JSON.parse(cached));
+      } catch (e) {}
+    };
+    window.addEventListener('rf-tab-permissions-updated', handleTabPermUpdate);
+    window.addEventListener('storage', handleTabPermUpdate);
+    return () => {
+      window.removeEventListener('rf-tab-permissions-updated', handleTabPermUpdate);
+      window.removeEventListener('storage', handleTabPermUpdate);
+    };
+  }, []);
   const [showPwaBanner, setShowPwaBanner] = React.useState(() => {
     const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
     return !isStandalone;
@@ -33973,25 +33995,39 @@ function App() {
   const mainUserSubTitle = String(mainUserProfile?.['Chức Danh Phụ'] || mainUserProfile?.subTitle || '').toUpperCase();
   const mainUserConfigRole = String(mainUserProfile?.['Phân Quyền'] || mainUserProfile?.role || userConfigs?.roles?.[currentUser] || '').toUpperCase();
   const isCTVRole = userRole === 'CỘNG TÁC VIÊN' || userRole === 'CTV' || mainUserConfigRole === 'CỘNG TÁC VIÊN' || mainUserConfigRole === 'CTV' || mainUserTitle.includes('CỘNG TÁC VIÊN') || mainUserTitle.includes('CTV') || mainUserSubTitle.includes('CỘNG TÁC VIÊN') || mainUserSubTitle.includes('CTV');
+  const isHocVienRole = userRole === 'HỌC VIÊN' || mainUserConfigRole === 'HỌC VIÊN' || mainUserTitle.includes('HỌC VIÊN') || mainUserSubTitle.includes('HỌC VIÊN');
+  const isRestrictedRole = isCTVRole || isHocVienRole;
+  const isTabAllowed = React.useCallback(tabId => {
+    if (isBoss || userRole === 'TỐI CAO' || currentUser === 'Nguyễn Ngọc Tiến' || currentUser.includes('Tiến')) return true;
+    if (tabPermissions && tabPermissions[currentUser]) {
+      const userAllowed = tabPermissions[currentUser];
+      if (Array.isArray(userAllowed)) return userAllowed.includes(tabId);
+    }
+    const roleKey = 'ROLE:' + (mainUserConfigRole || userRole);
+    if (tabPermissions && (tabPermissions[roleKey] || tabPermissions[userRole] || tabPermissions[mainUserConfigRole])) {
+      const roleAllowed = tabPermissions[roleKey] || tabPermissions[userRole] || tabPermissions[mainUserConfigRole];
+      if (Array.isArray(roleAllowed)) return roleAllowed.includes(tabId);
+    }
+    if (tabId === 'web_editor') return isBoss;
+    if (isCTVRole) return ['orders', 'production', 'affiliate'].includes(tabId);
+    if (isHocVienRole) return ['dashboard', 'production', 'apprenticeship', 'documents'].includes(tabId);
+    if (['import_export', 'suppliers', 'cashflow', 'cashbook', 'finance', 'analytics'].includes(tabId)) return isAdmin;
+    if (tabId === 'affiliate') return isBoss || userRole === 'KẾ TOÁN' || userRole === 'QUẢN LÝ BÁN HÀNG' || isCTVRole;
+    if (['hr', 'workspaces'].includes(tabId)) return !isRestrictedRole;
+    return true;
+  }, [isBoss, userRole, mainUserConfigRole, currentUser, tabPermissions, isCTVRole, isHocVienRole, isAdmin, isRestrictedRole]);
   const menuGroups = [{
-    title: 'VẬN HÀNH',
+    title: '',
     items: [{
       id: 'dashboard',
       label: 'Tổng Quan',
       icon: 'fa-home',
-      mode: 'WORKSPACE',
-      hidden: isCTVRole
+      mode: 'WORKSPACE'
     }, {
       id: 'orders',
       label: 'Đơn Hàng',
       icon: 'fa-shopping-cart',
       mode: 'WORKSPACE'
-    }, {
-      id: 'affiliate',
-      label: 'Cộng Tác Viên',
-      icon: 'fa-users',
-      mode: 'WORKSPACE',
-      hidden: !(isBoss || userRole === 'KẾ TOÁN' || userRole === 'QUẢN LÝ BÁN HÀNG' || isCTVRole)
     }, {
       id: 'production',
       label: 'Sản Xuất',
@@ -34001,66 +34037,75 @@ function App() {
       id: 'hr',
       label: 'Nhân Sự',
       icon: 'fa-user-clock',
-      mode: 'WORKSPACE',
-      hidden: isCTVRole
-    }, {
-      id: 'apprenticeship',
-      label: 'Học việc',
-      icon: 'fa-graduation-cap',
-      mode: 'WORKSPACE',
-      hidden: isCTVRole
-    }, {
-      id: 'workspaces',
-      label: 'Trách Nhiệm',
-      icon: 'fa-shield-alt',
-      mode: 'WORKSPACE',
-      hidden: isCTVRole
-    }].filter(item => !item.hidden)
-  }, {
-    title: 'QUẢN LÝ (KẾ TOÁN & KHO)',
-    reqAdmin: true,
-    hidden: isCTVRole,
-    items: [{
-      id: 'finance',
-      label: 'Tài Chính',
-      icon: 'fa-scale-balanced',
-      mode: 'ERP'
-    }, {
-      id: 'cashflow',
-      label: 'Sổ Quỹ',
-      icon: 'fa-wallet',
-      mode: 'ERP'
-    }, {
-      id: 'analytics',
-      label: 'Phân Tích P&L',
-      icon: 'fa-chart-pie',
-      mode: 'ERP'
+      mode: 'WORKSPACE'
     }, {
       id: 'warehouse',
-      label: 'Kho Hàng',
+      label: 'Hàng Hóa',
       icon: 'fa-boxes',
-      mode: 'ERP'
+      mode: 'ERP',
+      reqAdmin: false
     }, {
-      id: 'suppliers',
-      label: 'Đối Tác',
-      icon: 'fa-handshake',
-      mode: 'ERP'
-    }].filter(item => !item.hidden)
-  }, {
-    title: 'TIỆN ÍCH',
-    items: [{
+      id: 'import_export',
+      label: 'Kho Vận',
+      icon: 'fa-exchange-alt',
+      mode: 'ERP',
+      reqAdmin: true
+    }, {
+      id: 'cashflow',
+      label: 'Tài Chính',
+      icon: 'fa-chart-line',
+      mode: 'ERP',
+      reqAdmin: true
+    }, {
+      id: 'cashbook',
+      label: 'Sổ Quỹ',
+      icon: 'fa-wallet',
+      mode: 'ERP',
+      reqAdmin: true
+    }, {
+      id: 'analytics',
+      label: 'Báo Cáo',
+      icon: 'fa-chart-pie',
+      mode: 'ERP',
+      reqAdmin: true
+    }, {
+      id: 'affiliate',
+      label: 'Cộng Tác Viên',
+      icon: 'fa-users',
+      mode: 'WORKSPACE'
+    }, {
+      id: 'workspaces',
+      label: 'Phòng Ban',
+      icon: 'fa-shield-alt',
+      mode: 'WORKSPACE'
+    }, {
       id: 'documents',
       label: 'Tài Liệu',
       icon: 'fa-folder-open',
-      mode: 'WORKSPACE',
-      hidden: isCTVRole
-    }, {
-      id: 'changelog',
-      label: 'Cập Nhật Hệ Thống',
-      icon: 'fa-rocket',
       mode: 'WORKSPACE'
-    }].filter(item => !item.hidden)
+    }, {
+      id: 'web_editor',
+      label: 'Tinh Chỉnh Web',
+      icon: 'fa-globe',
+      mode: 'WORKSPACE',
+      reqAdmin: true,
+      hidden: !isBoss
+    }].filter(item => !item.hidden && isTabAllowed(item.id))
   }];
+  React.useEffect(() => {
+    if (activeTab === 'suppliers') {
+      if (typeof window !== 'undefined') window.__rfOpenSuppliersSubTab = true;
+      setActiveTab('import_export');
+      setMode('ERP');
+      return;
+    }
+    if (activeTab && activeTab !== 'changelog' && !isTabAllowed(activeTab)) {
+      const availableTabs = menuGroups.flatMap(g => g.items).map(i => i.id).filter(id => id !== 'web_editor');
+      if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+        setActiveTab(availableTabs[0]);
+      }
+    }
+  }, [activeTab, isTabAllowed, menuGroups]);
   const v6ActiveGroup = menuGroups.find(group => (group.items || []).some(item => item.id === activeTab));
   const v6ActiveItem = v6ActiveGroup && v6ActiveGroup.items.find(item => item.id === activeTab);
   const v6PageDescriptions = {
@@ -34248,9 +34293,9 @@ function App() {
     if (group.reqAdmin && !isAdmin || group.hidden) return null;
     return /*#__PURE__*/React.createElement("div", {
       key: gIdx
-    }, /*#__PURE__*/React.createElement("div", {
+    }, group.title && /*#__PURE__*/React.createElement("div", {
       className: `${isSidebarCollapsed ? 'lg:hidden' : ''} text-[10px] font-semibold uppercase tracking-wider pl-3 mb-2 text-zinc-400`
-    }, group.title), isSidebarCollapsed && /*#__PURE__*/React.createElement("div", {
+    }, group.title), isSidebarCollapsed && group.title && /*#__PURE__*/React.createElement("div", {
       className: "hidden lg:block w-7 mx-auto h-[1px] bg-white/[0.06] my-2"
     }), /*#__PURE__*/React.createElement("div", {
       className: "space-y-1"
@@ -34270,6 +34315,12 @@ function App() {
         onClick: () => {
           triggerHaptic('light');
           setIsMenuOpen(false);
+          if (item.id === 'web_editor') {
+            if (typeof window !== 'undefined' && typeof window.openWebsiteEditorModal === 'function') {
+              window.openWebsiteEditorModal();
+            }
+            return;
+          }
           if (typeof React.startTransition === 'function') {
             React.startTransition(() => {
               setActiveTab(item.id);
@@ -34633,8 +34684,9 @@ function App() {
       apprenticeship: CompApprenticeship,
       warehouse: CompInventory,
       import_export: CompImportExport,
-      finance: CompFinanceOverview,
-      cashflow: CompCashLedger,
+      finance: CompFinanceOverview || CompCashLedger,
+      cashflow: CompFinanceOverview || CompCashLedger,
+      cashbook: CompCashLedger || CompFinanceOverview,
       analytics: CompAnalytics,
       suppliers: CompSuppliers
     };
@@ -34801,9 +34853,9 @@ function App() {
       hasPerm: hasPerm,
       triggerToast: triggerToast,
       documents: memoizedDocuments
-    }))), (activeTab === 'finance' || mountedTabs.includes('finance')) && CompFinanceOverview && /*#__PURE__*/React.createElement("div", {
-      className: `w-full min-h-full ${activeTab === 'finance' ? 'block' : 'hidden'}`
-    }, isCTV ? renderCTVLocked() : /*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(CompFinanceOverview, {
+    }))), (activeTab === 'finance' || activeTab === 'cashflow' || mountedTabs.includes('finance') || mountedTabs.includes('cashflow')) && (CompFinanceOverview || CompCashLedger) && /*#__PURE__*/React.createElement("div", {
+      className: `w-full min-h-full ${['finance', 'cashflow'].includes(activeTab) ? 'block' : 'hidden'}`
+    }, isCTV ? renderCTVLocked() : /*#__PURE__*/React.createElement(ErrorBoundary, null, CompFinanceOverview ? /*#__PURE__*/React.createElement(CompFinanceOverview, {
       orders: memoizedOrders,
       erpData: erpData || {},
       pushDeltas: pushDeltas,
@@ -34817,8 +34869,22 @@ function App() {
       categories: memoizedFinanceCategories,
       tabMode: "OVERVIEW",
       onNavigateTab: handleNavigateTab
-    }))), (activeTab === 'cashflow' || mountedTabs.includes('cashflow')) && CompCashLedger && /*#__PURE__*/React.createElement("div", {
-      className: `w-full min-h-full ${activeTab === 'cashflow' ? 'block' : 'hidden'}`
+    }) : /*#__PURE__*/React.createElement(CompCashLedger, {
+      orders: memoizedOrders,
+      erpData: erpData || {},
+      pushDeltas: pushDeltas,
+      documents: memoizedDocuments,
+      triggerToast: triggerToast,
+      isAdmin: isAdmin,
+      isBoss: isBoss,
+      userRole: userRole,
+      currentUser: currentUser,
+      hasPerm: hasPerm,
+      categories: memoizedFinanceCategories,
+      tabMode: "OVERVIEW",
+      onNavigateTab: handleNavigateTab
+    }))), (activeTab === 'cashbook' || mountedTabs.includes('cashbook')) && (CompCashLedger || CompFinanceOverview) && /*#__PURE__*/React.createElement("div", {
+      className: `w-full min-h-full ${activeTab === 'cashbook' ? 'block' : 'hidden'}`
     }, isCTV ? renderCTVLocked() : /*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(CompCashLedger, {
       orders: memoizedOrders,
       erpData: erpData || {},
@@ -34857,22 +34923,24 @@ function App() {
       hasPerm: hasPerm,
       triggerToast: triggerToast,
       documents: memoizedDocuments
-    }))), !isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'analytics', 'suppliers'].includes(activeTab) && (() => {
+    }))), !isCurrentTabLoaded && ['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'cashbook', 'analytics', 'suppliers', 'web_editor'].includes(activeTab) && (() => {
       const TAB_NAMES = {
         dashboard: 'Tổng Quan & Bàn Làm Việc',
         orders: 'Quản Lý Đơn Hàng',
         production: 'Dây Chuyền Sản Xuất',
-        warehouse: 'Kho Vận & Vật Tư',
-        import_export: 'Xuất Nhập Tồn',
+        warehouse: 'Hàng Hóa & Kho Sản Phẩm',
+        import_export: 'Kho Vận & Xuất Nhập Tồn',
         finance: 'Tổng Quan Tài Chính',
-        cashflow: 'Sổ Quỹ & Ngân Hàng',
+        cashflow: 'Tổng Quan Tài Chính',
+        cashbook: 'Sổ Quỹ & Ngân Hàng',
         hr: 'Trung Tâm Nhân Sự & Bảng Lương',
         documents: 'Tài Liệu & Quy Trình SOP',
         affiliate: 'Cộng Tác Viên & Đại Lý',
-        workspaces: 'Quản Trị Mặt Bằng & 5S',
+        workspaces: 'Phòng Ban & Trách Nhiệm',
         apprenticeship: 'Học việc',
-        analytics: 'Phân Tích Dữ Liệu Chuyên Sâu',
-        suppliers: 'Nhà Cung Cấp & Công Nợ'
+        analytics: 'Báo Cáo & Phân Tích',
+        suppliers: 'Nhà Cung Cấp & Công Nợ',
+        web_editor: 'Tinh Chỉnh Web'
       };
       const tabTitle = TAB_NAMES[activeTab] || activeTab;
       return /*#__PURE__*/React.createElement("div", {
@@ -34914,7 +34982,7 @@ function App() {
       }, /*#__PURE__*/React.createElement("i", {
         className: "fas fa-rotate-right"
       }), " L\xE0m M\u1EDBi D\u1EEF Li\u1EC7u (F5)")));
-    })(), !['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'cashflow', 'analytics', 'suppliers'].includes(activeTab) && /*#__PURE__*/React.createElement("div", {
+    })(), !['dashboard', 'orders', 'production', 'hr', 'documents', 'affiliate', 'changelog', 'apprenticeship', 'workspaces', 'warehouse', 'import_export', 'finance', 'cashflow', 'cashbook', 'analytics', 'suppliers', 'web_editor'].includes(activeTab) && /*#__PURE__*/React.createElement("div", {
       className: "flex flex-col items-center justify-center min-h-[50vh] gap-3 text-center p-6 animate-fade-in"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-10 h-10 rounded-md bg-[#18181b] border border-[#333333] flex items-center justify-center text-zinc-300 text-lg mb-1"
