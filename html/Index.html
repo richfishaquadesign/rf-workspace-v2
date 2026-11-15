@@ -246,18 +246,18 @@
       --rf-text-secondary: #B8B8B8;
       --rf-text-muted: #858585;
 
-      /* Precision Borders */
-      --rf-border: #3A3A3A;
-      --rf-border-strong: #666666;
+      /* Precision Hairline Borders */
+      --rf-border: rgba(255, 255, 255, 0.08);
+      --rf-border-strong: rgba(255, 255, 255, 0.18);
 
       /* Monochrome Contrast */
       --rf-primary: #FFFFFF;
       --rf-primary-contrast: #0B0B0B;
 
-      /* Geometric Corner Radii (RF Technical Standard) */
-      --rf-radius-sm: 4px;
-      --rf-radius-md: 6px;
-      --rf-radius-lg: 8px;
+      /* Geometric Corner Radii */
+      --rf-radius-sm: 6px;
+      --rf-radius-md: 10px;
+      --rf-radius-lg: 14px;
 
       /* Backwards-compatibility Aliases */
       --bg-canvas: #0B0B0B;
@@ -265,14 +265,14 @@
       --bg-surface-2: #1D1D1D;
       --bg-glass-card: #141414;
       --bg-glass-modal: #141414;
-      --border-hairline: #3A3A3A;
-      --border-glass-shine: #666666;
+      --border-hairline: rgba(255, 255, 255, 0.08);
+      --border-glass-shine: rgba(255, 255, 255, 0.16);
       --color-paper-1: #141414;
       --color-paper-2: #1D1D1D;
       --color-ink-1: #F5F5F5;
       --color-ink-2: #B8B8B8;
       --color-ink-3: #858585;
-      --color-border-hairline: #3A3A3A;
+      --color-border-hairline: rgba(255, 255, 255, 0.08);
 
       /* Neutral Palette Aliases */
       --color-sage: #B8B8B8;
@@ -298,7 +298,7 @@
       background-color: var(--rf-bg);
       background-image: none !important;
       color: var(--rf-text);
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -316,18 +316,15 @@
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
       border: 1px solid var(--rf-border) !important;
-      border-radius: var(--rf-radius-md) !important;
-      box-shadow: none !important;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
-      transform: none !important;
+      border-radius: var(--rf-radius-lg) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
     }
     .vision-card:hover,
     .spatial-glass:hover,
     .hm-card:hover,
     .rf-card:hover {
       border-color: var(--rf-border-strong) !important;
-      box-shadow: none !important;
-      transform: none !important;
     }
 
     /* Container Adapter: Chuyển container cũ sang chuẩn bề mặt tối giản */
@@ -780,73 +777,26 @@
       }
     }
 
-    /* =========================================================================
-       GLOBAL RF MINIMALISM STRICT OVERRIDES (HARMONIZE ALL TABS & MODALS)
-       Eliminates gradients, toy rounded corners, heavy shadows, and royal gold
-       ========================================================================= */
-
-    /* 1. Triệt tiêu toàn bộ gradient bề mặt */
-    [class*="bg-gradient-"] {
-      background-image: none !important;
-    }
-
-    /* 2. Ép chuẩn bo góc kỹ thuật (chống bo tròn quá đà 16px - 32px) */
-    [class*="rounded-3xl"],
-    [class*="rounded-2xl"] {
-      border-radius: 8px !important;
-    }
-    [class*="rounded-xl"] {
-      border-radius: 6px !important;
-    }
-
-    /* 3. Triệt tiêu đổ bóng giao diện (Phẳng tối giản cao cấp) */
-    [class*="shadow-2xl"],
-    [class*="shadow-xl"],
-    [class*="shadow-lg"],
-    [class*="shadow-md"],
-    [class*="shadow-[0_"] {
-      box-shadow: none !important;
-    }
-
-    /* 4. Triệt tiêu hiệu ứng làm mờ kính dày đặc */
-    [class*="backdrop-blur-xl"],
-    [class*="backdrop-blur-2xl"],
-    [class*="backdrop-blur-3xl"] {
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-    }
-
-    /* 5. Ẩn hoàn toàn biểu tượng vương miện hoàng gia fa-crown */
+    /* Minimalist hairline polish & missing static utility fallback rules */
     .fa-crown {
       display: none !important;
     }
-
-    /* 6. Chuẩn hoá màu vàng kim #d4af37 và amber sang chuẩn phẳng monochrome RF */
-    button.bg-\[\#d4af37\],
-    .bg-\[\#d4af37\] {
-      background-color: #FFFFFF !important;
-      color: #000000 !important;
-      font-weight: 600 !important;
-      border-radius: var(--rf-radius-md) !important;
-    }
-    button.bg-\[\#d4af37\]:hover,
-    .bg-\[\#d4af37\]:hover,
-    .hover\:bg-\[\#c49f2c\]:hover,
-    .hover\:bg-\[\#b8972e\]:hover {
-      background-color: #E5E5E5 !important;
-      color: #000000 !important;
-    }
-
-    .border-\[\#d4af37\],
-    .border-\[\#d4af37\]\/20,
-    .border-\[\#d4af37\]\/25,
-    .border-\[\#d4af37\]\/30,
-    .border-\[\#d4af37\]\/35,
-    .border-\[\#d4af37\]\/40,
-    .border-\[\#d4af37\]\/50,
-    .border-\[\#d4af37\]\/60 {
-      border-color: #333333 !important;
-    }
+    .border-\[\#333333\] { border-color: rgba(255, 255, 255, 0.1) !important; }
+    .border-\[\#292929\] { border-color: rgba(255, 255, 255, 0.08) !important; }
+    .border-\[\#3f3f46\] { border-color: #3f3f46 !important; }
+    .border-\[\#444444\] { border-color: rgba(255, 255, 255, 0.15) !important; }
+    .border-white\/\[0\.08\] { border-color: rgba(255, 255, 255, 0.08) !important; }
+    .border-white\/\[0\.12\] { border-color: rgba(255, 255, 255, 0.12) !important; }
+    .bg-\[\#141416\] { background-color: #141416 !important; }
+    .bg-\[\#151515\], .bg-\[\#151517\] { background-color: #151517 !important; }
+    .bg-\[\#222225\], .bg-\[\#222226\] { background-color: #222226 !important; }
+    .bg-\[\#09090b\] { background-color: #09090b !important; }
+    .bg-\[\#0d0d10\] { background-color: #0d0d10 !important; }
+    .bg-white\/\[0\.03\] { background-color: rgba(255, 255, 255, 0.03) !important; }
+    .bg-white\/\[0\.04\] { background-color: rgba(255, 255, 255, 0.04) !important; }
+    .min-h-\[100dvh\] { min-height: 100dvh !important; }
+    .min-h-\[48px\] { min-height: 48px !important; }
+    .min-w-\[18px\] { min-width: 18px !important; }
   </style>
   <?!= include('RF_V6_Styles'); ?>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAB0UlEQVR4nO2UPavyMBiGkzT91FnEX9DBwbHi6FpQF910cBMUnBVHdxF/h5uuDk6Cq2DdpG4iSKElbZMc3rcc8VQ5Ohy3Xlu+7pvcz5NAURTBJ0EfVQeJwRskNXhJEtFLcGxcrVYrlQohRBAEAACEEAAQhqH0n/F4vNvt8vl8v99HCDHGOOfRHsaYLMvb7XYymdwLwthfJMtyGIa3Y/cUi8VOp9NutyGEnPMgCH4sA8A5p5S+KLLv+5RSxhh9YL1ee56Xy+Vc1/U8L3zgUf1JRJxzAICqqtElIISu60b5lEolRVFs2wYAZLPZTCYTKUIIEUKXy8W27ehyvxmYptloNM7nM8b/liCEhULBsqzr9app2nA4JISUy+Ver2dZFqWUc44Qwhgvl8unBkD8yWKxMAxDUZR0Op1KpTRNq9frq9VK13VRFCVJEkVxOp2apim+R7wGjuOcTidKKSHE9/0gCObz+WAwmM1mhmFEuRFCGGOCIEiSJHyD0PM3G59VVVWW5VuDAgAwxpvNptvtjkajWq3GOVdVFSEUawHG2FsGx+PR9/37mTAMMcaHw6HVajWbTV3X9/u94zi3jvid+Dv4c9BH1UFi8AZJDV6SRPSSj0f0BV6tAe7wznypAAAAAElFTkSuQmCC"><link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">

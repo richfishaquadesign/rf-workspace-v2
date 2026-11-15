@@ -1,7 +1,7 @@
 <style id="rf-v6-workspace-styles">
 /* RF V6 UI / existing Apps Script app. Scoped presentation; no hidden business state. */
-.rf-v6-workspace{--rf-v6-bg:#0b0b0b;--rf-v6-panel:#141414;--rf-v6-raised:#1d1d1d;--rf-v6-line:#363636;--rf-v6-text:#f5f5f5;--rf-v6-muted:#aaa;background:var(--rf-v6-bg)!important;color:var(--rf-v6-text)!important;font-size:13px!important;line-height:1.55!important}
-.rf-v6-workspace *:not(i){font-family:'Inter',system-ui,-apple-system,sans-serif!important}
+.rf-v6-workspace{--rf-v6-bg:#0b0b0b;--rf-v6-panel:#141414;--rf-v6-raised:#1d1d1d;--rf-v6-line:rgba(255,255,255,0.08);--rf-v6-text:#f5f5f5;--rf-v6-muted:#aaa;background:var(--rf-v6-bg)!important;color:var(--rf-v6-text)!important;font-size:13px!important;line-height:1.55!important}
+.rf-v6-workspace *:not(i){font-family:'Plus Jakarta Sans','Inter',system-ui,-apple-system,sans-serif!important}
 
 /* --- ZERO-LEAK TAB ISOLATION & STRICT DISPLAY GUARANTEE --- */
 /* KHÔNG đặt .hidden trần ở đây: display:none !important sẽ đè lên utility responsive
@@ -45,18 +45,18 @@ div[data-rf-tab-container].hidden {
 .rf-v6-workspace .rf-v6-exp-widget{max-width:240px}
 .rf-v6-workspace [data-rf-v6-main] table{font-size:12px!important;border-color:var(--rf-v6-line)!important}
 .rf-v6-workspace [data-rf-v6-main] th{background:#181818!important;color:#aaa!important;font-size:10px!important;letter-spacing:.5px;font-weight:550!important}
-.rf-v6-workspace [data-rf-v6-main] td,.rf-v6-workspace [data-rf-v6-main] th{border-color:#2f2f2f!important}
-.rf-v6-workspace [data-rf-v6-main] button:not([class*="h-6"]):not([class*="h-7"]):not([class*="w-6"]):not([class*="w-7"]):not(.rf-compact-btn){border-radius:7px!important;box-shadow:none!important;min-height:36px}
-.rf-v6-workspace [data-rf-v6-main] input,.rf-v6-workspace [data-rf-v6-main] select,.rf-v6-workspace [data-rf-v6-main] textarea{border-radius:7px!important;border-color:#454545!important;background:#101010!important;color:#eee!important}
+.rf-v6-workspace [data-rf-v6-main] td,.rf-v6-workspace [data-rf-v6-main] th{border-color:rgba(255,255,255,0.08)!important}
+.rf-v6-workspace [data-rf-v6-main] button:not([class*="h-6"]):not([class*="h-7"]):not([class*="w-6"]):not([class*="w-7"]):not(.rf-compact-btn){border-radius:8px!important;box-shadow:none!important;min-height:36px}
+.rf-v6-workspace [data-rf-v6-main] input,.rf-v6-workspace [data-rf-v6-main] select,.rf-v6-workspace [data-rf-v6-main] textarea{border-radius:8px!important;border-color:rgba(255,255,255,0.12)!important;background:#101010!important;color:#eee!important}
 .rf-v6-workspace button:focus-visible,.rf-v6-workspace a:focus-visible,.rf-v6-workspace input:focus-visible,.rf-v6-workspace select:focus-visible,.rf-v6-workspace textarea:focus-visible{outline:2px solid #eee!important;outline-offset:3px!important;box-shadow:none!important}
-.rf-v6-workspace [data-rf-v6-main] [class*="rounded-2xl"],.rf-v6-workspace [data-rf-v6-main] [class*="rounded-xl"]{border-radius:6px!important}
+.rf-v6-workspace [data-rf-v6-main] [class*="rounded-2xl"],.rf-v6-workspace [data-rf-v6-main] [class*="rounded-xl"]{border-radius:12px!important}
 @media(min-width:1024px){.rf-v6-workspace [data-rf-v6-sidebar].w-\[240px\]{width:236px}.rf-v6-workspace [data-rf-v6-sidebar].lg\:w-\[68px\]{width:68px}}
 @media(max-width:1100px){.rf-v6-workspace .rf-v6-exp-widget{display:none}.rf-v6-workspace [data-rf-v6-main]{padding:22px!important}}
 @media(max-width:767px){.rf-v6-workspace [data-rf-v6-main]{padding:10px 10px 12px!important;scroll-padding-bottom:0!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}.rf-v6-workspace [data-rf-v6-topbar]{min-height:52px}.rf-v6-workspace .rf-v6-page-heading{align-items:flex-start;flex-direction:column;gap:10px;margin-bottom:14px;padding-bottom:14px}.rf-v6-workspace .rf-v6-page-heading h1{font-size:24px!important}.rf-v6-workspace .rf-v6-page-description{font-size:12px!important}.rf-v6-workspace .rf-v6-data-status{align-items:flex-start;flex-direction:row;flex-wrap:wrap;align-items:center;gap:9px}.rf-v6-workspace [data-rf-v6-topbar] button{min-width:40px;min-height:40px}.rf-v6-workspace [data-rf-v6-main] button:not([class*="h-6"]):not([class*="h-7"]):not([class*="w-6"]):not([class*="w-7"]):not(.rf-compact-btn){min-height:40px}.rf-v6-workspace [data-rf-v6-tab]{min-height:40px}}
 @media(prefers-reduced-motion:reduce){.rf-v6-workspace *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 /* RF black / mobile refinement, 14 October 2026 */
-.rf-v6-workspace{--rf-v6-bg:#050505;--rf-v6-panel:#101010;--rf-v6-raised:#191919;--rf-v6-line:#292929;--rf-v6-muted:#ababab}
+.rf-v6-workspace{--rf-v6-bg:#050505;--rf-v6-panel:#101010;--rf-v6-raised:#191919;--rf-v6-line:rgba(255,255,255,0.08);--rf-v6-muted:#ababab}
 .rf-v6-workspace [data-rf-v6-sidebar]{background:#080808!important}
 .rf-v6-workspace [data-rf-v6-topbar]{background:#080808!important}
 .rf-v6-workspace .rf-v6-page-heading{border-bottom:0;padding-bottom:0}
@@ -125,7 +125,7 @@ nav.rf-mobile-dock {
 .rf-quick-actions .grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
 @media(min-width:640px){.rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
 @media(min-width:768px){.rf-quick-actions .grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
-.rf-quick-actions button{background:#141414!important;border:1px solid #292929!important;border-radius:6px!important;min-height:64px!important;gap:4px!important;padding:8px 4px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
+.rf-quick-actions button{background:#121215!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:12px!important;min-height:64px!important;gap:4px!important;padding:8px 4px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
 .rf-quick-actions button>div{background:transparent!important;border:0!important;margin:0!important;width:24px!important;height:24px!important}
 .rf-quick-actions button>span{font-size:11px!important;font-weight:600!important;text-transform:none!important;white-space:nowrap!important;text-align:center!important}
 .rf-more-tools>summary,.rf-secondary-detail>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:#aaa;font-size:12px;list-style:revert}

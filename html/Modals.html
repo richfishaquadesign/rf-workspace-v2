@@ -359,28 +359,31 @@
   };
 
   return React.createElement("div",{
-    className:"fixed inset-0 z-[99999] w-full min-h-[100dvh] h-full bg-[#090909] text-white flex flex-col justify-between items-center select-none overflow-x-hidden overflow-y-auto overscroll-none box-border",
+    className:"fixed inset-0 z-[99999] w-full h-full bg-[#09090b] text-white flex flex-col justify-between items-center select-none overflow-x-hidden overflow-y-auto overscroll-none box-border",
     style:{
-      paddingTop:"max(env(safe-area-inset-top, 0px), 16px)",
-      paddingBottom:"max(env(safe-area-inset-bottom, 0px), 16px)",
+      minHeight:"100dvh",
+      backgroundColor:"#09090b",
+      paddingTop:"max(env(safe-area-inset-top, 0px), 20px)",
+      paddingBottom:"max(env(safe-area-inset-bottom, 0px), 20px)",
       paddingLeft:"16px",
       paddingRight:"16px"
     }
   },
     React.createElement("div",{className:"w-full max-w-sm flex flex-col items-center shrink-0 pt-2 sm:pt-4"},
-      typeof RFLogo!=='undefined'?React.createElement(RFLogo,{className:"w-12 h-12 mb-2 text-white",size:48}):React.createElement("div",{className:"w-12 h-12 rounded-xl bg-[#151515] border border-[#292929] flex items-center justify-center mb-2"},React.createElement("i",{className:"fas fa-shield-halved text-white text-lg"})),
-      React.createElement("h1",{className:"text-white font-black text-lg sm:text-xl tracking-tight text-center leading-tight font-display"},"RF Workspace Pro"),
-      React.createElement("p",{className:"text-[#A1A1AA] text-xs font-medium mt-1 text-center"},hasSavedPasskey?`Chào mừng trở lại, ${savedUser||'Nhân sự'}`:"Mở khóa để tiếp tục"),
-      faceIdMessage&&React.createElement("div",{className:`w-full max-w-[300px] mt-2 px-3 py-1.5 rounded-xl text-[11px] text-center font-medium border leading-tight ${faceIdStatus==='success'?'bg-white/10 border-white/20 text-white':faceIdStatus==='error'?'bg-zinc-900 border-zinc-700 text-zinc-300':'bg-[#151515] border-[#292929] text-[#A1A1AA]'}`},faceIdMessage)
+      typeof RFLogo!=='undefined'?React.createElement(RFLogo,{className:"w-12 h-12 mb-3",size:48}):React.createElement("div",{className:"w-12 h-12 rounded-xl flex items-center justify-center mb-3",style:{backgroundColor:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.12)"}},React.createElement("i",{className:"fas fa-shield-halved text-white text-lg"})),
+      React.createElement("h1",{className:"text-white font-semibold text-lg sm:text-xl tracking-tight text-center leading-tight font-display"},"RF Workspace Pro"),
+      React.createElement("p",{className:"text-zinc-400 text-xs font-normal mt-1 text-center"},hasSavedPasskey?`Chào mừng trở lại, ${savedUser||'Nhân sự'}`:"Mở khóa để tiếp tục"),
+      faceIdMessage&&React.createElement("div",{className:`w-full mt-2.5 px-3 py-1.5 rounded-xl text-[11px] text-center font-normal leading-tight ${faceIdStatus==='success'?'text-white':'text-zinc-300'}`,style:{maxWidth:"300px",backgroundColor:faceIdStatus==='success'?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)",border:faceIdStatus==='success'?"1px solid rgba(255,255,255,0.22)":"1px solid rgba(255,255,255,0.1)"}} ,faceIdMessage)
     ),
-    React.createElement("div",{className:"w-full max-w-[320px] flex flex-col items-center my-auto py-2 shrink-0 space-y-4 sm:space-y-5"},
+    React.createElement("div",{className:"w-full flex flex-col items-center my-auto py-2 shrink-0 space-y-5",style:{maxWidth:"310px"}},
       isWebAuthnSupported&&React.createElement("button",{
         type:"button",
         onClick:hasSavedPasskey?()=>handleFaceIdLogin(false):handleRegisterPasskey,
         disabled:loading,
-        className:"w-full min-h-[48px] h-12 px-4 rounded-xl bg-[#151515] hover:bg-[#202020] active:scale-[0.98] border border-[#292929] text-white flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer shadow-sm text-xs font-bold"
+        className:"w-full h-11 px-4 rounded-xl text-zinc-200 hover:text-white active:scale-[0.98] flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer text-xs font-medium",
+        style:{minHeight:"46px",backgroundColor:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)"}
       },
-        React.createElement("i",{className:"fas fa-face-viewfinder text-base text-zinc-300"}),
+        React.createElement("i",{className:"fas fa-face-viewfinder text-sm text-zinc-300"}),
         React.createElement("span",null,hasSavedPasskey?"Mở khóa bằng Face ID":(pin.length>=4?"Liên kết Face ID cho mã PIN này":"Đăng ký Face ID / Sinh trắc học"))
       ),
       React.createElement("div",{className:`flex items-center justify-center gap-3.5 py-1 ${errorShake?'animate-shake':''}`},
@@ -388,53 +391,62 @@
           const isFilled=idx<pin.length;
           return React.createElement("div",{
             key:idx,
-            className:`w-3.5 h-3.5 rounded-full transition-all duration-150 ${errorShake?'bg-zinc-600 border border-zinc-500 scale-110':isFilled?'bg-[#FFFFFF] border border-[#FFFFFF] scale-105':'bg-transparent border border-[#292929]'}`
+            className:`w-3 h-3 rounded-full transition-all duration-150 ${errorShake?'scale-110':isFilled?'scale-105':''}`,
+            style:errorShake
+              ?{backgroundColor:"rgba(244,63,94,0.45)",border:"1px solid rgba(244,63,94,0.75)"}
+              :isFilled
+                ?{backgroundColor:"#ffffff",border:"1px solid #ffffff"}
+                :{backgroundColor:"transparent",border:"1px solid rgba(255,255,255,0.24)"}
           });
         })
       ),
-      React.createElement("div",{className:"w-full grid grid-cols-3 gap-3 sm:gap-4 place-items-center"},
+      React.createElement("div",{className:"w-full grid grid-cols-3 gap-3.5 sm:gap-4 place-items-center"},
         ['1','2','3','4','5','6','7','8','9'].map(digit=>{
           return React.createElement("button",{
             key:digit,
             type:"button",
             onClick:()=>handleKeyClick(digit),
             disabled:loading,
-            className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:bg-[#262626] active:scale-95 border border-[#292929] text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none"
+            className:"w-16 h-16 rounded-full active:scale-95 text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none hover:bg-white/10",
+            style:{width:"66px",height:"66px",backgroundColor:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.12)"}
           },
-            React.createElement("span",{className:"text-xl sm:text-2xl font-bold leading-none font-mono"},digit),
-            keypadLetters[digit]&&React.createElement("span",{className:"text-[9px] font-bold text-[#71717A] tracking-widest mt-0.5 leading-none"},keypadLetters[digit])
+            React.createElement("span",{className:"text-xl sm:text-2xl font-light leading-none font-mono"},digit),
+            keypadLetters[digit]&&React.createElement("span",{className:"text-[8.5px] font-medium text-zinc-500 tracking-widest mt-1 leading-none"},keypadLetters[digit])
           );
         }),
         React.createElement("button",{
           type:"button",
           onClick:hasSavedPasskey?()=>handleFaceIdLogin(false):handleClear,
           disabled:loading,
-          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:scale-95 border border-[#292929] text-zinc-300 flex items-center justify-center transition-all duration-150 cursor-pointer",
+          className:"w-16 h-16 rounded-full active:scale-95 text-zinc-400 hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-white/10",
+          style:{width:"66px",height:"66px",backgroundColor:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.1)"},
           title:hasSavedPasskey?"Quét Face ID":"Xóa toàn bộ"
         },
-          hasSavedPasskey?React.createElement("i",{className:"fas fa-face-viewfinder text-lg"}):React.createElement("span",{className:"text-[11px] font-bold text-[#A1A1AA]"},"XÓA")
+          hasSavedPasskey?React.createElement("i",{className:"fas fa-face-viewfinder text-base"}):React.createElement("span",{className:"text-[10px] font-medium tracking-wider text-zinc-400"},"XÓA")
         ),
         React.createElement("button",{
           type:"button",
           onClick:()=>handleKeyClick('0'),
           disabled:loading,
-          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:bg-[#262626] active:scale-95 border border-[#292929] text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none"
+          className:"w-16 h-16 rounded-full active:scale-95 text-white flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none hover:bg-white/10",
+          style:{width:"66px",height:"66px",backgroundColor:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.12)"}
         },
-          React.createElement("span",{className:"text-xl sm:text-2xl font-bold leading-none font-mono"},"0")
+          React.createElement("span",{className:"text-xl sm:text-2xl font-light leading-none font-mono"},"0")
         ),
         React.createElement("button",{
           type:"button",
           onClick:handleBackspace,
           disabled:loading,
-          className:"w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full bg-[#151515] hover:bg-[#202020] active:scale-95 border border-[#292929] text-zinc-300 flex items-center justify-center transition-all duration-150 cursor-pointer",
+          className:"w-16 h-16 rounded-full active:scale-95 text-zinc-400 hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-white/10",
+          style:{width:"66px",height:"66px",backgroundColor:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.1)"},
           title:"Xóa 1 số"
         },
-          React.createElement("i",{className:"fas fa-delete-left text-lg"})
+          React.createElement("i",{className:"fas fa-delete-left text-base"})
         )
       )
     ),
     React.createElement("div",{className:"w-full shrink-0 text-center pb-2"},
-      React.createElement("span",{className:"text-[10px] font-mono tracking-widest text-[#52525B] uppercase"},"BẢO MẬT NỘI BỘ • RICH FISH AQUARIUM")
+      React.createElement("span",{className:"text-[10px] font-mono tracking-widest text-zinc-600 uppercase"},"BẢO MẬT NỘI BỘ • RICH FISH AQUARIUM")
     )
   );
 }

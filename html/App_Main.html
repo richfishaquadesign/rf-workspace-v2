@@ -8409,8 +8409,29 @@
             }
         ];
 
+        const v6ActiveGroup = menuGroups.find(group => (group.items || []).some(item => item.id === activeTab));
+        const v6ActiveItem = v6ActiveGroup && v6ActiveGroup.items.find(item => item.id === activeTab);
+        const v6PageDescriptions = {
+            dashboard: 'Theo dõi công việc, đơn hàng và các ưu tiên cần xử lý.',
+            orders: 'Tiếp nhận và theo dõi đơn hàng xuyên suốt quá trình vận hành.',
+            production: 'Điều phối công đoạn, kiểm tra chất lượng và theo dõi bàn giao.',
+            apprenticeship: 'Quản lý lệnh học việc, thực hành kỹ thuật trên ảnh mẫu, định mức và đánh giá tay nghề.',
+            warehouse: 'Quản lý thành phẩm, vật tư và định mức sản xuất.',
+            import_export: 'Theo dõi chứng từ xuất nhập, kiểm kho và đối tác nhà cung cấp.',
+            suppliers: 'Danh bạ đối tác và các giao dịch nhà cung cấp.',
+            cashflow: 'Theo dõi dòng tiền, vốn khả dụng và quỹ dự trữ.',
+            cashbook: 'Quản lý phiếu thu chi và số dư các tài khoản.',
+            finance: 'Theo dõi dòng tiền, công nợ và đối soát thu chi.',
+            analytics: 'Phân tích P&L và hiệu quả hoạt động kinh doanh.',
+            affiliate: 'Theo dõi đơn hàng, giao dịch và công nợ cộng tác viên.',
+            hr: 'Quản lý công, thu nhập, hồ sơ nhân sự và phân quyền tab.',
+            workspaces: 'Phân công trách nhiệm và theo dõi thực hiện nhiệm vụ các phòng ban.',
+            documents: 'Tra cứu tài liệu, quy trình và hướng dẫn nội bộ.',
+            changelog: 'Theo dõi các thay đổi của RF Workspace Pro.'
+        };
+
         if (loading) return (
-            <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#09090b] text-white z-[9999]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+            <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#09090b] text-white z-[9999]" style={{ fontFamily: "'Plus Jakarta Sans', Inter, system-ui, sans-serif" }}>
                 <div className="flex flex-col items-center px-8 text-center">
                     <div className="mb-6">
                         {typeof RFLogo !== 'undefined' ? <RFLogo className="w-14 h-14 mx-auto" size={56} /> : <div className="w-14 h-14 rounded bg-white text-black font-black flex items-center justify-center text-xl mx-auto">RF</div>}
@@ -8428,7 +8449,7 @@
         }} />;
 
         return (
-            <div className="fixed inset-0 flex flex-row w-full text-[12px] max-w-[100vw] mx-auto overflow-hidden is-dark bg-[#09090b] text-zinc-100 premium-ui" style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", height: 'var(--app-height, 100dvh)' }}>
+            <div className="fixed inset-0 flex flex-row w-full text-[12px] max-w-[100vw] mx-auto overflow-hidden is-dark bg-[#09090b] text-zinc-100 premium-ui rf-v6-workspace" data-rf-v6-shell="true" style={{ fontFamily: "'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif", height: 'var(--app-height, 100dvh)' }}>
                 {typeof ToastManager !== 'undefined' && <ToastManager toasts={toasts} />}
                 {globalLightbox && typeof RFImageLightboxModal !== 'undefined' && (
                     <RFImageLightboxModal 
@@ -8440,7 +8461,7 @@
 
                 {/* ⚡ FLOATING SERVER SYNC NOTIFICATION PILL */}
                 {isInitialFetching && (
-                    <div className="fixed top-2.5 sm:top-3.5 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex items-center gap-2.5 bg-[#141416] border border-[#333333] text-zinc-200 px-3.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wide animate-fade-in shadow-md">
+                    <div className="fixed top-2.5 sm:top-3.5 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex items-center gap-2.5 bg-[#121215] border border-white/15 text-zinc-200 px-3.5 py-1.5 rounded-full text-[11px] font-medium tracking-wide animate-fade-in">
                         <i className="fas fa-circle-notch fa-spin text-zinc-400 text-[12px]"></i>
                         <span>Đang đồng bộ dữ liệu mới nhất...</span>
                     </div>
@@ -8448,7 +8469,6 @@
 
                 <style>
                     {`
-          /* 📱 MOBILE IPHONE X+ HARDWARE ACCELERATION & SILKY SMOOTH SCROLLING */
           * {
             -webkit-tap-highlight-color: transparent;
           }
@@ -8466,25 +8486,16 @@
           }
 
           .premium-ui *:not(i) { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif !important; 
+            font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important; 
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
           
           .premium-ui { font-size: 13px; line-height: 1.5; }
           .premium-ui button, .premium-ui input, .premium-ui select, .premium-ui textarea { transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1); }
-          
-          /* Dark Theme Styling */
-          .premium-ui .sticky { background-color: rgba(9, 9, 11, 0.95) !important; border-bottom: 1px solid #27272a !important; }
-          .premium-ui main button { border: 1px solid #27272a !important; background-color: #18181b !important; color: #f4f4f5 !important; border-radius: 6px !important; }
-          .premium-ui main button:hover { background-color: #242427 !important; border-color: #3f3f46 !important; }
-          .premium-ui main button:active { transform: scale(0.985); }
-          .premium-ui button.bg-zinc-800\/50 { position: relative; }
-          .premium-ui button.bg-zinc-800\/50::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 2px; height: 60%; background: #ffffff; }
-          .premium-ui [class*="rounded-2xl"], .premium-ui [class*="rounded-xl"] { border-radius: 6px !important; }
+          .premium-ui .sticky { background-color: rgba(9, 9, 11, 0.92) !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
           .premium-ui select { background-image: url("data:image/svg+xml,%3csvg xmlns='http:\/\/www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
           
-          /* Chế độ KHÁCH xem không được sửa */
           .rf-guest-mode button, 
           .rf-guest-mode input, 
           .rf-guest-mode select, 
@@ -8499,13 +8510,9 @@
           .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
-          .premium-ui input, .premium-ui select, .premium-ui textarea { background-color: #111111; border: 1px solid #333333; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #f4f4f5; }
-          .premium-ui.is-dark input, .premium-ui.is-dark select, .premium-ui.is-dark textarea { border-color: #333333; background-color: #111111; color: #f4f4f5; }
           .premium-ui [class*="shadow-"], .premium-ui [class*="drop-shadow"] { box-shadow: none !important; }
-          .premium-ui.is-dark select, .premium-ui.is-dark .form-select, .premium-ui.is-dark .filter-dropdown { background-color: #141416 !important; color: #ffffff !important; border: 1px solid #333333 !important; border-radius: 6px !important; }
-          .premium-ui input:focus, .premium-ui select:focus, .premium-ui textarea:focus { border-color: #71717a !important; box-shadow: 0 0 0 1px #71717a !important; outline: none !important; }
+          .premium-ui input:focus, .premium-ui select:focus, .premium-ui textarea:focus { border-color: rgba(255,255,255,0.28) !important; outline: none !important; }
           
-          /* ⚡ TỐI ƯU HÓA 0MS CHUYỂN ĐỔI TAB & CUỘN SIÊU MƯỢT 120FPS */
           .rf-tab-view {
             min-height: 100%;
             width: 100%;
@@ -8521,7 +8528,6 @@
             100% { opacity: 1; transform: translateY(-50%) translateX(0); }
           }
 
-          /* GPU HARDWARE ACCELERATION & INSTANT 0MS TAB SWITCHING */
           .rf-gpu-accelerated {
             backface-visibility: hidden;
             transform: translateZ(0);
@@ -8534,11 +8540,11 @@
         `}
                 </style>
 
-                {isMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/70 z-[200] transition-opacity duration-200" onClick={() => setIsMenuOpen(false)}></div>}
+                {isMenuOpen && <div data-rf-sidebar-backdrop="true" className="rf-sidebar-backdrop lg:hidden fixed inset-0 bg-black/70 z-[200] transition-opacity duration-200" onClick={() => setIsMenuOpen(false)} aria-hidden="true"></div>}
 
-                <aside className={`fixed lg:static inset-y-0 left-0 shrink-0 z-[210] transform transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${isSidebarCollapsed ? 'w-[240px] lg:w-[68px]' : 'w-[240px]'} bg-[#121214] border-r border-[#27272a] shadow-none select-none`}>
+                <aside id="rf-v6-sidebar" data-rf-v6-sidebar="true" className={`fixed lg:static inset-y-0 left-0 shrink-0 z-[210] transform transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex flex-col ${isMenuOpen ? 'is-open translate-x-0' : '-translate-x-full lg:translate-x-0'} ${isSidebarCollapsed ? 'w-[240px] lg:w-[68px]' : 'w-[240px]'} bg-[#121215] border-r border-white/10 shadow-none select-none`}>
                     {/* ĐỈNH SIDEBAR */}
-                    <div className={`p-4 pt-[max(1.5rem,env(safe-area-inset-top))] border-b border-[#27272a] flex items-center ${isSidebarCollapsed ? 'lg:p-3 lg:justify-center' : 'justify-between'}`}>
+                    <div className={`p-4 pt-[max(1.5rem,env(safe-area-inset-top))] border-b border-white/10 flex items-center ${isSidebarCollapsed ? 'lg:p-3 lg:justify-center' : 'justify-between'}`}>
                         <div className="flex items-center gap-3 min-w-0">
                             {typeof RFLogo !== 'undefined' ? (
                                 <RFLogo className="w-8 h-8 shrink-0" size={32} />
@@ -8548,8 +8554,8 @@
                                 </div>
                             )}
                             <div className={`${isSidebarCollapsed ? 'lg:hidden' : ''} truncate transition-opacity duration-200`}>
-                                <div className="font-bold tracking-wide text-[14px] text-zinc-100">Workspace</div>
-                                <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-widest mt-0.5">Workspace V2 <span className="text-[10px] text-zinc-500">v2.46.45</span></div>
+                                <div className="font-semibold tracking-wide text-[14px] text-zinc-100">Workspace Pro</div>
+                                <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-widest mt-0.5">V6.2</div>
                             </div>
                         </div>
 
@@ -8558,6 +8564,9 @@
                             type="button"
                             onClick={toggleSidebar}
                             className={`hidden lg:flex w-7 h-7 items-center justify-center rounded transition-all text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 ${isSidebarCollapsed ? 'mt-2' : ''}`}
+                            aria-label={isSidebarCollapsed ? "Mở rộng menu" : "Thu gọn menu"}
+                            aria-expanded={!isSidebarCollapsed}
+                            aria-controls="rf-v6-sidebar"
                             title={isSidebarCollapsed ? "Mở rộng menu (Ctrl+B)" : "Thu gọn menu (Ctrl+B)"}
                         >
                             <i className={`fas ${isSidebarCollapsed ? 'fa-angles-right text-[11px]' : 'fa-angles-left text-[11px]'}`}></i>
@@ -8578,7 +8587,7 @@
                     </div>
 
                     {/* MENU ITEMS & FLOATING TOOLTIP */}
-                    <div className={`flex-1 overflow-y-auto py-4 ${isSidebarCollapsed ? 'lg:px-2' : 'px-3'} space-y-6 custom-scrollbar overflow-x-hidden`}>
+                    <nav aria-label="Điều hướng phân hệ" data-rf-v6-navigation="true" className={`flex-1 overflow-y-auto py-4 ${isSidebarCollapsed ? 'lg:px-2' : 'px-3'} space-y-6 custom-scrollbar overflow-x-hidden`}>
                         {menuGroups.map((group, gIdx) => {
                             if ((group.reqAdmin && !isAdmin) || group.hidden) return null;
                             return (
@@ -8592,12 +8601,16 @@
                                     <div className="space-y-1">
                                         {group.items.map(item => {
                                             const isActive = activeTab === item.id;
-                                            const activeClass = 'bg-[#222225] text-white font-semibold border border-[#3f3f46]';
-                                            const inactiveClass = 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-all border border-transparent';
+                                            const activeClass = 'bg-white/10 text-white font-semibold border border-white/15';
+                                            const inactiveClass = 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-all border border-transparent';
                                             return (
                                                 <div key={item.id} className="relative group">
                                                     <button
                                                         type="button"
+                                                        data-rf-v6-tab={item.id}
+                                                        aria-current={isActive ? "page" : undefined}
+                                                        aria-label={item.label}
+                                                        title={isSidebarCollapsed ? item.label : undefined}
                                                         onClick={() => {
                                                             triggerHaptic('light');
                                                             setIsMenuOpen(false);
@@ -8692,10 +8705,10 @@
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </nav>
 
                     {/* USER PROFILE & LOGOUT */}
-                    <div className={`p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/[0.06] bg-[#121214] flex items-center ${isSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'gap-3'}`}>
+                    <div className={`p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#121215] flex items-center ${isSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'gap-3'}`}>
                         <div className="relative group">
                             {typeof Avatar !== 'undefined' ? (
                                 <Avatar name={currentUser} userConfigs={userConfigs} className="w-9 h-9 border border-white/10 shadow-sm shrink-0" />
@@ -8815,7 +8828,7 @@
                 </aside>
 
                 <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-                    <header className="h-12 sm:h-14 lg:h-16 px-3 sm:px-5 sticky top-0 z-50 flex justify-between items-center w-full mx-auto transition-all duration-300 bg-[#09090b]/95 backdrop-blur-xl border-b border-white/[0.08] shadow-sm shrink-0 pt-[env(safe-area-inset-top,0px)]">
+                    <header data-rf-v6-topbar="true" className="h-12 sm:h-14 lg:h-16 px-3 sm:px-5 sticky top-0 z-50 flex justify-between items-center w-full mx-auto bg-[#0B0B0B] border-b border-white/10 shrink-0 box-border pt-[env(safe-area-inset-top,0px)]">
                         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 shrink">
                             {/* NÚT TOGGLE MENU ĐA VỊ TRÍ (Hoạt động cả Desktop & Mobile) */}
                             <button
@@ -8830,10 +8843,14 @@
                                 }}
                                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center transition-all text-zinc-400 hover:text-white hover:bg-white/5 active:scale-95 shrink-0"
                                 title={window?.innerWidth >= 1024 ? (isSidebarCollapsed ? "Mở menu (Ctrl+B)" : "Thu gọn menu (Ctrl+B)") : "Mở menu"}
-                                aria-label="Toggle Menu"
+                                aria-label={isMenuOpen ? "Đóng menu" : "Mở menu"}
+                                aria-expanded={isMenuOpen}
+                                aria-controls="rf-v6-sidebar"
                             >
                                 <i className={`fas ${!isSidebarCollapsed ? 'fa-bars-staggered text-[15px]' : 'fa-bars text-[15px]'}`}></i>
                             </button>
+
+                            {typeof RFLogo !== 'undefined' && <RFLogo className="rf-topbar-logo shrink-0" size={40} />}
 
                             <div className="flex flex-col justify-center cursor-pointer min-w-0" onClick={() => {
                                 if (!isAdmin) {
@@ -8866,29 +8883,43 @@
                                     }
                                 }
                             }}>
-                                <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest mb-0.5 text-zinc-400 truncate">{mode === 'ERP' ? 'Kế Toán & Kho Vận' : 'Hệ Thống Nội Bộ'}</span>
-                                <span className="font-display font-semibold text-[14px] sm:text-[16px] leading-none flex items-center text-zinc-100 truncate">
+                                <span data-rf-subtitle="true" className="rf-topbar-subtitle hidden sm:block text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest mb-0.5 text-zinc-400 truncate">{mode === 'ERP' ? 'Kế Toán & Kho Vận' : 'Hệ Thống Nội Bộ'}</span>
+                                <span className="font-display font-semibold text-[13px] sm:text-[15px] leading-none flex items-center text-zinc-100 truncate">
                                     {isAdmin ? (isBoss ? 'Workspace Pro' : getDisplayRole(userRole)) : 'Workspace'}
-                                    {isAdmin && <i className={`fas fa-shield-check ml-1.5 sm:ml-2 text-[11px] sm:text-[12px] shrink-0 ${isBoss ? 'text-white' : 'text-emerald-400'}`}></i>}
+                                    {isAdmin && <i className={`fas fa-shield-check ml-1.5 text-[11px] shrink-0 text-white`}></i>}
+                                </span>
+                            </div>
+
+                            <div data-rf-breadcrumbs="true" className="rf-header-breadcrumbs hidden lg:flex items-center gap-2 border-l border-white/10 pl-3 ml-1 select-none">
+                                <span className="text-[11px] text-zinc-500 font-medium">WORKSPACE PRO V6.2</span>
+                                <i className="fas fa-chevron-right text-[8px] text-zinc-600"></i>
+                                <span className="text-[12px] text-white font-semibold flex items-center gap-1.5">
+                                    {v6ActiveItem ? (
+                                        <React.Fragment>
+                                            <i className={`fas ${v6ActiveItem.icon} text-[11px]`}></i>
+                                            <span>{v6ActiveItem.label}</span>
+                                        </React.Fragment>
+                                    ) : activeTab}
                                 </span>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                            {/* THANH CẤP ĐỘ & EXP MINI (ĐỒNG BỘ TAB HR) */}
+                            {/* THANH CẤP ĐỘ & EXP MINI (Ẩn trên < 1100px qua .rf-v6-exp-widget) */}
                             {currentUser && (
-                                <HeaderExpWidget 
-                                    currentUser={currentUser} 
-                                    erpData={erpData} 
-                                    userConfigs={userConfigs} 
-                                    prodItems={memoizedProdItems} 
-                                    packings={memoizedPackings} 
-                                />
+                                <div className="rf-v6-exp-widget hidden lg:block">
+                                    <HeaderExpWidget 
+                                        currentUser={currentUser} 
+                                        erpData={erpData} 
+                                        userConfigs={userConfigs} 
+                                        prodItems={memoizedProdItems} 
+                                        packings={memoizedPackings} 
+                                    />
+                                </div>
                             )}
 
-
                             {isAdmin && (
-                                <div className="hidden md:block animate-fade-in shrink-0">
-                                    <div className="text-[10px] font-bold text-white uppercase tracking-wider bg-white/10 px-2.5 py-1 rounded-md border border-white/20">
+                                <div data-rf-role-badge="true" className="rf-header-role-badge hidden lg:block animate-fade-in shrink-0">
+                                    <div className="text-[10px] font-bold text-white uppercase tracking-wider bg-white/10 px-2.5 py-1 rounded-md border border-white/15">
                                         {isBoss ? 'TỐI CAO' : getDisplayRole(userRole)}
                                     </div>
                                 </div>
@@ -8897,23 +8928,30 @@
                                 className="relative cursor-pointer group shrink-0 ml-0.5 sm:ml-1"
                                 onClick={() => {
                                     if (typeof window !== 'undefined') {
-                                        const setIsSpinning = (val) => { }; // dummy or actual if needed
+                                        const setIsSpinning = (val) => { };
                                         window.dispatchEvent(new CustomEvent('triggerReloadData', { detail: { setIsSpinning } }));
                                     }
                                 }}
                                 title="Nhấn để làm mới dữ liệu"
                             >
-                                {syncing ? <i className="fas fa-sync animate-spin text-[16px] text-white w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"></i> : (typeof Avatar !== 'undefined' ? <Avatar name={currentUser} userConfigs={userConfigs} className="w-8 h-8 sm:w-9 sm:h-9 border border-white/10 rounded-full transition-transform group-hover:scale-105 shadow-sm object-cover" /> : <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-800"></div>)}
+                                {syncing ? <i className="fas fa-sync animate-spin text-[16px] text-white w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"></i> : (typeof Avatar !== 'undefined' ? <Avatar name={currentUser} userConfigs={userConfigs} className="w-8 h-8 sm:w-9 sm:h-9 border border-white/15 rounded-full transition-transform group-hover:scale-105 object-cover" /> : <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-800"></div>)}
                                 {!syncing && (
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-[#09090b] shadow-sm group-hover:rotate-180 transition-all duration-300">
-                                        <i className="fas fa-sync-alt text-[6px] sm:text-[7px] text-[#09090b]"></i>
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-zinc-100 rounded-full flex items-center justify-center border-2 border-[#0B0B0B] group-hover:rotate-180 transition-all duration-300">
+                                        <i className="fas fa-sync-alt text-[6px] sm:text-[7px] text-[#0B0B0B]"></i>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </header>
 
-                    <main className={`flex-1 min-h-0 w-full max-w-full p-3 sm:p-4 lg:p-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] lg:pb-8 overflow-y-auto overflow-x-hidden custom-scrollbar relative overscroll-none touch-pan-y ${userRole === 'KHÁCH' ? 'rf-guest-mode' : ''}`}>
+                    <main data-rf-v6-main="true" className={`flex-1 min-h-0 w-full max-w-full p-2.5 sm:p-4 lg:p-6 pb-3 sm:pb-6 lg:pb-8 overflow-y-auto overflow-x-hidden custom-scrollbar relative overscroll-none touch-pan-y ${userRole === 'KHÁCH' ? 'rf-guest-mode' : ''}`}>
+                        <section className="rf-v6-page-heading" aria-label="Thông tin phân hệ">
+                            <div>
+                                <p className="rf-v6-eyebrow">{v6ActiveGroup && v6ActiveGroup.title ? v6ActiveGroup.title : 'RF WORKSPACE PRO V6.2'}</p>
+                                <h1>{v6ActiveItem ? v6ActiveItem.label : (activeTab === 'changelog' ? 'Bản cập nhật' : 'Workspace Pro')}</h1>
+                                <p className="rf-v6-page-description">{v6PageDescriptions[activeTab] || ''}</p>
+                            </div>
+                        </section>
                         <ErrorBoundary>
                             {(() => {
                                 const isCTV = isCTVRole;
@@ -9077,60 +9115,6 @@
                             })()}
                         </ErrorBoundary>
                     </main>
-
-                    {/* THANH ĐIỀU HƯỚNG DƯỚI CÙNG CHO DI ĐỘNG (MOBILE-FIRST DOCK) */}
-                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[45] bg-[#0d0d10]/95 backdrop-blur-xl border-t border-white/[0.08] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-[0_-8px_24px_rgba(0,0,0,0.6)]">
-                        {[
-                            { id: 'dashboard', label: 'Tổng Quan', icon: 'fa-house' },
-                            { id: 'orders', label: 'Đơn Hàng', icon: 'fa-receipt' },
-                            { id: 'production', label: 'Sản Xuất', icon: 'fa-hammer' },
-                            { id: 'warehouse', label: 'Hàng Hóa', icon: 'fa-boxes-stacked' }
-                        ].map(item => {
-                            const isAct = activeTab === item.id;
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => {
-                                        triggerHaptic('light');
-                                        setActiveTab(item.id);
-                                        setIsMenuOpen(false);
-                                    }}
-                                    className={`flex flex-col items-center justify-center min-w-[60px] min-h-[44px] py-1 rounded-xl transition-all active:scale-95 ${
-                                        isAct ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
-                                    }`}
-                                >
-                                    <div className={`w-8 h-6 rounded-full flex items-center justify-center mb-0.5 transition-all ${
-                                        isAct ? 'bg-white text-black shadow-sm' : ''
-                                    }`}>
-                                        <i className={`fas ${item.icon} text-[13px]`}></i>
-                                    </div>
-                                    <span className={`text-[10px] leading-none tracking-tight ${
-                                        isAct ? 'font-bold text-white' : 'font-medium text-zinc-500'
-                                    }`}>{item.label}</span>
-                                </button>
-                            );
-                        })}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                triggerHaptic('light');
-                                setIsMenuOpen(prev => !prev);
-                            }}
-                            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[44px] py-1 rounded-xl transition-all active:scale-95 ${
-                                isMenuOpen ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
-                        >
-                            <div className={`w-8 h-6 rounded-full flex items-center justify-center mb-0.5 transition-all ${
-                                isMenuOpen ? 'bg-white text-black shadow-sm' : ''
-                            }`}>
-                                <i className="fas fa-bars text-[13px]"></i>
-                            </div>
-                            <span className={`text-[10px] leading-none tracking-tight ${
-                                isMenuOpen ? 'font-bold text-white' : 'font-medium text-zinc-500'
-                            }`}>Menu</span>
-                        </button>
-                    </nav>
 
 
 
