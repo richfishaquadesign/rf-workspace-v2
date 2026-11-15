@@ -2275,6 +2275,73 @@ const CONFIGS_KHUNG = Object.freeze([{
   n: 'Gia Cố',
   req: ['phase1']
 }]);
+
+// Override an toàn trình tra cứu Layout 5 góc: khóa chặt đúng tên dòng layout + đúng số ver, tránh số kích thước (40x23x25cm) làm nhảy nhầm ver.4 -> ver.5
+window.__rfSafeFindLayoutAngles = function (productOrName) {
+  if (!productOrName) return null;
+  const raw = typeof productOrName === 'object' ? productOrName.name || productOrName.productName || productOrName.sku || '' : String(productOrName);
+  if (!raw) return null;
+  const clean = String(raw).trim().toLowerCase().replace(/^(layout|kho layout|bộ layout)\s+/i, '').trim();
+  const catalog = window.RF_LAYOUT_5_ANGLES_CATALOG || [];
+  if (!catalog || !catalog.length) return null;
+  const formatFn = window.formatLayoutAngleItem;
+  if (typeof formatFn !== 'function') return null;
+  const cleanBase = clean.split(/[\-\–\—|]/)[0].replace(/\s*\(\s*\d+\s*[xX*×]\s*\d+.*?\)/g, '').replace(/\s+\d+\s*[xX*×]\s*\d+\s*[xX*×]\s*\d+.*$/g, '').trim();
+  for (let i = 0; i < catalog.length; i++) {
+    const it = catalog[i];
+    const itName = String(it.n || '').toLowerCase().trim();
+    if (itName && (itName === clean || itName === cleanBase || itName === String(raw).trim().toLowerCase())) {
+      return formatFn(it, productOrName);
+    }
+  }
+  const verMatch = cleanBase.match(/(?:ver\.?|v\.?)\s*(\d+)\b/i) || clean.match(/(?:ver\.?|v\.?)\s*(\d+)\b/i);
+  const targetVer = verMatch ? String(verMatch[1]) : null;
+  const cleanFamily = cleanBase.replace(/(?:ver\.?|v\.?)\s*\d+\b/gi, '').replace(/\s+/g, ' ').trim();
+  if (targetVer) {
+    let bestItem = null;
+    let bestScore = -1;
+    for (let j = 0; j < catalog.length; j++) {
+      const item = catalog[j];
+      const itemName = String(item.n || '').toLowerCase();
+      const itemVerMatch = itemName.match(/^(.*?)\s*ver\.?\s*(\d+)\b/i);
+      if (itemVerMatch) {
+        const baseKw = itemVerMatch[1].trim();
+        const vNum = String(itemVerMatch[2]);
+        if (vNum === targetVer && baseKw) {
+          if (cleanFamily === baseKw || cleanFamily.indexOf(baseKw) !== -1 || baseKw.indexOf(cleanFamily) !== -1 && cleanFamily.length >= 3) {
+            const score = (cleanFamily === baseKw ? 1000 : 0) + baseKw.length;
+            if (score > bestScore) {
+              bestScore = score;
+              bestItem = item;
+            }
+          }
+        }
+      }
+    }
+    if (bestItem) return formatFn(bestItem, productOrName);
+  } else {
+    let bestSingle = null;
+    let bestSingleLen = -1;
+    for (let k = 0; k < catalog.length; k++) {
+      const itemK = catalog[k];
+      const itemKName = String(itemK.n || '').toLowerCase().trim();
+      if (itemKName && itemKName.indexOf('ver.') === -1) {
+        if (cleanBase === itemKName || cleanBase.indexOf(itemKName) !== -1) {
+          if (itemKName.length > bestSingleLen) {
+            bestSingleLen = itemKName.length;
+            bestSingle = itemK;
+          }
+        }
+      }
+    }
+    if (bestSingle) return formatFn(bestSingle, productOrName);
+  }
+  return null;
+};
+window.findLayoutAngles = window.__rfSafeFindLayoutAngles;
+window.isLayoutWith5Angles = function (p) {
+  return !!window.__rfSafeFindLayoutAngles(p);
+};
 const getChannelBadgeInfo = chan => {
   const k = String(chan || '').toUpperCase().trim();
   if (k.includes('SHOPEE')) {
@@ -5873,15 +5940,20 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
       };
     }
     const norm = str => String(str || '').toLowerCase().replace(/ver\.?\s*/gi, 'ver').replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi, ' ').replace(/\s+/g, ' ').trim();
+    const stripLayoutPrefix = s => String(s || '').replace(/^(layout|kho layout|bộ layout)\s+/i, '').trim();
     const normRaw = norm(rawName);
     const rawBaseName = norm(rawName.split(' - ')[0].split('–')[0].split('—')[0]);
-    if (rawBaseName && !isRawAcc) {
-      match = prodList.find(x => {
-        const xBase = norm(String(x.name || '').split(' - ')[0].split('–')[0].split('—')[0]);
-        const xNorm = norm(x.name);
-        return (xBase === rawBaseName || xNorm === rawBaseName) && (x.image || x.realImage);
+    const rawCleanBase = stripLayoutPrefix(rawBaseName);
+    if (rawCleanBase && !isRawAcc) {
+      const baseMatches = prodList.filter(x => {
+        const xBase = stripLayoutPrefix(norm(String(x.name || '').split(' - ')[0].split('–')[0].split('—')[0]));
+        const xNorm = stripLayoutPrefix(norm(x.name));
+        return (xBase === rawCleanBase || xNorm === rawCleanBase) && (x.image || x.realImage);
       });
-      if (match) {
+      if (baseMatches.length > 0) {
+        const dimMatch = normRaw.match(/(\d+\s+\d+\s+\d+)/);
+        const targetDim = dimMatch ? dimMatch[1] : '';
+        match = targetDim && baseMatches.find(x => norm(x.name).includes(targetDim)) || baseMatches[0];
         return {
           ...match,
           image: fmtImg(match.image || match.realImage),
@@ -5889,12 +5961,18 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
         };
       }
     }
-    const verMatch = normRaw.match(/ver\s*(\d+)/);
+    const verMatch = normRaw.match(/\bver\s*(\d+)\b/);
     if (verMatch && verMatch[1] && !isRawAcc) {
       const targetVer = `ver${verMatch[1]}`;
+      const targetVerRegex = new RegExp(`\\b${targetVer}\\b`, 'i');
+      const rawFamily = rawCleanBase.replace(/\bver\d+\b/gi, '').replace(/\s+/g, ' ').trim();
       match = prodList.find(x => {
+        if (!(x.image || x.realImage)) return false;
         const xNorm = norm(x.name);
-        return xNorm.includes(targetVer) && (x.image || x.realImage);
+        if (!targetVerRegex.test(xNorm)) return false;
+        if (!rawFamily || rawFamily.length < 2) return false;
+        const xFamily = stripLayoutPrefix(norm(String(x.name || '').split(' - ')[0].split('–')[0].split('—')[0])).replace(/\bver\d+\b/gi, '').replace(/\s+/g, ' ').trim();
+        return xFamily === rawFamily || xFamily.includes(rawFamily) || rawFamily.includes(xFamily) && xFamily.length >= 3;
       });
       if (match) {
         return {
@@ -5909,7 +5987,12 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
       match = sorted.find(x => {
         const xNorm = norm(x.name);
         const xBase = norm(String(x.name || '').split(' - ')[0].split('–')[0].split('—')[0]);
-        if (rawBaseName && rawBaseName.includes('ver') && !xBase.includes('ver')) return false;
+        if (verMatch && verMatch[1]) {
+          const xVer = xNorm.match(/\bver(\d+)\b/);
+          if (!xVer || xVer[1] !== verMatch[1]) return false;
+        } else if (rawBaseName && rawBaseName.includes('ver') && !xBase.includes('ver')) {
+          return false;
+        }
         const xCat = String(x.category || '').toUpperCase();
         const xSub = String(x.sub_category || '').toUpperCase();
         // Poka-yoke: Không gán layout hoặc bể kính cho phụ kiện
@@ -5962,7 +6045,14 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
       displayCoverImage = match[1];
     }
   }
-  const l5AngleFallback = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(_item.name || _item.productName) : null;
+  if (typeof window.__rfSafeFindLayoutAngles === 'function' && window.findLayoutAngles !== window.__rfSafeFindLayoutAngles) {
+    window.findLayoutAngles = window.__rfSafeFindLayoutAngles;
+    window.isLayoutWith5Angles = function (p) {
+      return !!window.__rfSafeFindLayoutAngles(p);
+    };
+  }
+  const findAnglesFn = typeof window.__rfSafeFindLayoutAngles === 'function' ? window.__rfSafeFindLayoutAngles : window.findLayoutAngles;
+  const l5AngleFallback = typeof findAnglesFn === 'function' ? findAnglesFn(_item.name || _item.productName) : null;
   const realImage = displayCoverImage || productInfo.realImage || productInfo.image || l5AngleFallback?.coverUrl;
   const productImage = displayCoverImage || productInfo.image || productInfo.realImage || l5AngleFallback?.coverUrl;
   const rawItemOrder = String(_item.orderId || '').trim();
@@ -6126,7 +6216,7 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
   }, "\u0110\u1ECBnh M\u1EE9c"), /*#__PURE__*/React.createElement("i", {
     className: `fas fa-chevron-${showBOMDrawer ? 'up' : 'down'} text-[8px] ml-0.5 text-zinc-500`
   })), (() => {
-    const l5 = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(_item.name || _item.productName) : null;
+    const l5 = l5AngleFallback;
     const hasPhoto = realImage || l5;
     if (!hasPhoto) return null;
     return /*#__PURE__*/React.createElement("button", {
@@ -6208,7 +6298,7 @@ const WorkerCardV2 = React.memo(function WorkerCardV2({
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => {
       e.stopPropagation();
-      const l5Click = typeof window.findLayoutAngles === 'function' ? window.findLayoutAngles(_item.name || _item.productName) : null;
+      const l5Click = l5AngleFallback;
       if (l5Click && typeof window.openLayout5AngleViewer === 'function') {
         window.openLayout5AngleViewer(l5Click);
       } else if (realImage) {
@@ -44466,6 +44556,10 @@ window.ApprenticeshipTab = ApprenticeshipTab;
       script.textContent=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
       document.body.appendChild(script);
       node.remove();
+      if (typeof window.__rfSafeFindLayoutAngles === 'function') {
+        window.findLayoutAngles = window.__rfSafeFindLayoutAngles;
+        window.isLayoutWith5Angles = function(p) { return !!window.__rfSafeFindLayoutAngles(p); };
+      }
     })();
   </script>
 

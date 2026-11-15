@@ -930,6 +930,10 @@
       script.textContent=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
       document.body.appendChild(script);
       node.remove();
+      if (typeof window.__rfSafeFindLayoutAngles === 'function') {
+        window.findLayoutAngles = window.__rfSafeFindLayoutAngles;
+        window.isLayoutWith5Angles = function(p) { return !!window.__rfSafeFindLayoutAngles(p); };
+      }
     })();
   </script>
 

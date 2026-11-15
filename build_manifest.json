@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T12:10:30.740Z",
+  "generatedAt": "2026-11-15T12:16:42.872Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -25,7 +25,7 @@
     "Tab_Apprenticeship.html"
   ],
   "hashes": {
-    "Tab_Production.html": "24d498df3795c3038c696d9a7578fbfe51b213df218d6b496420d340c713a72a",
+    "Tab_Production.html": "75ed69aa0418bf08b724823d9ebef7b31c481e0ece262a951756e92166287042",
     "Tab_Inventory.html": "5f7484609c0b5fa5bfd08e18ad063ea5f3093add79691426b5dd965d2eb03187",
     "Tab_ImportExport.html": "e2de9a9d9f60b6917cb6f226e0067bd26cc5bfe318cb19ba8c6b220c49f469e9",
     "Tab_Suppliers.html": "2cc2262f84ae8958aaa53248ccfce804d51b550f266f58e5e87886366d5e756c",
@@ -48,6 +48,6 @@
   },
   "bundleHashes": {
     "Compiled_Core.html": "32799707b2f2854cd68c3cf637b4bbc339615f778845f1d34d83e1cd09c40532",
-    "Compiled_Deferred.html": "655c6c4cce740fb5c4db43cfcccdc49bd097e781aa332d9dc906d5fee6e1654a"
+    "Compiled_Deferred.html": "fc152394181e7054b582aa96284c9c8525d8bd3721200855393770440fd3f81b"
   }
 }
