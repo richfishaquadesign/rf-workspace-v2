@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T10:21:49.076Z",
+  "generatedAt": "2026-11-15T10:57:19.067Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -32,7 +32,7 @@
     "Tab_Finance.html": "a11940ae9a2e4653f95f566cedb4602ba5adab3108ce2ee418a182279e2fbfb0",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
     "Tab_HR.html": "a88bfa23b51ced8e79b4d19bcd0abe28f521d3d63c111b5455c5950744c49fee",
-    "Tab_Documents.html": "b1588007a64852ccf13618c25db5a7b4ba41431695d419ce79221d153f560597",
+    "Tab_Documents.html": "0fb59801d3c3d198a018d5aaf992de0b965592d9c7abb8ac50c9a66d1535cb4f",
     "Tab_Affiliate.html": "14d6c02efade79a6afe856e785289e2857557324f598712967eeae124794e95b",
     "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
     "Tab_Workspaces.html": "71d29d53ce7f942db49bb8dc9bb948d504ac1b6b08c4380ff5e3cf8d3b871104",
@@ -42,12 +42,12 @@
     "Components.html": "02a97d191185600ef48e3a9394d4934b3a896567dff011bcc8edb9cda8064588",
     "Modals.html": "b87bfe935a9ea4f1672f686a877dfce5425cf08929263c95bdf8ae4430bb6b75",
     "Modals_Orders.html": "f14b81c49dfebad3ef91d2ff438ce1423cce48521d857693eabb42cc3f850c5f",
-    "Tab_Dashboard.html": "6b1d67b3eb38955fad0e46405c62d7f87a6db200c10a6bee452d48710d4c7606",
+    "Tab_Dashboard.html": "a7bd5e4b434540d1c09081aa311d4cf7548813a626a235f2d280adfdf18ec20d",
     "Tab_Orders.html": "fe51c235be45f5028c5a75f30f07720c3e8f6e8063bc05172bae10a4db3ec795",
     "App_Main.html": "737cd13f91376da96a179a924b600cf4d75bfde086365d982725371c48fb8aae"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "75e6f783b6a5e8aa581597866cb65a8d5bed5cd512d63d3643388d5386c9a833",
-    "Compiled_Deferred.html": "55e12871d0758644cfdcf81f4e0f5234315f81aeabb0e1b9231a2b311fe20c77"
+    "Compiled_Core.html": "800b37297662c3d690269cb857f68b4f1a22663ab532e2f55aa15d0c006c28af",
+    "Compiled_Deferred.html": "0185c41534a87c762b071cf41b82e7d5f41416213eaca428ff0efa0fba5f0fb8"
   }
 }

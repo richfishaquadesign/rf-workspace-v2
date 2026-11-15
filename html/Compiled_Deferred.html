@@ -33439,8 +33439,8 @@ function DocumentsTab({
   const categories = ['Tất cả', 'Phiếu Lương', 'Hướng Dẫn', 'Biểu Mẫu', 'Báo Giá', 'Đào Tạo', 'Thông Tin', 'Kế Hoạch', 'Khác'];
   const filteredDocs = React.useMemo(() => {
     return documents.filter(doc => {
-      // ẨN HOÀN TOÀN các bản ghi thông báo hệ thống ngầm
-      if (doc.category === 'THONG_BAO_HE_THONG' || doc.category === 'THÔNG BÁO HỆ THỐNG' || String(doc.id || '').startsWith('SYS_ANNO_')) return false;
+      // ẨN HOÀN TOÀN các bản ghi thông báo hệ thống & cấu hình Website ngầm
+      if (doc.category === 'THONG_BAO_HE_THONG' || doc.category === 'THÔNG BÁO HỆ THỐNG' || doc.category === 'WEBSITE_CONFIG_INTERNAL' || String(doc.id || '').startsWith('SYS_ANNO_') || String(doc.id || '').startsWith('RF_WEB_THEME_')) return false;
       const text = `${doc.title} ${doc.description || ''}`.toLowerCase();
       const matchSearch = text.includes(search.toLowerCase());
       const isPayslip = doc.category === 'Phiếu Lương';

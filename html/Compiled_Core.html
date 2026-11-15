@@ -20632,8 +20632,13 @@ const DashboardTab = React.memo(function DashboardTab({
 
   // ==================== THÔNG BÁO TỪ BAN QUẢN LÝ (BOSS) ====================
   const noticeDocs = React.useMemo(() => {
-    // Ưu tiên đọc từ bảng Documents (category = 'THONG_BAO_HE_THONG')
-    const docList = (documents || erpData?.documents || []).filter(d => d.category === 'THONG_BAO_HE_THONG' || d.category === 'THÔNG BÁO HỆ THỐNG');
+    // Ưu tiên đọc từ bảng Documents (category = 'THONG_BAO_HE_THONG'), bỏ qua cấu hình JSON/Website nội bộ
+    const docList = (documents || erpData?.documents || []).filter(d => {
+      const isNotice = d.category === 'THONG_BAO_HE_THONG' || d.category === 'THÔNG BÁO HỆ THỐNG';
+      const isInternalCfg = d.category === 'WEBSITE_CONFIG_INTERNAL' || String(d.id || '').startsWith('RF_WEB_THEME_') || String(d.id || '') === 'SYS_ANNO_WEBSITE_THEME_V2';
+      const isRawJson = String(d.description || '').trim().startsWith('{');
+      return isNotice && !isInternalCfg && !isRawJson;
+    });
     if (docList.length > 0) return docList;
     // Fallback dữ liệu cũ từ importExport nếu chưa có trong documents
     return (importExport || []).filter(log => log.type === 'THONG_BAO_HE_THONG');
