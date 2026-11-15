@@ -226,7 +226,7 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
           var chalBytes = new Uint8Array(32);
           crypto.getRandomValues(chalBytes);
           var b64Chal = btoa(String.fromCharCode.apply(null, chalBytes))
-            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            .replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
           window.__rfLastChallenge = b64Chal;
           window.__rfChallengeTime = Date.now();
           return { success: true, challenge: b64Chal };
@@ -432,20 +432,6 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
                 }
               } catch(e) {}
             }
-
-            // Gộp thêm đơn hàng kiểm thử mới tạo từ LocalStorage (nếu có)
-            try {
-              var localPersisted = JSON.parse(localStorage.getItem('rf_persisted_test_orders') || '{}');
-              var existingIds = {};
-              (effectiveOrders || []).forEach(function(o) { if (o && o.id) existingIds[o.id] = true; });
-              Object.keys(localPersisted).forEach(function(k) {
-                var o = localPersisted[k];
-                if (o && o.id && !existingIds[o.id]) {
-                  effectiveOrders.unshift(o);
-                  existingIds[o.id] = true;
-                }
-              });
-            } catch(e) {}
 
             (effectiveOrders || []).forEach(function(o) {
               if (o.accessories && typeof o.accessories === 'string') {
@@ -809,13 +795,6 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
             // Write Orders
             var ords = payload.Orders || payload.orders;
             if (ords && ords.length) {
-              // Lưu vào local cache an toàn
-              try {
-                var persisted = JSON.parse(localStorage.getItem('rf_persisted_test_orders') || '{}');
-                ords.forEach(function(o) { if (o && o.id) persisted[o.id] = o; });
-                localStorage.setItem('rf_persisted_test_orders', JSON.stringify(persisted));
-              } catch(e) {}
-
               // Whitelist chính xác 32 cột của bảng Orders trước khi ghi Supabase (chống PGRST204)
               var cleanOrds = ords.map(function(o) {
                 var c = {};
