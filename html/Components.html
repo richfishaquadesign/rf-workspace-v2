@@ -365,7 +365,7 @@ const Avatar = React.memo(function Avatar({ name, userConfigs, className="" }) {
     }
 
     if (cleanId && !hasError) { 
-        const isFullUrl = String(cleanId).startsWith('http://') || String(cleanId).startsWith('https://');
+        const isFullUrl = String(cleanId).startsWith('http://') || String(cleanId).startsWith('https://') || String(cleanId).startsWith('data:') || String(cleanId).startsWith('blob:');
         const imgSrc = isFullUrl ? cleanId : ('https:\x2F\x2Flh3.googleusercontent.com/d/' + cleanId + '=w120-h120');
         return <img src={imgSrc} className={`object-cover rounded-full shadow-sm bg-[#18181c] ${className}`} alt={name} onError={() => setHasError(true)} />;
     } 

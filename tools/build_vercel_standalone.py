@@ -109,11 +109,11 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v11') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v12') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
-          localStorage.setItem('rf_db_sync_v11', 'true');
+          localStorage.setItem('rf_db_sync_v12', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -313,6 +313,24 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
           if (!staffRows || staffRows.length === 0) {
             staffRows = (window.__RF_KNOWLEDGE_OS_SEED__ && window.__RF_KNOWLEDGE_OS_SEED__.Config_NhanSu) || [];
           }
+          var formatStaffAvatar = function(rawAv) {
+            if (!rawAv) return '';
+            var s = String(rawAv).trim();
+            if (!s) return '';
+            if (s.indexOf('data:') === 0 || s.indexOf('blob:') === 0 || s.indexOf('http://') === 0 || s.indexOf('https://') === 0) {
+              if (s.indexOf('drive.google.com') !== -1) {
+                var dm = s.match(/[-\\w]{25,}/);
+                if (dm) return 'https://lh3.googleusercontent.com/d/' + dm[0] + '=w240-h240';
+              }
+              return s;
+            }
+            var m = s.match(/^[-\\w]{20,}$/);
+            if (m) return 'https://lh3.googleusercontent.com/d/' + m[0] + '=w240-h240';
+            return s;
+          };
+          var validStaffRows = (staffRows || []).filter(function(s) {
+            return s && String(s['Tên Nhân Sự'] || s.name || '').trim().length > 0;
+          });
           var cfg = {
             avatars: {},
             titles: {},
@@ -321,21 +339,24 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
             users: [],
             roles: {},
             pins: {},
-            raw: staffRows || [],
+            raw: validStaffRows,
             staffList: [],
             staffDetails: {},
             statuses: {}
           };
-          (staffRows || []).forEach(function(s) {
-            var name = (s['Tên Nhân Sự'] || '').trim();
+          validStaffRows.forEach(function(s) {
+            var name = String(s['Tên Nhân Sự'] || s.name || '').trim();
             if (!name) return;
+            var cleanAvatar = formatStaffAvatar(s['ID Ảnh'] || s.avatar || '');
+            s['ID Ảnh'] = cleanAvatar;
+            s.avatar = cleanAvatar;
             cfg.users.push(name);
             cfg.staffList.push({
               id: s.id || ('staff_' + (s['Mã PIN'] || name)),
               name: name,
               'Tên Nhân Sự': name,
-              avatar: s['ID Ảnh'] || s.avatar || '',
-              'ID Ảnh': s['ID Ảnh'] || s.avatar || '',
+              avatar: cleanAvatar,
+              'ID Ảnh': cleanAvatar,
               title: s['Chức Danh'] || s.title || 'Thợ',
               'Chức Danh': s['Chức Danh'] || s.title || 'Thợ',
               subTitle: s['Chức Danh Phụ'] || s.subTitle || '',
@@ -361,9 +382,8 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               allowance: Number(s['Phụ Cấp Xăng Xe'] || 0),
               deduction: Number(s['Khoản Trừ Vi Phạm'] || 0)
             });
-            if (s['ID Ảnh']) {
-              var m = String(s['ID Ảnh']).match(/[-\\w]{25,}/);
-              cfg.avatars[name] = m ? m[0] : s['ID Ảnh'];
+            if (cleanAvatar) {
+              cfg.avatars[name] = cleanAvatar;
             }
             if (s['Chức Danh']) cfg.titles[name] = s['Chức Danh'];
             if (s['Chức Danh Phụ']) cfg.subTitles[name] = s['Chức Danh Phụ'];
@@ -498,7 +518,20 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
             var effectiveBom = (bomRaw && bomRaw.length > 0) ? bomRaw : (kosSeed.BOM_Config || []);
             var effectiveKpi = (kpiRaw && kpiRaw.length > 0) ? kpiRaw : (kosSeed.Config_KPI || []);
-            var effectiveStaff = (staffRaw && staffRaw.length > 0) ? staffRaw : (kosSeed.Config_NhanSu || []);
+            var rawStaffSource = (staffRaw && staffRaw.length > 0) ? staffRaw : (kosSeed.Config_NhanSu || []);
+            var effectiveStaff = (rawStaffSource || []).filter(function(s) {
+              return s && String(s['Tên Nhân Sự'] || s.name || '').trim().length > 0;
+            }).map(function(s) {
+              var av = String(s['ID Ảnh'] || s.avatar || '').trim();
+              if (av && av.indexOf('data:') !== 0 && av.indexOf('blob:') !== 0 && av.indexOf('http://') !== 0 && av.indexOf('https://') !== 0) {
+                var mAv = av.match(/^[-\\w]{20,}$/);
+                if (mAv) av = 'https://lh3.googleusercontent.com/d/' + mAv[0] + '=w240-h240';
+              } else if (av.indexOf('drive.google.com') !== -1) {
+                var dmAv = av.match(/[-\\w]{25,}/);
+                if (dmAv) av = 'https://lh3.googleusercontent.com/d/' + dmAv[0] + '=w240-h240';
+              }
+              return Object.assign({}, s, { 'ID Ảnh': av, avatar: av });
+            });
             var effectiveSuppliers = (supRaw && supRaw.length > 0) ? supRaw : (kosSeed.Suppliers || []);
             var effectiveDocs = (docRaw && docRaw.length > 0) ? docRaw : (kosSeed.Documents || []);
             var effectiveTrainings = (trainRaw && trainRaw.length > 0) ? trainRaw : (kosSeed.Trainings || []);
@@ -883,6 +916,7 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
         if (action === 'api_deleteEmployee') {
           var targetId = String(args[0] || '');
           var targetName = String(args[1] || targetId);
+          var forceHardDelete = args[2] !== undefined ? Boolean(args[2]) : true;
           if (!targetId) return { success: false, message: 'Mã nhân sự không hợp lệ' };
           
           // Kiểm tra quyền Admin
@@ -890,26 +924,7 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
           var isAdm = currentRole.indexOf('TỐI CAO') >= 0 || currentRole.indexOf('ADMIN') >= 0 || (localStorage.getItem('rf_admin') === 'true') || (localStorage.getItem('rf_boss') === 'true');
           if (!isAdm) return { success: false, message: 'Từ chối: Bạn không có quyền Admin để xóa nhân sự.' };
 
-          // Kiểm tra ràng buộc dữ liệu liên kết
-          var [attRows, prodRows, packRows] = await Promise.all([
-            fetchFromSupabaseWithRetry('Attendance', 'select=id,user&limit=100', 2),
-            fetchFromSupabaseWithRetry('Production', 'select=id,p1_user,p2_user&limit=100', 2),
-            fetchFromSupabaseWithRetry('Packings', 'select=id,user&limit=100', 2)
-          ]);
-          var hasAtt = (attRows || []).some(function(a) { return a.user === targetName; });
-          var hasProd = (prodRows || []).some(function(p) { return p.p1_user === targetName || p.p2_user === targetName; });
-          var hasPack = (packRows || []).some(function(pk) { return pk.user === targetName; });
-
-          if (hasAtt || hasProd || hasPack) {
-            // Có dữ liệu liên quan -> Soft delete (ngừng hoạt động để bảo toàn liên kết dữ liệu)
-            await upsertToSupabase('Config_NhanSu', [{ id: targetId, 'Trạng Thái': 'Đã nghỉ việc' }]);
-            return {
-              success: true,
-              softDeleted: true,
-              message: 'Nhân sự có dữ liệu liên quan (chấm công / sản xuất) nên đã được chuyển sang trạng thái "Đã nghỉ việc" để bảo toàn lịch sử!'
-            };
-          } else {
-            // Không có dữ liệu liên quan -> Xóa cứng vĩnh viễn theo ID
+          if (forceHardDelete) {
             await deleteFromSupabase('Config_NhanSu', [targetId]);
             return {
               success: true,
@@ -917,6 +932,16 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               message: 'Đã xóa vĩnh viễn hồ sơ nhân sự khỏi hệ thống!'
             };
           }
+
+          var existingStaffRows = await fetchFromSupabaseWithRetry('Config_NhanSu', 'select=*&id=eq.' + encodeURIComponent(targetId), 2);
+          var existingStaff = (existingStaffRows && existingStaffRows[0]) || { id: targetId, 'Tên Nhân Sự': targetName };
+          existingStaff['Trạng Thái'] = 'Đã nghỉ việc';
+          await upsertToSupabase('Config_NhanSu', [existingStaff]);
+          return {
+            success: true,
+            softDeleted: true,
+            message: 'Đã chuyển nhân sự sang trạng thái "Đã nghỉ việc"!'
+          };
         }
 
         // 5. Apprenticeship Module Handlers

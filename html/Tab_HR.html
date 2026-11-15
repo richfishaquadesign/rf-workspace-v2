@@ -247,30 +247,53 @@
             if (!file) return;
             setIsUploadingAvatar(true);
             try {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const base64Data = event.target.result;
-                    const cleanName = (staffForm.name || 'Staff').replace(/[^a-zA-Z0-9]/g, '_');
-                    const fileName = `Avatar_${cleanName}_${Date.now()}.jpg`;
-                    if (typeof window.runGAS === 'function') {
-                        const avatarUrl = await window.runGAS('uploadImage', base64Data, fileName);
-                        if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
-                            setStaffForm(prev => ({ ...prev, avatar: avatarUrl }));
-                            triggerToast('Đã tải ảnh lên Drive thành công!', 'fa-image', 'success');
-                        } else {
-                            setStaffForm(prev => ({ ...prev, avatar: base64Data }));
-                            triggerToast('Đã nạp ảnh đại diện!', 'fa-image', 'info');
-                        }
+                let base64Data = '';
+                if (typeof window.resizeImage === 'function') {
+                    base64Data = await window.resizeImage(file, 320, 320);
+                } else {
+                    base64Data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const maxDim = 320;
+                                let w = img.width;
+                                let h = img.height;
+                                if (w > h && w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                else if (h >= w && h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+                                canvas.width = w;
+                                canvas.height = h;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, w, h);
+                                resolve(canvas.toDataURL('image/jpeg', 0.88));
+                            };
+                            img.onerror = () => resolve(ev.target.result);
+                            img.src = ev.target.result;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }
+                const cleanName = (staffForm.name || 'Staff').replace(/[^a-zA-Z0-9]/g, '_');
+                const fileName = `Avatar_${cleanName}_${Date.now()}.jpg`;
+                if (typeof window.runGAS === 'function') {
+                    const avatarUrl = await window.runGAS('uploadImage', base64Data, fileName);
+                    if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
+                        setStaffForm(prev => ({ ...prev, avatar: avatarUrl }));
+                        triggerToast('Đã tải ảnh lên Drive thành công!', 'fa-image', 'success');
                     } else {
                         setStaffForm(prev => ({ ...prev, avatar: base64Data }));
-                        triggerToast('Đã chọn ảnh đại diện!', 'fa-image', 'info');
+                        triggerToast('Đã nạp ảnh đại diện!', 'fa-image', 'info');
                     }
-                    setIsUploadingAvatar(false);
-                };
-                reader.readAsDataURL(file);
+                } else {
+                    setStaffForm(prev => ({ ...prev, avatar: base64Data }));
+                    triggerToast('Đã chọn ảnh đại diện!', 'fa-image', 'info');
+                }
             } catch (err) {
                 console.error('Lỗi đọc file ảnh:', err);
                 triggerToast('Lỗi khi đọc file ảnh!', 'fa-times', 'danger');
+            } finally {
                 setIsUploadingAvatar(false);
             }
         };
@@ -505,15 +528,16 @@
                 hasHistory: hasHistory,
                 attCount: attCount,
                 prodCount: prodCount,
-                packCount: packCount
+                packCount: packCount,
+                staffObj: staff
             });
         }, [attendance, erpData, prodItems, packings, isStaffResignedOrInactive]);
 
-        const handleConfirmDeleteStaff = async () => {
+        const handleConfirmDeleteStaff = async (forceHardDelete = true) => {
             if (!deleteStaffModal || !deleteStaffModal.id) return;
             const targetId = deleteStaffModal.id;
             const targetName = deleteStaffModal.name;
-            const hasHistory = Boolean(deleteStaffModal.hasHistory);
+            const baseStaff = deleteStaffModal.staffObj || {};
 
             if (!isBoss && !isAdmin && !hasPerm('HR_CONFIG_STAFF')) {
                 alert('Từ chối: Bạn không có quyền Admin để thực hiện thao tác xóa nhân sự!');
@@ -522,9 +546,10 @@
 
             setIsDeletingStaff(true);
             try {
-                if (hasHistory) {
-                    // CÓ DỮ LIỆU LIÊN KẾT: Soft delete (ngừng hoạt động để bảo toàn lịch sử chấm công, sản xuất, doanh số)
+                if (!forceHardDelete) {
+                    // Chuyển sang trạng thái "Đã nghỉ việc" nhưng GIỮ NGUYÊN toàn bộ thông tin (avatar, chức vụ, PIN...)
                     const updatedStaff = {
+                        ...baseStaff,
                         id: targetId,
                         name: targetName,
                         'Tên Nhân Sự': targetName,
@@ -541,32 +566,30 @@
                         await pushDeltas({ Config_NhanSu: [updatedStaff] }, `Đã chuyển nhân sự ${targetName} sang Đã nghỉ việc`, 'fa-user-clock');
                     }
                     if (typeof window.runGAS === 'function') {
-                        const res = await window.runGAS('api_deleteEmployee', targetId, targetName);
-                        if (res && res.message && triggerToast) {
-                            triggerToast(res.message, 'fa-info-circle', 'info');
-                        }
-                    } else if (triggerToast) {
-                        triggerToast(`Nhân sự ${targetName} có dữ liệu liên kết nên đã chuyển sang "Đã nghỉ việc"!`, 'fa-user-clock', 'warning');
+                        await window.runGAS('api_deleteEmployee', targetId, targetName, false);
+                    }
+                    if (triggerToast) {
+                        triggerToast(`Đã chuyển ${targetName} sang trạng thái "Đã nghỉ việc"!`, 'fa-user-clock', 'info');
                     }
                 } else {
-                    // KHÔNG CÓ DỮ LIỆU LIÊN KẾT: Hard delete (Xoá vĩnh viễn theo ID duy nhất)
+                    // XÓA VĨNH VIỄN KHỎI BẢNG NHÂN SỰ (Config_NhanSu)
                     setLocalStaffList(prevList => {
                         const current = prevList || staffList || [];
-                        return current.filter(s => s.id !== targetId && !matchUser(s.name, targetName));
+                        return current.filter(s => s.id !== targetId && (!targetName || !matchUser(s.name, targetName)));
                     });
 
                     if (typeof pushDeltas === 'function') {
                         await pushDeltas({
                             deletes: { Config_NhanSu: [targetId] }
-                        }, `Đã xoá vĩnh viễn nhân sự ${targetName}!`, 'fa-trash-alt');
+                        }, `Đã xoá vĩnh viễn nhân sự ${targetName || targetId}!`, 'fa-trash-alt');
                     }
                     if (typeof window.runGAS === 'function') {
-                        const res = await window.runGAS('api_deleteEmployee', targetId, targetName);
+                        const res = await window.runGAS('api_deleteEmployee', targetId, targetName, true);
                         if (res && !res.success) {
                             throw new Error(res.message || 'Lỗi từ chối xóa tại backend');
                         }
                     }
-                    if (triggerToast) triggerToast(`Đã xoá vĩnh viễn nhân sự ${targetName} khỏi hệ thống!`, 'fa-trash-alt', 'success');
+                    if (triggerToast) triggerToast(`Đã xoá vĩnh viễn nhân sự ${targetName || targetId} khỏi hệ thống!`, 'fa-trash-alt', 'success');
                 }
             } catch (err) {
                 console.error('Lỗi khi xoá nhân sự:', err);
@@ -812,24 +835,43 @@
 
         // NGUỒN DANH SÁCH NHÂN SỰ TOÀN DIỆN (Hỗ trợ Optimistic UI khi Thêm/Sửa/Xoá)
         const staffList = React.useMemo(() => {
+            const formatStaffAvatarUrl = (rawAv) => {
+                if (!rawAv) return '';
+                const s = String(rawAv).trim();
+                if (!s) return '';
+                if (s.startsWith('data:') || s.startsWith('blob:') || s.startsWith('http://') || s.startsWith('https://')) {
+                    if (s.includes('drive.google.com')) {
+                        const dm = s.match(/[-\w]{25,}/);
+                        if (dm) return `https://lh3.googleusercontent.com/d/${dm[0]}=w240-h240`;
+                    }
+                    return s;
+                }
+                const m = s.match(/^[-\w]{20,}$/);
+                if (m) return `https://lh3.googleusercontent.com/d/${m[0]}=w240-h240`;
+                return s;
+            };
+
             const normalizeStaffItem = (r, idx) => {
                 if (!r) return null;
                 if (typeof r === 'string') {
-                    const detail = userConfigs?.staffDetails?.[r] || {};
+                    const cleanR = r.trim();
+                    if (!cleanR) return null;
+                    const detail = userConfigs?.staffDetails?.[cleanR] || {};
+                    const cleanAv = formatStaffAvatarUrl(userConfigs?.avatars?.[cleanR] || detail['ID Ảnh'] || detail.avatar || '');
                     return {
                         id: detail.id || ('staff_' + idx),
-                        name: r,
-                        'Tên Nhân Sự': r,
-                        avatar: userConfigs?.avatars?.[r] || detail['ID Ảnh'] || detail.avatar || '',
-                        'ID Ảnh': userConfigs?.avatars?.[r] || detail['ID Ảnh'] || detail.avatar || '',
-                        title: userConfigs?.titles?.[r] || detail['Chức Danh'] || 'Thợ sản xuất',
-                        'Chức Danh': userConfigs?.titles?.[r] || detail['Chức Danh'] || 'Thợ sản xuất',
-                        subTitle: userConfigs?.subTitles?.[r] || detail['Chức Danh Phụ'] || '',
-                        'Chức Danh Phụ': userConfigs?.subTitles?.[r] || detail['Chức Danh Phụ'] || '',
-                        role: userConfigs?.roles?.[r] || detail['Phân Quyền'] || 'THỢ',
-                        'Phân Quyền': userConfigs?.roles?.[r] || detail['Phân Quyền'] || 'THỢ',
-                        pin: userConfigs?.pins?.[r] || detail['Mã PIN'] || '',
-                        'Mã PIN': userConfigs?.pins?.[r] || detail['Mã PIN'] || '',
+                        name: cleanR,
+                        'Tên Nhân Sự': cleanR,
+                        avatar: cleanAv,
+                        'ID Ảnh': cleanAv,
+                        title: userConfigs?.titles?.[cleanR] || detail['Chức Danh'] || 'Thợ sản xuất',
+                        'Chức Danh': userConfigs?.titles?.[cleanR] || detail['Chức Danh'] || 'Thợ sản xuất',
+                        subTitle: userConfigs?.subTitles?.[cleanR] || detail['Chức Danh Phụ'] || '',
+                        'Chức Danh Phụ': userConfigs?.subTitles?.[cleanR] || detail['Chức Danh Phụ'] || '',
+                        role: userConfigs?.roles?.[cleanR] || detail['Phân Quyền'] || 'THỢ',
+                        'Phân Quyền': userConfigs?.roles?.[cleanR] || detail['Phân Quyền'] || 'THỢ',
+                        pin: userConfigs?.pins?.[cleanR] || detail['Mã PIN'] || '',
+                        'Mã PIN': userConfigs?.pins?.[cleanR] || detail['Mã PIN'] || '',
                         email: detail['Gmail'] || detail.email || '',
                         'Gmail': detail['Gmail'] || detail.email || '',
                         phone: detail['Số Điện Thoại'] || detail.phone || '',
@@ -840,22 +882,24 @@
                         'Ngày Sinh': detail['Ngày Sinh'] || detail.dob || '',
                         cccd: detail['Số CCCD'] || detail.cccd || '',
                         'Số CCCD': detail['Số CCCD'] || detail.cccd || '',
-                        status: detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(r) ? 'Đã nghỉ việc' : 'Đang làm việc'),
-                        'Trạng Thái': detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(r) ? 'Đã nghỉ việc' : 'Đang làm việc'),
-                        baseSalary: cleanNumber(userConfigs?.salaries?.[r]?.baseSalary || detail['Lương Cơ Bản'] || 0),
-                        funcSalary: cleanNumber(userConfigs?.salaries?.[r]?.funcSalary || detail['Lương Chức Vụ'] || 0),
-                        allowance: cleanNumber(userConfigs?.salaries?.[r]?.allowance || detail['Phụ Cấp Xăng Xe'] || 0),
-                        deduction: cleanNumber(userConfigs?.salaries?.[r]?.deduction || detail['Khoản Trừ Vi Phạm'] || 0)
+                        status: detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(cleanR) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                        'Trạng Thái': detail['Trạng Thái'] || detail.status || (isStaffResignedOrInactive(cleanR) ? 'Đã nghỉ việc' : 'Đang làm việc'),
+                        baseSalary: cleanNumber(userConfigs?.salaries?.[cleanR]?.baseSalary || detail['Lương Cơ Bản'] || 0),
+                        funcSalary: cleanNumber(userConfigs?.salaries?.[cleanR]?.funcSalary || detail['Lương Chức Vụ'] || 0),
+                        allowance: cleanNumber(userConfigs?.salaries?.[cleanR]?.allowance || detail['Phụ Cấp Xăng Xe'] || 0),
+                        deduction: cleanNumber(userConfigs?.salaries?.[cleanR]?.deduction || detail['Khoản Trừ Vi Phạm'] || 0)
                     };
                 }
-                const name = r.name || r['Tên Nhân Sự'] || (typeof r.user === 'string' ? r.user : '');
+                const name = String(r.name || r['Tên Nhân Sự'] || (typeof r.user === 'string' ? r.user : '') || '').trim();
+                if (!name) return null;
                 const detail = (name && userConfigs?.staffDetails?.[name]) ? userConfigs.staffDetails[name] : {};
+                const cleanAv = formatStaffAvatarUrl(r.avatar || r['ID Ảnh'] || detail.avatar || detail['ID Ảnh'] || (name ? userConfigs?.avatars?.[name] : '') || '');
                 return {
                     id: r.id || detail.id || ('staff_' + (r['Mã PIN'] || idx)),
                     name: name,
                     'Tên Nhân Sự': name,
-                    avatar: r.avatar || r['ID Ảnh'] || detail.avatar || detail['ID Ảnh'] || (name ? userConfigs?.avatars?.[name] : '') || '',
-                    'ID Ảnh': r.avatar || r['ID Ảnh'] || detail.avatar || detail['ID Ảnh'] || (name ? userConfigs?.avatars?.[name] : '') || '',
+                    avatar: cleanAv,
+                    'ID Ảnh': cleanAv,
                     title: r.title || r['Chức Danh'] || detail.title || detail['Chức Danh'] || (name ? userConfigs?.titles?.[name] : '') || 'Thợ sản xuất',
                     'Chức Danh': r.title || r['Chức Danh'] || detail.title || detail['Chức Danh'] || (name ? userConfigs?.titles?.[name] : '') || 'Thợ sản xuất',
                     subTitle: r.subTitle || r['Chức Danh Phụ'] || detail.subTitle || detail['Chức Danh Phụ'] || (name ? userConfigs?.subTitles?.[name] : '') || '',
@@ -8662,24 +8706,14 @@
                                 )}
                             </div>
 
-                            <div className={`text-[11px] p-3 rounded-xl border leading-relaxed ${
-                                deleteStaffModal.hasHistory 
-                                    ? 'text-amber-300 bg-amber-500/10 border-amber-500/30' 
-                                    : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-                            }`}>
+                            <div className="text-[11px] p-3 rounded-xl border leading-relaxed text-rose-300 bg-rose-500/10 border-rose-500/20">
                                 <i className="fas fa-info-circle mr-1"></i>
-                                {deleteStaffModal.hasHistory ? (
-                                    <span>
-                                        <b>BẢO TOÀN DỮ LIỆU:</b> Nhân sự này đã có lịch sử làm việc (chấm công / sản xuất). Để không làm đứt gãy quan hệ dữ liệu bảng lương và báo cáo, hệ thống sẽ chuyển nhân sự sang trạng thái <b>"Đã nghỉ việc"</b> (ngừng hoạt động) thay vì xóa cứng.
-                                    </span>
-                                ) : (
-                                    <span>
-                                        <b>XÓA VĨNH VIỄN:</b> Hồ sơ chưa có dữ liệu lịch sử liên kết nào. Xác nhận xóa vĩnh viễn dòng nhân sự này khỏi CSDL Supabase.
-                                    </span>
-                                )}
+                                <span>
+                                    <b>XÓA KHỎI DANH SÁCH NHÂN SỰ:</b> Xác nhận xóa vĩnh viễn hồ sơ của <b>{deleteStaffModal.name}</b> khỏi bảng nhân sự hệ thống (lịch sử chấm công/sản xuất cũ trong kho dữ liệu vẫn được giữ nguyên).
+                                </span>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 pt-2">
+                            <div className="flex items-center justify-end gap-2.5 pt-2 flex-wrap">
                                 <button
                                     type="button"
                                     onClick={() => setDeleteStaffModal(null)}
@@ -8688,25 +8722,32 @@
                                 >
                                     Huỷ Bỏ
                                 </button>
+                                {deleteStaffModal.status !== 'Đã nghỉ việc' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleConfirmDeleteStaff(false)}
+                                        disabled={isDeletingStaff}
+                                        className="px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase transition-all cursor-pointer disabled:opacity-50"
+                                    >
+                                        <i className="fas fa-user-slash mr-1.5"></i>
+                                        Chuyển Nghỉ Việc
+                                    </button>
+                                )}
                                 <button
                                     type="button"
-                                    onClick={handleConfirmDeleteStaff}
+                                    onClick={() => handleConfirmDeleteStaff(true)}
                                     disabled={isDeletingStaff}
-                                    className={`px-5 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center gap-2 cursor-pointer border-0 disabled:opacity-50 ${
-                                        deleteStaffModal.hasHistory 
-                                            ? 'bg-amber-600 hover:bg-amber-500' 
-                                            : 'bg-rose-600 hover:bg-rose-500'
-                                    }`}
+                                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center gap-2 cursor-pointer border-0 disabled:opacity-50"
                                 >
                                     {isDeletingStaff ? (
                                         <>
                                             <i className="fas fa-spinner fa-spin"></i>
-                                            <span>Đang Xử Lý...</span>
+                                            <span>Đang Xoá...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <i className={`fas ${deleteStaffModal.hasHistory ? 'fa-user-slash' : 'fa-trash-alt'}`}></i>
-                                            <span>{deleteStaffModal.hasHistory ? 'Xác Nhận Ngừng Hoạt Động' : 'Xác Nhận Xoá Vĩnh Viễn'}</span>
+                                            <i className="fas fa-trash-alt"></i>
+                                            <span>Xác Nhận Xoá Vĩnh Viễn</span>
                                         </>
                                     )}
                                 </button>
