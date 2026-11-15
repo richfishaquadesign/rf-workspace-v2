@@ -411,11 +411,14 @@ def extract_products(img_map, gallery_map, desc_map, glass_bom_meta, layout_bom_
 
     def register_detail(sku, front, body, fallback_img=""):
         md_imgs, md_desc = extract_md_gallery_and_desc(front, body, media_vault_dir)
-        merged_imgs = []
-        # Ưu tiên tuyệt đối ảnh studio thực tế từ Kho tri thức (media-vault)
-        for u in md_imgs + list(gallery_map.get(sku) or []) + ([fallback_img] if fallback_img else []):
-            if u and u not in merged_imgs:
-                merged_imgs.append(u)
+        # Nếu đã có bộ ảnh studio thực tế chuẩn từ Kho tri thức (media-vault), ưu tiên dùng độc quyền bộ ảnh này
+        if md_imgs:
+            merged_imgs = list(md_imgs)
+        else:
+            merged_imgs = []
+            for u in list(gallery_map.get(sku) or []) + ([fallback_img] if fallback_img else []):
+                if u and u not in merged_imgs:
+                    merged_imgs.append(u)
         final_desc = desc_map.get(sku) or md_desc
         dims = ""
         raw_dim = front.get("dimensions") or front.get("dimensions_cm")
