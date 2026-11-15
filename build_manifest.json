@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T14:26:56.777Z",
+  "generatedAt": "2026-11-15T14:38:22.793Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -31,7 +31,7 @@
     "Tab_Finance.html": "a11940ae9a2e4653f95f566cedb4602ba5adab3108ce2ee418a182279e2fbfb0",
     "Tab_BusinessReport.html": "1106d53006ed691a4affb8d0d660872d0a2ecece1c61c24824f5bd28873aa8c3",
     "Tab_HR.html": "f9a93e1fca84d6f95ba9ce4afea979cda24827439748549519a86cf168d92871",
-    "Tab_Documents.html": "0fb59801d3c3d198a018d5aaf992de0b965592d9c7abb8ac50c9a66d1535cb4f",
+    "Tab_Documents.html": "0b4b3eab6c760d78a47a28b398db63bfb52f3e669cb54b156278d1f355d56843",
     "Tab_Affiliate.html": "14d6c02efade79a6afe856e785289e2857557324f598712967eeae124794e95b",
     "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
     "Tab_Workspaces.html": "71d29d53ce7f942db49bb8dc9bb948d504ac1b6b08c4380ff5e3cf8d3b871104",
@@ -47,6 +47,6 @@
   },
   "bundleHashes": {
     "Compiled_Core.html": "bcb541d0d75fbf02c2c23a859df424bfb87fa8949705d7d931cecbe955156363",
-    "Compiled_Deferred.html": "10c7460f4e66f8f7b3cb37eddf9650a3358eb62ca8e4ea9a648a5d7f3e1a3583"
+    "Compiled_Deferred.html": "f61201b90d042306414ce10cebd5979cd703aa1aaa00e810dcc3bd9ae0cca46f"
   }
 }

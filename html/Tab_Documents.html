@@ -138,13 +138,43 @@ function DocumentUploadModal({ onClose, pushDeltas, triggerToast }) {
 // MỤC 2: GIAO DIỆN CHÍNH TAB TÀI LIỆU
 // -------------------------------------------------------------------------
 function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss, userRole: propUserRole, currentUser: propCurrentUser, hasPerm: propHasPerm, pushDeltas, triggerToast }) {
-  const [search] = React.useState('');
+  const [search, setSearch] = React.useState('');
   const [categoryFilter, setCategoryFilter] = React.useState('Tất cả');
   const [editingDoc, setEditingDoc] = React.useState(null);
   const [previewDoc, setPreviewDoc] = React.useState(null);
   const [readersDoc, setReadersDoc] = React.useState(null);
   const [editUploading, setEditUploading] = React.useState(false);
   const [editProgress, setEditProgress] = React.useState(0);
+
+  const getSafeAttachments = React.useCallback((doc) => {
+    if (!doc) return [];
+    let raw = doc.attachments;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        raw = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        raw = [];
+      }
+    }
+    if (Array.isArray(raw) && raw.length > 0) return raw;
+    if (doc.link) return [{ link: doc.link, fileName: doc.fileName || doc.title, fileType: doc.fileType }];
+    return [];
+  }, []);
+
+  const getSafeReadBy = React.useCallback((doc) => {
+    if (!doc) return [];
+    let raw = doc.readBy;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+      return raw.trim() ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    }
+    return [];
+  }, []);
   
   const currentRole = propUserRole || localStorage.getItem('rf_role') || '';
   const currentUser = propCurrentUser || localStorage.getItem('rf_user') || 'Unknown';
@@ -212,7 +242,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
       }
       setEditProgress(100);
       
-      const currentAtts = editingDoc.attachments?.length > 0 ? editingDoc.attachments : (editingDoc.link ? [{link: editingDoc.link, fileName: editingDoc.fileName || editingDoc.title, fileType: editingDoc.fileType}] : []);
+      const currentAtts = getSafeAttachments(editingDoc);
       
       setEditingDoc({
         ...editingDoc,
@@ -230,7 +260,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
 
   const handleRemoveAttachment = (index) => {
     if (!window.confirm('Xoá file đính kèm này?')) return;
-    const currentAtts = editingDoc.attachments?.length > 0 ? editingDoc.attachments : (editingDoc.link ? [{link: editingDoc.link, fileName: editingDoc.fileName || editingDoc.title, fileType: editingDoc.fileType}] : []);
+    const currentAtts = getSafeAttachments(editingDoc);
     const newAtts = currentAtts.filter((_, i) => i !== index);
     setEditingDoc({
       ...editingDoc,
@@ -253,7 +283,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
     const rootDoc = documents.find(d => d.id === previewDoc.id);
     if (!rootDoc) return;
     
-    const currentReadBy = rootDoc.readBy || [];
+    const currentReadBy = getSafeReadBy(rootDoc);
     if (currentReadBy.includes(currentUser)) return;
     
     try {
@@ -404,10 +434,12 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {filteredDocs.map(doc => {
               const theme = getCategoryTheme(doc.category);
+              const safeAtts = getSafeAttachments(doc);
+              const safeReaders = getSafeReadBy(doc);
               return (
                 <div 
                   key={doc.id} 
-                  onClick={() => openPreview(doc.attachments?.length > 0 ? { ...doc, link: doc.attachments[0].link, title: doc.attachments[0].fileName || doc.title, fileType: doc.attachments[0].fileType } : doc)}
+                  onClick={() => openPreview(safeAtts.length > 0 ? { ...doc, link: safeAtts[0].link, title: safeAtts[0].fileName || doc.title, fileType: safeAtts[0].fileType } : doc)}
                   className={`group bg-[#141414] rounded-2xl border border-[#222] p-5 flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 ${theme.hoverBorder} relative overflow-hidden`}
                 >
                   <div className={`absolute top-0 right-0 w-32 h-32 ${theme.bg} rounded-bl-full -mr-10 -mt-10 opacity-30 transition-opacity group-hover:opacity-50`}></div>
@@ -446,12 +478,12 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
                             {doc.category || 'Khác'}
                           </span>
                           <button onClick={(e) => { e.stopPropagation(); setReadersDoc(doc); }} className="flex items-center gap-1.5 px-3 py-1 bg-[#222]/90 hover:bg-[#333] border border-[#444] text-gray-300 rounded-full text-[10px] font-black backdrop-blur-sm transition-colors shadow-sm active:scale-95" title="Xem ai đã đọc">
-                            <i className="fas fa-eye text-emerald-500"></i> {doc.readBy?.length || 0}
+                            <i className="fas fa-eye text-emerald-500"></i> {safeReaders.length}
                           </button>
                       </div>
                       
                       <div className="flex flex-wrap gap-2">
-                        {(doc.attachments?.length > 0 ? doc.attachments : [{ link: doc.link, fileName: doc.fileName || doc.title, fileType: doc.fileType }]).map((att, idx) => {
+                        {(safeAtts.length > 0 ? safeAtts : [{ link: doc.link, fileName: doc.fileName || doc.title, fileType: doc.fileType }]).map((att, idx) => {
                           const fileInfo = getFileTypeInfo(att);
                           return (
                             <button 
@@ -498,7 +530,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
             </div>
             
             <div className="flex items-center gap-3">
-              {!(previewDoc.readBy || []).includes(currentUser) ? (
+              {!getSafeReadBy(previewDoc).includes(currentUser) ? (
                 <button onClick={handleMarkAsRead} className="px-4 py-2 bg-[#10b981] hover:bg-emerald-400 text-[#0a0a0a] font-black text-[11px] rounded-lg shadow-lg active:scale-95 transition-all whitespace-nowrap">
                   <i className="fas fa-check-double mr-1"></i> XÁC NHẬN ĐÃ ĐỌC
                 </button>
@@ -515,7 +547,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
           </div>
 
           <div className="flex-1 bg-[#0a0a0a] overflow-hidden flex items-center justify-center p-4 sm:p-8">
-            {previewDoc.link ? (
+            {previewDoc.link && /^(https?:\/\/|data:|blob:)/i.test(String(previewDoc.link).trim()) ? (
               <iframe 
                 src={previewDoc.link} 
                 className="w-full h-full max-w-6xl border border-[#333] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-white"
@@ -524,24 +556,32 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
                 allowFullScreen
               />
             ) : previewDoc.description ? (
-              <div className="w-full h-full max-w-4xl bg-white text-black overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-10 custom-scrollbar relative flex flex-col">
-                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 shrink-0">
-                  <span className="font-black text-sm text-gray-700 uppercase tracking-wider"><i className="fas fa-file-invoice-dollar mr-2 text-emerald-600"></i>NỘI DUNG PHIẾU LƯƠNG CHỐT</span>
-                  <button 
-                    onClick={() => {
-                      const win = window.open('', '_blank');
-                      win.document.write(`<html><head><title>${previewDoc.title}</title><style>@media print { @page { size: A4 portrait; margin: 15mm auto; } body { background: white !important; margin: 0 !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style></head><body>${previewDoc.description}</body></html>`);
-                      win.document.close();
-                      win.focus();
-                      setTimeout(() => win.print(), 300);
-                    }} 
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
-                  >
-                    <i className="fas fa-print"></i> IN LẠI PHIẾU LƯƠNG
-                  </button>
+              (previewDoc.category === 'Phiếu Lương' || String(previewDoc.description || '').includes('<div') || String(previewDoc.description || '').includes('<table')) ? (
+                <div className="w-full h-full max-w-4xl bg-white text-black overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-10 custom-scrollbar relative flex flex-col">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 shrink-0">
+                    <span className="font-black text-sm text-gray-700 uppercase tracking-wider"><i className="fas fa-file-invoice-dollar mr-2 text-emerald-600"></i>NỘI DUNG PHIẾU LƯƠNG CHỐT</span>
+                    <button 
+                      onClick={() => {
+                        const win = window.open('', '_blank');
+                        win.document.write(`<html><head><title>${previewDoc.title}</title><style>@media print { @page { size: A4 portrait; margin: 15mm auto; } body { background: white !important; margin: 0 !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style></head><body>${previewDoc.description}</body></html>`);
+                        win.document.close();
+                        win.focus();
+                        setTimeout(() => win.print(), 300);
+                      }} 
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      <i className="fas fa-print"></i> IN LẠI PHIẾU LƯƠNG
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto" dangerouslySetInnerHTML={{ __html: previewDoc.description }}></div>
                 </div>
-                <div className="flex-1 overflow-y-auto" dangerouslySetInnerHTML={{ __html: previewDoc.description }}></div>
-              </div>
+              ) : (
+                <div className="w-full h-full max-w-4xl bg-[#141414] text-zinc-100 border border-[#2a2a2a] overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-10 custom-scrollbar">
+                  <div className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-3">{previewDoc.category || 'Tài liệu nội bộ'}</div>
+                  <h2 className="text-xl font-black text-white mb-6 pb-4 border-b border-[#262626]">{previewDoc.title}</h2>
+                  <div className="text-sm leading-relaxed text-zinc-200 whitespace-pre-wrap font-sans">{previewDoc.description}</div>
+                </div>
+              )
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 text-lg gap-4 bg-[#141414] p-12 rounded-3xl border border-[#333]">
                 <div className="w-24 h-24 bg-[#1a1a1a] rounded-full flex items-center justify-center text-gray-600">
@@ -587,7 +627,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
               <div>
                 <label className="text-[10px] font-black text-gray-500 block mb-1.5 uppercase tracking-widest">FILE ĐÍNH KÈM</label>
                 <div className="bg-[#0a0a0a] border border-[#333] rounded-xl p-3 shadow-inner">
-                  {(editingDoc.attachments?.length > 0 ? editingDoc.attachments : (editingDoc.link ? [{link: editingDoc.link, fileName: editingDoc.fileName || editingDoc.title, fileType: editingDoc.fileType}] : [])).map((att, idx) => (
+                  {getSafeAttachments(editingDoc).map((att, idx) => (
                     <div key={idx} className="flex items-center justify-between gap-3 p-2 border-b border-[#222] last:border-0 hover:bg-[#141414] transition-colors rounded-lg">
                       <div className="font-bold text-[11px] text-[#f5f5f5] truncate flex-1">
                         <i className={`fas ${getFileTypeInfo(att).icon} text-[#d4af37] mr-2`}></i> 
@@ -625,7 +665,7 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
           <div className="bg-[#141414] w-full max-w-sm rounded-[24px] p-6 border border-[#333] shadow-2xl">
             <div className="flex justify-between items-center mb-6 border-b border-[#222] pb-3">
               <div className="font-black text-[15px] text-[#f5f5f5] tracking-wide uppercase flex items-center gap-2">
-                <i className="fas fa-eye text-emerald-500"></i> ĐÃ ĐỌC ({readersDoc.readBy?.length || 0})
+                <i className="fas fa-eye text-emerald-500"></i> ĐÃ ĐỌC ({getSafeReadBy(readersDoc).length})
               </div>
               <button onClick={() => setReadersDoc(null)} className="w-8 h-8 rounded-full bg-[#222] text-gray-400 hover:text-rose-500 flex items-center justify-center transition-colors">
                 <i className="fas fa-times"></i>
@@ -633,8 +673,8 @@ function DocumentsTab({ documents = [], isAdmin: propIsAdmin, isBoss: propIsBoss
             </div>
             
             <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 space-y-2">
-              {readersDoc.readBy && readersDoc.readBy.length > 0 ? (
-                readersDoc.readBy.map((user, idx) => (
+              {getSafeReadBy(readersDoc).length > 0 ? (
+                getSafeReadBy(readersDoc).map((user, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-[#0a0a0a] p-3 rounded-xl border border-[#222]">
                     <div className="w-8 h-8 rounded-full bg-[#3b82f6]/20 text-[#3b82f6] flex items-center justify-center font-black border border-[#3b82f6]/30 uppercase">
                       {user.substring(0, 1)}

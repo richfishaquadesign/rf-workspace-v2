@@ -33106,13 +33106,45 @@ function DocumentsTab({
   pushDeltas,
   triggerToast
 }) {
-  const [search] = React.useState('');
+  const [search, setSearch] = React.useState('');
   const [categoryFilter, setCategoryFilter] = React.useState('Tất cả');
   const [editingDoc, setEditingDoc] = React.useState(null);
   const [previewDoc, setPreviewDoc] = React.useState(null);
   const [readersDoc, setReadersDoc] = React.useState(null);
   const [editUploading, setEditUploading] = React.useState(false);
   const [editProgress, setEditProgress] = React.useState(0);
+  const getSafeAttachments = React.useCallback(doc => {
+    if (!doc) return [];
+    let raw = doc.attachments;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        raw = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        raw = [];
+      }
+    }
+    if (Array.isArray(raw) && raw.length > 0) return raw;
+    if (doc.link) return [{
+      link: doc.link,
+      fileName: doc.fileName || doc.title,
+      fileType: doc.fileType
+    }];
+    return [];
+  }, []);
+  const getSafeReadBy = React.useCallback(doc => {
+    if (!doc) return [];
+    let raw = doc.readBy;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+      return raw.trim() ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    }
+    return [];
+  }, []);
   const currentRole = propUserRole || localStorage.getItem('rf_role') || '';
   const currentUser = propCurrentUser || localStorage.getItem('rf_user') || 'Unknown';
   const isBoss = propIsBoss !== undefined ? propIsBoss : localStorage.getItem('rf_boss') === 'true' || currentRole === 'TỐI CAO' || currentUser.includes('Tiến');
@@ -33165,11 +33197,7 @@ function DocumentsTab({
         }
       }
       setEditProgress(100);
-      const currentAtts = editingDoc.attachments?.length > 0 ? editingDoc.attachments : editingDoc.link ? [{
-        link: editingDoc.link,
-        fileName: editingDoc.fileName || editingDoc.title,
-        fileType: editingDoc.fileType
-      }] : [];
+      const currentAtts = getSafeAttachments(editingDoc);
       setEditingDoc({
         ...editingDoc,
         attachments: [...currentAtts, ...newAttachments]
@@ -33185,11 +33213,7 @@ function DocumentsTab({
   };
   const handleRemoveAttachment = index => {
     if (!window.confirm('Xoá file đính kèm này?')) return;
-    const currentAtts = editingDoc.attachments?.length > 0 ? editingDoc.attachments : editingDoc.link ? [{
-      link: editingDoc.link,
-      fileName: editingDoc.fileName || editingDoc.title,
-      fileType: editingDoc.fileType
-    }] : [];
+    const currentAtts = getSafeAttachments(editingDoc);
     const newAtts = currentAtts.filter((_, i) => i !== index);
     setEditingDoc({
       ...editingDoc,
@@ -33208,7 +33232,7 @@ function DocumentsTab({
     if (!previewDoc) return;
     const rootDoc = documents.find(d => d.id === previewDoc.id);
     if (!rootDoc) return;
-    const currentReadBy = rootDoc.readBy || [];
+    const currentReadBy = getSafeReadBy(rootDoc);
     if (currentReadBy.includes(currentUser)) return;
     try {
       const newReadBy = [...currentReadBy, currentUser];
@@ -33437,13 +33461,15 @@ function DocumentsTab({
     className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
   }, filteredDocs.map(doc => {
     const theme = getCategoryTheme(doc.category);
+    const safeAtts = getSafeAttachments(doc);
+    const safeReaders = getSafeReadBy(doc);
     return /*#__PURE__*/React.createElement("div", {
       key: doc.id,
-      onClick: () => openPreview(doc.attachments?.length > 0 ? {
+      onClick: () => openPreview(safeAtts.length > 0 ? {
         ...doc,
-        link: doc.attachments[0].link,
-        title: doc.attachments[0].fileName || doc.title,
-        fileType: doc.attachments[0].fileType
+        link: safeAtts[0].link,
+        title: safeAtts[0].fileName || doc.title,
+        fileType: safeAtts[0].fileType
       } : doc),
       className: `group bg-[#141414] rounded-2xl border border-[#222] p-5 flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 ${theme.hoverBorder} relative overflow-hidden`
     }, /*#__PURE__*/React.createElement("div", {
@@ -33490,9 +33516,9 @@ function DocumentsTab({
       title: "Xem ai \u0111\xE3 \u0111\u1ECDc"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-eye text-emerald-500"
-    }), " ", doc.readBy?.length || 0)), /*#__PURE__*/React.createElement("div", {
+    }), " ", safeReaders.length)), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-2"
-    }, (doc.attachments?.length > 0 ? doc.attachments : [{
+    }, (safeAtts.length > 0 ? safeAtts : [{
       link: doc.link,
       fileName: doc.fileName || doc.title,
       fileType: doc.fileType
@@ -33534,7 +33560,7 @@ function DocumentsTab({
     className: `fas ${getCategoryTheme(previewDoc.category).icon}`
   })), previewDoc.title), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
-  }, !(previewDoc.readBy || []).includes(currentUser) ? /*#__PURE__*/React.createElement("button", {
+  }, !getSafeReadBy(previewDoc).includes(currentUser) ? /*#__PURE__*/React.createElement("button", {
     onClick: handleMarkAsRead,
     className: "px-4 py-2 bg-[#10b981] hover:bg-emerald-400 text-[#0a0a0a] font-black text-[11px] rounded-lg shadow-lg active:scale-95 transition-all whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("i", {
@@ -33550,13 +33576,13 @@ function DocumentsTab({
     className: "fas fa-times"
   })))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 bg-[#0a0a0a] overflow-hidden flex items-center justify-center p-4 sm:p-8"
-  }, previewDoc.link ? /*#__PURE__*/React.createElement("iframe", {
+  }, previewDoc.link && /^(https?:\/\/|data:|blob:)/i.test(String(previewDoc.link).trim()) ? /*#__PURE__*/React.createElement("iframe", {
     src: previewDoc.link,
     className: "w-full h-full max-w-6xl border border-[#333] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-white",
     title: previewDoc.title,
     allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
     allowFullScreen: true
-  }) : previewDoc.description ? /*#__PURE__*/React.createElement("div", {
+  }) : previewDoc.description ? previewDoc.category === 'Phiếu Lương' || String(previewDoc.description || '').includes('<div') || String(previewDoc.description || '').includes('<table') ? /*#__PURE__*/React.createElement("div", {
     className: "w-full h-full max-w-4xl bg-white text-black overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-10 custom-scrollbar relative flex flex-col"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center mb-4 pb-3 border-b border-gray-200 shrink-0"
@@ -33581,6 +33607,14 @@ function DocumentsTab({
       __html: previewDoc.description
     }
   })) : /*#__PURE__*/React.createElement("div", {
+    className: "w-full h-full max-w-4xl bg-[#141414] text-zinc-100 border border-[#2a2a2a] overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-10 custom-scrollbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold uppercase tracking-widest text-zinc-400 mb-3"
+  }, previewDoc.category || 'Tài liệu nội bộ'), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black text-white mb-6 pb-4 border-b border-[#262626]"
+  }, previewDoc.title), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm leading-relaxed text-zinc-200 whitespace-pre-wrap font-sans"
+  }, previewDoc.description)) : /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col items-center justify-center h-full text-gray-500 text-lg gap-4 bg-[#141414] p-12 rounded-3xl border border-[#333]"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-24 h-24 bg-[#1a1a1a] rounded-full flex items-center justify-center text-gray-600"
@@ -33647,11 +33681,7 @@ function DocumentsTab({
     className: "text-[10px] font-black text-gray-500 block mb-1.5 uppercase tracking-widest"
   }, "FILE \u0110\xCDNH K\xC8M"), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#0a0a0a] border border-[#333] rounded-xl p-3 shadow-inner"
-  }, (editingDoc.attachments?.length > 0 ? editingDoc.attachments : editingDoc.link ? [{
-    link: editingDoc.link,
-    fileName: editingDoc.fileName || editingDoc.title,
-    fileType: editingDoc.fileType
-  }] : []).map((att, idx) => /*#__PURE__*/React.createElement("div", {
+  }, getSafeAttachments(editingDoc).map((att, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     className: "flex items-center justify-between gap-3 p-2 border-b border-[#222] last:border-0 hover:bg-[#141414] transition-colors rounded-lg"
   }, /*#__PURE__*/React.createElement("div", {
@@ -33702,14 +33732,14 @@ function DocumentsTab({
     className: "font-black text-[15px] text-[#f5f5f5] tracking-wide uppercase flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-eye text-emerald-500"
-  }), " \u0110\xC3 \u0110\u1ECCC (", readersDoc.readBy?.length || 0, ")"), /*#__PURE__*/React.createElement("button", {
+  }), " \u0110\xC3 \u0110\u1ECCC (", getSafeReadBy(readersDoc).length, ")"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setReadersDoc(null),
     className: "w-8 h-8 rounded-full bg-[#222] text-gray-400 hover:text-rose-500 flex items-center justify-center transition-colors"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-times"
   }))), /*#__PURE__*/React.createElement("div", {
     className: "max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 space-y-2"
-  }, readersDoc.readBy && readersDoc.readBy.length > 0 ? readersDoc.readBy.map((user, idx) => /*#__PURE__*/React.createElement("div", {
+  }, getSafeReadBy(readersDoc).length > 0 ? getSafeReadBy(readersDoc).map((user, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     className: "flex items-center gap-3 bg-[#0a0a0a] p-3 rounded-xl border border-[#222]"
   }, /*#__PURE__*/React.createElement("div", {

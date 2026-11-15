@@ -10,16 +10,10 @@
   "theme_color": "#050505",
   "icons": [
     {
-      "src": "/icons/rf-workspace-v3-192.png",
-      "sizes": "192x192",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAB0UlEQVR4nO2UPavyMBiGkzT91FnEX9DBwbHi6FpQF910cBMUnBVHdxF/h5uuDk6Cq2DdpG4iSKElbZMc3rcc8VQ5Ohy3Xlu+7pvcz5NAURTBJ0EfVQeJwRskNXhJEtFLcGxcrVYrlQohRBAEAACEEAAQhqH0n/F4vNvt8vl8v99HCDHGOOfRHsaYLMvb7XYymdwLwthfJMtyGIa3Y/cUi8VOp9NutyGEnPMgCH4sA8A5p5S+KLLv+5RSxhh9YL1ee56Xy+Vc1/U8L3zgUf1JRJxzAICqqtElIISu60b5lEolRVFs2wYAZLPZTCYTKUIIEUKXy8W27ehyvxmYptloNM7nM8b/liCEhULBsqzr9app2nA4JISUy+Ver2dZFqWUc44Qwhgvl8unBkD8yWKxMAxDUZR0Op1KpTRNq9frq9VK13VRFCVJEkVxOp2apim+R7wGjuOcTidKKSHE9/0gCObz+WAwmM1mhmFEuRFCGGOCIEiSJHyD0PM3G59VVVWW5VuDAgAwxpvNptvtjkajWq3GOVdVFSEUawHG2FsGx+PR9/37mTAMMcaHw6HVajWbTV3X9/u94zi3jvid+Dv4c9BH1UFi8AZJDV6SRPSSj0f0BV6tAe7wznypAAAAAElFTkSuQmCC",
+      "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/rf-workspace-v3-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
     }
   ],
   "id": "/"

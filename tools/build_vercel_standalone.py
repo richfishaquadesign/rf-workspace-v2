@@ -109,12 +109,12 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
       // ⚡ TỰ ĐỘNG ĐỒNG BỘ TÀI KHOẢN TỐI CAO & XÓA CACHE CŨ ĐỂ NẠP TRỰC TIẾP TỪ SUPABASE ⚡
       try {
-        if (localStorage.getItem('rf_db_sync_v14') !== 'true') {
+        if (localStorage.getItem('rf_db_sync_v15') !== 'true') {
           localStorage.removeItem('rf_turbo_cache_app_data');
           localStorage.removeItem('rf_local_products_override');
           localStorage.removeItem('rf_persisted_test_orders');
           localStorage.removeItem('rf_drive_5_angles_catalog');
-          localStorage.setItem('rf_db_sync_v14', 'true');
+          localStorage.setItem('rf_db_sync_v15', 'true');
         }
         if (localStorage.getItem('rf_pin') === '226868') {
           localStorage.setItem('rf_user', 'Nguyễn Ngọc Tiến');
@@ -538,8 +538,44 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
               return Object.assign({}, s, { 'ID Ảnh': av, avatar: av });
             });
             var effectiveSuppliers = (supRaw && supRaw.length > 0) ? supRaw : (kosSeed.Suppliers || []);
-            var effectiveDocs = (docRaw && docRaw.length > 0) ? docRaw : (kosSeed.Documents || []);
-            var effectiveTrainings = (trainRaw && trainRaw.length > 0) ? trainRaw : (kosSeed.Trainings || []);
+            var effectiveDocs = ((docRaw && docRaw.length > 0) ? docRaw : (kosSeed.Documents || [])).map(function(d) {
+              var copy = Object.assign({}, d);
+              if (typeof copy.attachments === 'string') {
+                try {
+                  var pa = JSON.parse(copy.attachments);
+                  copy.attachments = Array.isArray(pa) ? pa : [];
+                } catch(e) {
+                  copy.attachments = [];
+                }
+              } else if (!Array.isArray(copy.attachments)) {
+                copy.attachments = [];
+              }
+              if (typeof copy.readBy === 'string') {
+                try {
+                  var pr = JSON.parse(copy.readBy);
+                  copy.readBy = Array.isArray(pr) ? pr : (copy.readBy.trim() ? copy.readBy.split(',').map(function(s){return s.trim();}).filter(Boolean) : []);
+                } catch(e) {
+                  copy.readBy = copy.readBy.trim() ? copy.readBy.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+                }
+              } else if (!Array.isArray(copy.readBy)) {
+                copy.readBy = [];
+              }
+              return copy;
+            });
+            var effectiveTrainings = ((trainRaw && trainRaw.length > 0) ? trainRaw : (kosSeed.Trainings || [])).map(function(t) {
+              var copy = Object.assign({}, t);
+              if (typeof copy.readUsers === 'string') {
+                try {
+                  var pru = JSON.parse(copy.readUsers);
+                  copy.readUsers = Array.isArray(pru) ? pru : [];
+                } catch(e) {
+                  copy.readUsers = [];
+                }
+              } else if (!Array.isArray(copy.readUsers)) {
+                copy.readUsers = [];
+              }
+              return copy;
+            });
 
             // Chuẩn hóa và bảo vệ UOM cho toàn bộ danh mục Hàng hoá & Nguyên liệu
             (effectiveProducts || []).forEach(function(p) {
@@ -902,11 +938,26 @@ bridge_script = "  <!-- ⚡ RF KNOWLEDGE OS AUTHORITATIVE SEED ⚡ -->\n  <scrip
 
             // Write Documents
             var docs = payload.Documents || payload.documents;
-            if (docs && docs.length) await upsertToSupabase('Documents', docs);
+            if (docs && docs.length) {
+              var cleanDocs = docs.map(function(d) {
+                var cd = Object.assign({}, d);
+                if (Array.isArray(cd.attachments)) cd.attachments = JSON.stringify(cd.attachments);
+                if (Array.isArray(cd.readBy)) cd.readBy = JSON.stringify(cd.readBy);
+                return cd;
+              });
+              await upsertToSupabase('Documents', cleanDocs);
+            }
 
             // Write Trainings
             var trains = payload.Trainings || payload.trainings;
-            if (trains && trains.length) await upsertToSupabase('Trainings', trains);
+            if (trains && trains.length) {
+              var cleanTrains = trains.map(function(t) {
+                var ct = Object.assign({}, t);
+                if (Array.isArray(ct.readUsers)) ct.readUsers = JSON.stringify(ct.readUsers);
+                return ct;
+              });
+              await upsertToSupabase('Trainings', cleanTrains);
+            }
 
             // Write Models3D
             var mods = payload.Models3D || payload.models3D;
