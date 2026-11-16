@@ -2079,11 +2079,11 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
             } else if (targetChannel === 'SHOPEE') {
                 return !isInter && (channel.includes('SHOPEE') || channel.includes('SHP') || channel.includes('SPX'));
             } else if (targetChannel === 'BÁN LẺ') {
-                return channel.includes('BÁN LẺ') || channel.includes('BAN LE') || channel.includes('ZALO') || channel.includes('FACEBOOK') || channel.includes('MESSENGER') || channel.includes('TRỰC TIẾP') || channel.includes('RETAIL');
+                return !channel || channel.includes('BÁN LẺ') || channel.includes('BAN LE') || channel.includes('OFFLINE') || channel.includes('ZALO') || channel.includes('FACEBOOK') || channel.includes('MESSENGER') || channel.includes('TRỰC TIẾP') || channel.includes('RETAIL');
             } else if (targetChannel === 'CTV') {
                 return channel.includes('CỘNG TÁC VIÊN') || channel.includes('CỘNG TAC') || channel === 'CTV';
             } else if (targetChannel === 'TIKTOK') {
-                return channel.includes('TIKTOK') || channel.includes('TT') || channel.includes('TIK TOK');
+                return channel.includes('TIKTOK') || channel.includes('TIK TOK') || /\bTT\b/.test(channel);
             } else if (targetChannel === 'BẢO HÀNH') {
                 return channel.includes('BẢO HÀNH') || channel.includes('BAO HANH') || channel.includes('SỬA CHỮA') || channel.includes('SUA CHUA');
             }

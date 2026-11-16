@@ -5008,13 +5008,14 @@ const ProductionTab = React.memo(function ProductionTab({
         if (i._quickGroup !== 'CHO_SUA_CHUA') return false;
       }
       if (filterChannel !== 'ALL') {
-        const ch = String(i._parentOrder?.channel || i.channel || '').toUpperCase();
-        if (filterChannel === 'SHOPEE' && !ch.includes('SHOPEE')) return false;
-        if (filterChannel === 'EXPORT' && !ch.includes('XUẤT KHẨU') && !ch.includes('MY') && !ch.includes('SG') && !ch.includes('TH')) return false;
-        if (filterChannel === 'TIKTOK' && !ch.includes('TIKTOK')) return false;
-        if (filterChannel === 'BÁN LẺ' && !ch.includes('BÁN LẺ') && !ch.includes('LẺ')) return false;
+        const ch = String(i._parentOrder?.channel || i.channel || '').toUpperCase().trim();
+        const isInter = ch.includes('XUẤT KHẨU') || ch.includes('EXPORT') || ch.includes('QUỐC TẾ') || ch.includes('SHOPEE SG') || ch.includes('SHOPEE TH') || ch.includes('SHOPEE TW') || ch.includes('SHOPEE PH') || ch.includes('SHOPEE MA') || ch.includes('SHOPEE MY') || /\b(SHOPEE_SG|SHOPEE_MY|SHOPEE_TH|SHOPEE_PH|SHOPEE_MA|SHOPEE_TW|SG|MY|PH|MA|TH|TW)\b/i.test(ch);
+        if (filterChannel === 'EXPORT' && !isInter) return false;
+        if (filterChannel === 'SHOPEE' && (isInter || !ch.includes('SHOPEE') && !ch.includes('SPX'))) return false;
+        if (filterChannel === 'TIKTOK' && !ch.includes('TIKTOK') && !ch.includes('TIK TOK') && !/\bTT\b/.test(ch)) return false;
+        if (filterChannel === 'BÁN LẺ' && ch && !ch.includes('BÁN LẺ') && !ch.includes('BAN LE') && !ch.includes('LẺ') && !ch.includes('OFFLINE') && !ch.includes('ZALO') && !ch.includes('FACEBOOK') && !ch.includes('MESSENGER') && !ch.includes('TRỰC TIẾP')) return false;
         if (filterChannel === 'CTV' && !ch.includes('CỘNG TÁC') && !ch.includes('CTV')) return false;
-        if (filterChannel === 'BẢO HÀNH' && !ch.includes('BẢO HÀNH') && !ch.includes('SỬA CHỮA')) return false;
+        if (filterChannel === 'BẢO HÀNH' && !ch.includes('BẢO HÀNH') && !ch.includes('BAO HANH') && !ch.includes('SỬA CHỮA')) return false;
       }
       return true;
     }).sort((a, b) => {

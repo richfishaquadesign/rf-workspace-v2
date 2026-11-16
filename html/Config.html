@@ -1087,6 +1087,9 @@ const normalizeDisplayChannel = (channel) => {
 
 const getChannelBadge = (channel) => { 
     const ch = String(channel || '').toUpperCase().trim();
+    if (ch.includes('XUẤT KHẨU') || ch.includes('EXPORT') || ch.includes('QUỐC TẾ') || ch.includes('SHOPEE SG') || ch.includes('SHOPEE TH') || ch.includes('SHOPEE TW') || ch.includes('SHOPEE PH') || ch.includes('SHOPEE MA') || ch.includes('SHOPEE MY') || /\b(SHOPEE_SG|SHOPEE_MY|SHOPEE_TH|SHOPEE_PH|SHOPEE_MA|SHOPEE_TW|SG|MY|PH|MA|TH|TW)\b/i.test(ch)) {
+        return 'bg-[#eab308] text-black font-black border border-[#ca8a04] shadow-sm';
+    }
     if (ch.includes('SHOPEE')) {
         return 'bg-[#f97316] text-black font-black border border-[#ea580c] shadow-sm';
     }
@@ -1096,7 +1099,7 @@ const getChannelBadge = (channel) => {
     if (ch.includes('CỘNG TÁC VIÊN') || ch.includes('CTV')) {
         return 'bg-[#10b981] text-black font-black border border-[#059669] shadow-sm';
     }
-    if (ch.includes('BÁN LẺ') || ch.includes('OFFLINE') || ch.includes('ZALO') || ch.includes('FACEBOOK') || ch.includes('MESSENGER')) {
+    if (!ch || ch.includes('BÁN LẺ') || ch.includes('OFFLINE') || ch.includes('ZALO') || ch.includes('FACEBOOK') || ch.includes('MESSENGER') || ch.includes('TRỰC TIẾP')) {
         return 'bg-[#0284c7] text-white font-black border border-[#0369a1] shadow-sm';
     }
     if (ch.includes('BÁN SỈ') || ch.includes('WHOLESALE')) {
@@ -1108,10 +1111,7 @@ const getChannelBadge = (channel) => {
     if (ch.includes('BẢO HÀNH') || ch.includes('SỬA CHỮA')) {
         return 'bg-[#f43f5e] text-white font-black border border-[#e11d48] shadow-sm';
     }
-    if (ch.includes('XUẤT KHẨU') || ch.includes('EXPORT') || ch.includes('QUỐC TẾ') || ch.includes('MA') || ch.includes('TH') || ch.includes('TW') || ch.includes('SG') || ch.includes('PH')) {
-        return 'bg-[#eab308] text-black font-black border border-[#ca8a04] shadow-sm';
-    }
-    return 'bg-[#eab308] text-black font-black border border-[#ca8a04] shadow-sm'; 
+    return 'bg-[#0284c7] text-white font-black border border-[#0369a1] shadow-sm'; 
 };
 
 const getChannelInlineStyle = (groupKey) => {

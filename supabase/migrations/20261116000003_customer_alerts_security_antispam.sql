@@ -30,6 +30,9 @@ BEGIN
 END;
 $$;
 
+-- Xóa bản cũ 1 tham số để không lọt lỗ hổng gọi rf_track_order(p_order_code) bỏ qua xác thực SĐT
+DROP FUNCTION IF EXISTS public.rf_track_order(text);
+
 CREATE OR REPLACE FUNCTION public.rf_track_order(
   p_order_code text,
   p_phone_last4 text DEFAULT ''
