@@ -106,39 +106,42 @@
   </script>
   <script>
     window.__rfBootErrors = [];
-    window.__rfReportBootError = function (msg, stack) {
-      console.error("💥 [RF CRASH]:", msg, stack);
-      window.__rfBootErrors.push({ msg: msg, stack: stack });
-      var box = document.getElementById('rf-crash-container');
-      var details = document.getElementById('rf-crash-details');
-      var status = document.getElementById('rf-boot-status-msg');
-      if (box && details) {
-        box.style.display = 'block';
-        details.textContent = (details.textContent ? details.textContent + "\n\n" : "") + msg + (stack ? "\n" + stack : "");
-      } else if (document.body) {
-        var fb = document.getElementById('rf-floating-crash-banner');
-        if (!fb) {
-          fb = document.createElement('div');
-          fb.id = 'rf-floating-crash-banner';
-          fb.className = 'fixed bottom-4 left-4 right-4 max-w-lg mx-auto z-[999999] bg-rose-950/95 border border-rose-500/60 rounded-2xl p-4 text-white shadow-2xl backdrop-blur';
-          fb.innerHTML = '<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase"><i class="fas fa-triangle-exclamation"></i><span>Sự cố khởi chạy phân hệ</span></div><button onclick="this.closest(\'#rf-floating-crash-banner\').remove()" class="text-zinc-400 hover:text-white text-xs px-2 py-1">✕</button></div><pre id="rf-float-details" class="text-[11px] font-mono text-rose-200 bg-black/60 p-2.5 rounded-lg border border-rose-900/50 max-h-36 overflow-auto whitespace-pre-wrap"></pre><div class="mt-2 flex gap-2"><button onclick="localStorage.clear(); location.reload(true);" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"><i class="fas fa-rotate-right mr-1"></i> Xoá Cache & Tải Lại</button></div>';
-          document.body.appendChild(fb);
+    window.__rfReportBootError = function (msg, stack, isFatal) {
+      var msgStr = String(msg || '');
+      if (
+        msgStr.indexOf('ResizeObserver loop') !== -1 ||
+        msgStr === 'Script error.' ||
+        msgStr.indexOf('AbortError') !== -1
+      ) {
+        return;
+      }
+      console.error("💥 [RF BOOT/RUNTIME]:", msgStr, stack);
+      window.__rfBootErrors.push({ msg: msgStr, stack: stack });
+      if (!isFatal) return;
+
+      setTimeout(function () {
+        var splash = document.getElementById('rf-splash-screen');
+        if (!splash) return;
+        var box = document.getElementById('rf-crash-container');
+        var details = document.getElementById('rf-crash-details');
+        var status = document.getElementById('rf-boot-status-msg');
+        if (box && details) {
+          box.style.display = 'block';
+          details.textContent = (details.textContent ? details.textContent + "\n\n" : "") + msgStr + (stack ? "\n" + stack : "");
         }
-        var fd = document.getElementById('rf-float-details');
-        if (fd) fd.textContent = (fd.textContent ? fd.textContent + "\n\n" : "") + msg + (stack ? "\n" + stack : "");
-      }
-      if (status) {
-        status.innerHTML = '<span class="text-rose-400 font-bold">⚠️ Sự cố nạp ứng dụng</span>';
-      }
+        if (status) {
+          status.innerHTML = '<span class="text-rose-400 font-bold">⚠️ Sự cố nạp ứng dụng</span>';
+        }
+      }, 1500);
     };
     window.onerror = function (msg, url, line, col, err) {
       var fullMsg = (msg || 'Unknown Error') + (line ? ' (Dòng ' + line + ':' + col + ')' : '');
-      window.__rfReportBootError(fullMsg, err ? err.stack : '');
+      window.__rfReportBootError(fullMsg, err ? err.stack : '', true);
     };
     window.addEventListener('unhandledrejection', function (e) {
       var r = e.reason;
       var fullMsg = 'Lỗi bất đồng bộ: ' + (r ? (r.stack || r.message || String(r)) : 'Promise Rejection');
-      window.__rfReportBootError(fullMsg);
+      window.__rfReportBootError(fullMsg, '', false);
     });
   </script>
   <!-- Built CSS: mobile utility release 884 -->
