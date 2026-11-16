@@ -1249,8 +1249,9 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
       };
 
       // Schema Whitelist chuẩn 100% theo RULE[user_global] (chống lỗi PGRST204)
-      var ORDERS_SCHEMA = ['id', 'orderCode', 'channel', 'customer', 'createdAt', 'deadline', 'date', 'status', 'accessories', 'hasProduction', 'isCarriedToWH', 'updatedBy', 'revenue', 'phone', 'address', 'note', 'prePaid', 'cod', 'costTotal', 'responsibleUser', 'discount', 'shippingMethod', 'sizeCoefficient', 'cogs', 'feeFixed', 'feeService', 'feePayment', 'feeAffiliate', 'shopVoucher', 'tax', 'reconciledAt', 'isReconciled'];
+      var ORDERS_SCHEMA = ['id', 'orderCode', 'channel', 'customer', 'createdAt', 'deadline', 'date', 'status', 'accessories', 'hasProduction', 'isCarriedToWH', 'updatedBy', 'revenue', 'phone', 'address', 'note', 'prePaid', 'cod', 'costTotal', 'responsibleUser', 'discount', 'shippingMethod', 'sizeCoefficient', 'cogs', 'feeFixed', 'feeService', 'feePayment', 'feeAffiliate', 'shopVoucher', 'tax', 'reconciledAt', 'isReconciled', 'isUrgent'];
       var PROD_SCHEMA = ['id', 'orderId', 'type', 'name', 'note', 'status', 'deadline', 'fulfilledFromStock', 'p1_name', 'p1_status', 'p1_user', 'p1_start', 'p1_endTime', 'p1_photo', 'p1_reward_vnd', 'p2_name', 'p2_status', 'p2_user', 'p2_start', 'p2_endTime', 'p2_photo', 'p2_reward_vnd', 'qc_front_photo', 'qc_side_photo', 'qc_status', 'qc_note'];
+      var PRODUCTS_MASTER_COLS = ['id', 'sku', 'name', 'unit', 'image', 'category', 'sub_category', 'costPrice', 'price', 'minStock', 'maxStock', 'realImage', 'importUnit', 'conversionRate', 'model3D'];
 
       // Fetch Supabase với cơ chế Retry an toàn (tối đa 3 lần với backoff)
       async function fetchFromSupabaseWithRetry(table, query, retries) {
@@ -1328,6 +1329,88 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
           });
         } catch(e) {
           console.warn('Delete from ' + table + ' error:', e);
+        }
+      }
+
+      async function callSupabaseRpc(fnName, params) {
+        var url = SUPABASE_URL + '/rest/v1/rpc/' + fnName;
+        var resp = await fetch(url, {
+          method: 'POST',
+          headers: SUPABASE_HEADERS,
+          body: JSON.stringify(params || {})
+        });
+        var text = await resp.text();
+        var data = null;
+        try { data = text ? JSON.parse(text) : null; } catch(e) { data = null; }
+        if (!resp.ok) {
+          var errMsg = (data && (data.message || data.hint || data.details)) || text || ('HTTP ' + resp.status);
+          console.error('Supabase RPC ' + fnName + ' failed (' + resp.status + '):', errMsg);
+          throw new Error(errMsg);
+        }
+        return data;
+      }
+
+      async function upsertProductsMasterSafely(prds) {
+        if (!prds || !prds.length) return;
+        var existingRows = await fetchAllFromSupabase('Products', 'select=id', 3);
+        var existingIdSet = {};
+        (existingRows || []).forEach(function(r) {
+          if (r && r.id) existingIdSet[String(r.id)] = true;
+        });
+
+        var cachedById = {};
+        try {
+          var cachedApp = JSON.parse(localStorage.getItem('rf_turbo_cache_app_data') || '{}');
+          (cachedApp.Products || []).forEach(function(cp) {
+            if (cp && cp.id) cachedById[String(cp.id)] = cp;
+          });
+        } catch(e) {}
+
+        var newInserts = [];
+        var existingPatches = [];
+        var isBulkDump = prds.length > 20;
+
+        prds.forEach(function(p) {
+          if (!p || !p.id) return;
+          var pid = String(p.id);
+          if (!existingIdSet[pid]) {
+            newInserts.push(p);
+            return;
+          }
+          var patchObj = {};
+          var prev = cachedById[pid];
+          var hasDiff = false;
+          Object.keys(p).forEach(function(k) {
+            if (k === 'id' || k === 'quantity' || k === '_diff') return;
+            if (PRODUCTS_MASTER_COLS.indexOf(k) === -1) return;
+            if (isBulkDump && prev && JSON.stringify(prev[k] ?? null) === JSON.stringify(p[k] ?? null)) {
+              return;
+            }
+            patchObj[k] = p[k];
+            hasDiff = true;
+          });
+          if (hasDiff || !isBulkDump) {
+            if (Object.keys(patchObj).length > 0) {
+              existingPatches.push({ id: pid, body: patchObj });
+            }
+          }
+        });
+
+        if (newInserts.length > 0) {
+          await upsertToSupabase('Products', newInserts);
+        }
+        for (var i = 0; i < existingPatches.length; i++) {
+          var item = existingPatches[i];
+          var patchUrl = SUPABASE_URL + '/rest/v1/Products?id=eq.' + encodeURIComponent(item.id);
+          var patchResp = await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: SUPABASE_HEADERS,
+            body: JSON.stringify(item.body)
+          });
+          if (!patchResp.ok) {
+            var patchErr = await patchResp.text();
+            throw new Error('Lỗi cập nhật Products (' + patchResp.status + '): ' + patchErr);
+          }
         }
       }
 
@@ -1906,15 +1989,18 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
           }
         }
 
-        // 4. syncDeltas: Lưu thay đổi trực tiếp vào Supabase PostgreSQL
+        // 4. syncDeltas: Lưu thay đổi trực tiếp vào Supabase PostgreSQL + kích hoạt RPC nguyên tử
         if (action === 'syncDeltas') {
           var payload = args[0] || {};
+          var effPin = String(pin || payload.pin || localStorage.getItem('rf_pin') || '').trim();
+          var actorName = String(localStorage.getItem('rf_user') || 'System').trim();
           console.log('⚡ [SUPABASE] Lưu syncDeltas vào CSDL Supabase PostgreSQL:', payload);
           try {
-            // Write Orders
+            var shouldRefreshAfterRpc = false;
+
+            // Write Orders (tách đơn chuyển 'Đã Bàn Giao' qua RPC rf_handover_orders để trừ kho & bù Layout M nguyên tử)
             var ords = payload.Orders || payload.orders;
             if (ords && ords.length) {
-              // Whitelist chính xác 32 cột của bảng Orders trước khi ghi Supabase (chống PGRST204)
               var cleanOrds = ords.map(function(o) {
                 var c = {};
                 ORDERS_SCHEMA.forEach(function(col) {
@@ -1930,13 +2016,32 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
                 });
                 return c;
               });
+
+              var handoverIds = [];
+              cleanOrds.forEach(function(o) {
+                if (String(o.status || '').trim().toUpperCase() === 'ĐÃ BÀN GIAO' && o.id) {
+                  handoverIds.push(String(o.id));
+                }
+              });
+
+              if (handoverIds.length > 0 && effPin) {
+                var handoverRes = await callSupabaseRpc('rf_handover_orders', {
+                  p_pin: effPin,
+                  p_order_ids: handoverIds,
+                  p_actor: actorName
+                });
+                console.log('✅ [RPC rf_handover_orders]:', handoverRes);
+                shouldRefreshAfterRpc = true;
+              }
+
               await upsertToSupabase('Orders', cleanOrds);
             }
 
-            // Write Production
+            // Write Production + tự động gọi RPC rf_approve_qc_and_deduct_bom khi lệnh SX hoàn thành đủ khâu / đạt KCS
             var prods = payload.Production || payload.prodItems;
-            if (prods && prods.length) {
-              var cleanProds = prods.map(function(p) {
+            var rawProdsList = Array.isArray(prods) ? prods : [];
+            if (rawProdsList.length) {
+              var cleanProds = rawProdsList.map(function(p) {
                 var c = {};
                 var rawP = Object.assign({}, p);
                 if (rawP.phases) {
@@ -1971,6 +2076,38 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
                 return c;
               });
               await upsertToSupabase('Production', cleanProds);
+
+              if (effPin) {
+                for (var pi = 0; pi < rawProdsList.length; pi++) {
+                  var rp = rawProdsList[pi];
+                  if (!rp || !rp.id) continue;
+                  var isFromStock = rp.fulfilledFromStock === true || String(rp.fulfilledFromStock).toUpperCase() === 'TRUE' || String(rp.status || '').trim() === 'Hoàn Kho Đạt' || String(rp.note || '').indexOf('Lấy từ tồn kho') !== -1;
+                  if (isFromStock) continue;
+                  var pSt = String(rp.status || '').toUpperCase().trim();
+                  var p1St = String(rp.p1_status || (rp.phases && rp.phases.phase1 && rp.phases.phase1.status) || '').toUpperCase().trim();
+                  var p2St = String(rp.p2_status || (rp.phases && rp.phases.phase2 && rp.phases.phase2.status) || '').toUpperCase().trim();
+                  var qcSt = String(rp.qc_status || '').toUpperCase().trim();
+                  var hasP2 = Boolean(rp.p2_name || rp.p2_status || (rp.phases && rp.phases.phase2 && rp.phases.phase2.name));
+                  var p2Done = p1St === 'DONE' && p2St === 'DONE';
+                  var qcOk = qcSt === 'PASSED' || qcSt === 'ĐÃ DUYỆT' || qcSt === 'ĐẠT' || qcSt === 'APPROVED';
+                  var pDone = pSt === 'DONE' || pSt === 'ĐÃ XONG' || pSt === 'HOÀN THÀNH' || (hasP2 ? p2Done : p1St === 'DONE') || qcOk;
+                  if (pDone) {
+                    try {
+                      var bomRpcRes = await callSupabaseRpc('rf_approve_qc_and_deduct_bom', {
+                        p_pin: effPin,
+                        p_production_id: String(rp.id),
+                        p_actor: actorName,
+                        p_material_usage: rp.materialUsageData || null,
+                        p_qc_status: rp.qc_status || null
+                      });
+                      console.log('✅ [RPC rf_approve_qc_and_deduct_bom]:', bomRpcRes);
+                      shouldRefreshAfterRpc = true;
+                    } catch(bomErr) {
+                      console.warn('BOM RPC warning for ' + rp.id + ':', bomErr);
+                    }
+                  }
+                }
+              }
             }
 
             // Write Packings
@@ -1981,27 +2118,42 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
             var atts = payload.Attendance || payload.attendance;
             if (atts && atts.length) await upsertToSupabase('Attendance', atts);
 
-            // Write Products
-            var prds = payload.Products || payload.products;
-            if (prds && prds.length) {
+            // Stock Voucher vs Product Master Updates (bảo vệ bởi Trigger guard_product_quantity_direct_edit)
+            var prds = payload.Products || payload.products || [];
+            var imps = payload.ImportExport || payload.importExport || [];
+            var delImps = (payload.deletes && payload.deletes.ImportExport) ? payload.deletes.ImportExport : [];
+            var handledStockViaRpc = false;
+
+            if (imps.length > 0 || delImps.length > 0) {
+              var stockVoucherRes = await callSupabaseRpc('rf_apply_stock_voucher', {
+                p_pin: effPin,
+                p_ie_rows: imps,
+                p_delete_ie_ids: delImps,
+                p_product_updates: prds
+              });
+              console.log('✅ [RPC rf_apply_stock_voucher]:', stockVoucherRes);
+              handledStockViaRpc = true;
+              shouldRefreshAfterRpc = true;
+            } else if (prds.length > 0) {
               try {
                 var localProdOv = JSON.parse(localStorage.getItem('rf_local_products_override') || '{}');
                 prds.forEach(function(p) {
                   var key = p.id || p.sku;
-                  if (key) localProdOv[key] = Object.assign(localProdOv[key] || {}, p);
+                  if (key) {
+                    var safeOv = Object.assign({}, p);
+                    delete safeOv.quantity;
+                    delete safeOv._diff;
+                    localProdOv[key] = Object.assign(localProdOv[key] || {}, safeOv);
+                  }
                 });
                 localStorage.setItem('rf_local_products_override', JSON.stringify(localProdOv));
               } catch(e) {}
-              await upsertToSupabase('Products', prds);
+              await upsertProductsMasterSafely(prds);
             }
 
             // Write Transactions
             var trans = payload.Transactions || payload.transactions;
             if (trans && trans.length) await upsertToSupabase('Transactions', trans);
-
-            // Write ImportExport
-            var imps = payload.ImportExport || payload.importExport;
-            if (imps && imps.length) await upsertToSupabase('ImportExport', imps);
 
             // Write Accounts
             var accs = payload.Accounts || payload.accounts;
@@ -2095,11 +2247,18 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
             // Handle Deletes
             if (payload.deletes && typeof payload.deletes === 'object') {
               for (var delTbl in payload.deletes) {
+                if (handledStockViaRpc && delTbl === 'ImportExport') continue;
                 var delIds = payload.deletes[delTbl];
                 if (delIds && delIds.length) {
                   await deleteFromSupabase(delTbl, delIds);
                 }
               }
+            }
+
+            if (shouldRefreshAfterRpc) {
+              setTimeout(function() {
+                try { window.dispatchEvent(new CustomEvent('triggerReloadData')); } catch(e) {}
+              }, 3200);
             }
 
             return {
@@ -2219,6 +2378,29 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
           };
         }
 
+        if (action === 'deductInventoryBOM' || action === 'processQCApproval') {
+          var bomReq = (args[0] && typeof args[0] === 'object') ? args[0] : { prodId: args[0] };
+          var bomPin = String(bomReq.pin || pin || localStorage.getItem('rf_pin') || '').trim();
+          var targetProdId = String(bomReq.prodId || bomReq.productionId || bomReq.id || '').trim();
+          var bomActor = String(bomReq.actor || bomReq.approverName || args[1] || localStorage.getItem('rf_user') || 'KCS').trim();
+          var matUsage = bomReq.materialUsageData || null;
+          var qcStatusArg = bomReq.qc_status || (action === 'processQCApproval' ? 'Passed' : null);
+          if (!targetProdId) {
+            return { success: false, message: 'Thiếu mã lệnh sản xuất (prodId).' };
+          }
+          var rpcRes = await callSupabaseRpc('rf_approve_qc_and_deduct_bom', {
+            p_pin: bomPin,
+            p_production_id: targetProdId,
+            p_actor: bomActor,
+            p_material_usage: matUsage,
+            p_qc_status: qcStatusArg
+          });
+          setTimeout(function() {
+            try { window.dispatchEvent(new CustomEvent('triggerReloadData')); } catch(e) {}
+          }, 3200);
+          return rpcRes;
+        }
+
         if (action === 'getLayout5AnglesDriveCatalog') {
           return [];
         }
@@ -2281,6 +2463,28 @@ window.__RF_KNOWLEDGE_OS_SEED__ = {"Products":[{"id":"BE_BE101010","sku":"BE1010
         window.google.script = {};
       }
       window.google.script.run = createGasRunner(null, null);
+
+      // Intercept legacy window.safeFetchJSON(window.SCRIPT_URL || '', ...) calls (e.g. Tab_Production deductInventoryBOM)
+      if (typeof window.fetch === 'function') {
+        var _origFetch = window.fetch.bind(window);
+        window.fetch = function(resource, options) {
+          try {
+            var isSelfTarget = (typeof resource === 'string' && (resource === '' || resource === window.location.href));
+            if (isSelfTarget && options && String(options.method || '').toUpperCase() === 'POST' && typeof options.body === 'string') {
+              var bodyJson = JSON.parse(options.body);
+              if (bodyJson && (bodyJson.action === 'deductInventoryBOM' || bodyJson.action === 'processQCApproval')) {
+                return callRemoteGasApi(bodyJson.action, [bodyJson], bodyJson.pin || localStorage.getItem('rf_pin') || '').then(function(res) {
+                  return new Response(JSON.stringify(res), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                });
+              }
+            }
+          } catch(e) {}
+          return _origFetch(resource, options);
+        };
+      }
 
       // Accelerate window.runGAS to call local RPC directly
       window.runGAS = function(serverFunctionName) {
