@@ -150,9 +150,9 @@ nav.rf-mobile-dock {
  .rf-v6-dashboard>.rf-dashboard-legacy-header{display:none!important}
 }
 
-/* Fill the current iframe viewport after rotation, browser chrome or keyboard resize. */
-html,body,#root{width:100%!important;max-width:100vw!important;height:100%!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
-.rf-v6-workspace[data-rf-v6-shell]{position:fixed!important;inset:0!important;width:100%!important;max-width:100vw!important;height:100%!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
+/* Fill the entire screen edge-to-edge on iPhone / iOS Safari & PWA (no bottom black band). */
+html,body,#root{width:100%!important;max-width:100vw!important;height:100%!important;min-height:100%!important;min-height:-webkit-fill-available!important;margin:0!important;padding:0!important;overflow:hidden!important;box-sizing:border-box!important;background:#050505!important}
+.rf-v6-workspace[data-rf-v6-shell]{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100%!important;max-width:100vw!important;height:auto!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
 .rf-v6-workspace[data-rf-v6-shell] > div.flex-1{min-height:0!important;width:100%!important;max-width:100%!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
 .rf-v6-workspace .rf-mobile-dock{display:none!important}
 
@@ -233,11 +233,7 @@ div[data-rf-sidebar-backdrop="true"] {
     pointer-events: auto !important;
   }
 
-  /* Bỏ menu bên dưới -> Chỉ chừa đệm an toàn vừa vặn cho vạch Home Bar */
-  .rf-v6-workspace [data-rf-v6-main] {
-    padding-bottom: max(24px, calc(16px + env(safe-area-inset-bottom, 0px))) !important;
-    scroll-padding-bottom: max(24px, calc(16px + env(safe-area-inset-bottom, 0px))) !important;
-  }
+  /* Bỏ khoảng trống đen thừa phía dưới màn hình */
 }
 
 /* =========================================================================
@@ -255,12 +251,12 @@ div[data-rf-sidebar-backdrop="true"] {
     display: none !important;
   }
 
-  /* TOPBAR: Đệm trên 42px an toàn tránh cụm Dynamic Island / Notch, không cấn mép đỉnh */
+  /* TOPBAR: Tự co theo safe-area thật trên iPhone (0px ở trình duyệt, Dynamic Island khi mở PWA) */
   [data-rf-v6-topbar] {
     height: auto !important;
-    min-height: 82px !important;
-    padding: 42px 14px 10px !important;
-    padding-top: max(42px, env(safe-area-inset-top, 42px)) !important;
+    min-height: 48px !important;
+    padding: 6px 10px !important;
+    padding-top: max(6px, env(safe-area-inset-top, 0px)) !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -323,10 +319,10 @@ div[data-rf-sidebar-backdrop="true"] {
     min-height: 44px !important;
   }
 
-  /* MAIN CONTENT: Full màn hình di động (viền mỏng 6px, đệm đáy gọn gàng) */
+  /* MAIN CONTENT: Full màn hình di động (viền mỏng 4px, sát đáy không còn vùng đen thừa) */
   .rf-v6-workspace [data-rf-v6-main] {
-    padding: 6px 6px 24px !important;
-    scroll-padding-bottom: 24px !important;
+    padding: 4px 4px max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* ẨN HOÀN TOÀN BOTTOM DOCK */
