@@ -793,16 +793,16 @@
                 return -1;
             };
             // --- BỘ NHẬN DIỆN SÀN & KÊNH BÁN TỰ ĐỘNG CHỐNG GÁN BÁN LẺ ---
-            let detectedChannel = 'Shopee VN';
+            let detectedChannel = 'Shopee';
             const hStr = headers.join(' ');
             if (hStr.includes('id người dùng') || hStr.includes('tiktok') || hStr.includes('buyer username') || hStr.includes('seller sku') || hStr.includes('shipping provider')) {
-                detectedChannel = 'Tiktok Shop';
+                detectedChannel = 'Tiktok';
             } else if (hStr.includes('หมายเลขคำสั่งซื้อ')) {
                 detectedChannel = 'Shopee TH';
             } else if (hStr.includes('singapore') || hStr.includes('sgd') || hStr.includes('spx express lockers') || (hStr.includes('country') && (hStr.includes('sg') || hStr.includes('destination country')))) {
                 detectedChannel = 'Shopee SG';
             } else if (hStr.includes('username (buyer)') || hStr.includes('tracking number') || hStr.includes('mã đơn hàng') || hStr.includes('mã vận đơn') || hStr.includes('order sn') || hStr.includes('order id')) {
-                detectedChannel = 'Shopee VN';
+                detectedChannel = 'Shopee';
             }
 
             let iCode = findCol(['mã đơn hàng', 'mã đơn', 'order id', 'order sn', 'order_sn', 'order_id', 'order no', 'order no.', 'order number', 'หมายเลขคำสั่งซื้อ', 'no. pesanan', 'id pesanan']);
@@ -1077,11 +1077,11 @@
                     const isInternationalChannel = ['Shopee SG', 'Shopee MY', 'Shopee TH', 'Shopee PH', 'Shopee TW', 'Shopee Quốc Tế'].includes(rowChannel);
                     if (!isInternationalChannel) {
                         if (upperOCode.includes('VN') || upperTCode.startsWith('SPXVN') || upperTCode.includes('VN') || /^2\d{13,15}/.test(upperOCode)) {
-                            rowChannel = 'Shopee VN';
+                            rowChannel = 'Shopee';
                         } else if (/^57\d{16,18}/.test(oCode) || upperTCode.startsWith('TT') || upperOCode.includes('TIKTOK')) {
-                            rowChannel = 'Tiktok Shop';
+                            rowChannel = 'Tiktok';
                         } else if (!rowChannel || rowChannel === 'Bán Lẻ') {
-                            rowChannel = 'Shopee VN';
+                            rowChannel = 'Shopee';
                         }
                     }
 
@@ -1663,7 +1663,7 @@
                         newOrders.push({
                             id: targetOrderId,
                             orderCode: o.orderCode,
-                            channel: o.channel || (o.existingRecord && o.existingRecord.channel) || 'Shopee VN',
+                            channel: o.channel || (o.existingRecord && o.existingRecord.channel) || 'Shopee',
                             customer: (o.customer && o.customer !== 'Khách') ? o.customer : (o.existingRecord.customer || 'Khách'),
                             phone: o.existingRecord.phone || '',
                             address: o.existingRecord.address || '',
@@ -1709,7 +1709,7 @@
                         newOrders.push({
                             id: targetOrderId, 
                             orderCode: o.orderCode, 
-                            channel: o.channel || 'Shopee VN', 
+                            channel: o.channel || 'Shopee', 
                             customer: o.customer,
                             phone: '',
                             address: '',
@@ -1982,7 +1982,7 @@
         );
         const isSaleRole = isUserRoleCTV || isInternalSales || sessionRole === 'BÁN HÀNG' || sessionRole === 'QUẢN LÝ BÁN HÀNG';
         const forceSXT = sessionRole === 'SẢN XUẤT' && !isUserRoleCTV;
-        const saleChannels = ['Bán Lẻ', 'Bán Sỉ', 'Cộng Tác Viên', 'Bảo Hành & Thu Hồi'];
+        const saleChannels = ['Bán Lẻ', 'Cộng Tác Viên', 'Bảo Hành'];
         const [channel, setChannel] = React.useState(() => {
             if (editOrder && editOrder.channel) return editOrder.channel;
             if (draftData && draftData.channel) return draftData.channel;
@@ -2064,13 +2064,14 @@
 
         const autoCalculateFees = (rev, chan) => {
             const revenueAmt = Number(rev) || 0;
-            if (chan === 'Shopee VN') {
+            const cUp = String(chan || '').toUpperCase();
+            if (cUp === 'SHOPEE' || cUp === 'SHOPEE VN') {
                 setFeeFixed(revenueAmt * 0.14);
                 setFeeService(revenueAmt * 0.062);
                 setFeePayment(revenueAmt * 0.0603);
                 setTax(revenueAmt * 0.015);
                 setFeeAffiliate(0);
-            } else if (chan === 'Tiktok Shop') {
+            } else if (cUp.includes('TIKTOK')) {
                 setFeeFixed(revenueAmt * 0.08); // Example rate
                 setFeeService(revenueAmt * 0.05); // Example rate
                 setFeePayment(revenueAmt * 0.04); // Example rate
@@ -2826,8 +2827,8 @@
                                                     saleChannels.map(c => <option key={c} value={c}>{c}</option>)
                                                 ) : (
                                                     <>
-                                                        {typeof CHANNELS !== 'undefined' ? CHANNELS.map(c => <option key={c} value={c}>{c}</option>) : <option>Shopee VN</option>}
-                                                        <option value="Bảo Hành & Thu Hồi">Bảo Hành & Thu Hồi (Form Sale)</option>
+                                                        {typeof CHANNELS !== 'undefined' ? CHANNELS.map(c => <option key={c} value={c}>{c}</option>) : <option>Shopee</option>}
+                                                        {channel === 'Bảo Hành & Thu Hồi' && <option value="Bảo Hành & Thu Hồi">Bảo Hành & Thu Hồi (Form Sale)</option>}
                                                     </>
                                                 )}
                                             </select>
@@ -6682,54 +6683,40 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                 )}
 
                 <div className="absolute top-2 right-2 flex items-center gap-1 z-30">
-                    <div className="flex items-center gap-1 bg-[#13141a]/90 p-1 rounded-xl border border-white/15 backdrop-blur-md shadow-lg">
-                        {/* 1. NÚT HỎA TỐC ⚡ */}
-                        <button
-                            type="button"
-                            onClick={handleToggleUrgent}
-                            title={isUrgent ? "Đang bật HỎA TỐC (Bấm để tắt)" : "Bật HỎA TỐC / Ưu tiên làm ngay"}
-                            className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
-                                isUrgent 
-                                    ? 'text-amber-300 bg-amber-400/25 border border-amber-400/50 shadow-[0_0_10px_rgba(251,191,36,0.35)]' 
-                                    : 'text-zinc-400 hover:text-amber-400 hover:bg-white/10'
-                            }`}
-                        >
-                            <i className="fas fa-bolt text-xs"></i>
-                        </button>
-
-                        {/* 2. NÚT IN HÓA ĐƠN / BILL 📄 */}
+                    <div className="flex items-center gap-1 sm:gap-1 bg-[#13141a]/95 p-1 sm:p-1 rounded-xl border border-white/15 backdrop-blur-md shadow-lg">
+                        {/* 1. NÚT IN HÓA ĐƠN / BILL 📄 */}
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setShowInvoiceModal(true); }}
                             title="In / Xem Hoá Đơn Bán Hàng"
-                            className="w-7.5 h-7.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                            className="w-9 h-9 sm:w-8 sm:h-8 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15 transition-all flex items-center justify-center cursor-pointer active:scale-95"
                         >
-                            <i className="fas fa-file-invoice text-xs"></i>
+                            <i className="fas fa-file-invoice text-sm sm:text-xs"></i>
                         </button>
 
-                        {/* 3. NÚT CHI TIẾT ĐƠN ℹ️ */}
+                        {/* 2. NÚT CHI TIẾT ĐƠN ℹ️ */}
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setShowDetailModal(true); }}
                             title="Xem Chi Tiết Đơn Hàng"
-                            className="w-7.5 h-7.5 rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/15 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                            className="w-9 h-9 sm:w-8 sm:h-8 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/15 transition-all flex items-center justify-center cursor-pointer active:scale-95"
                         >
-                            <i className="fas fa-info-circle text-xs"></i>
+                            <i className="fas fa-info-circle text-sm sm:text-xs"></i>
                         </button>
 
-                        {/* 4. NÚT MENU TÁC VỤ KHÁC ••• */}
+                        {/* 3. NÚT MENU TÁC VỤ KHÁC ••• (Tăng vùng chạm trên di động) */}
                         <button
                             ref={actionBtnRef}
                             type="button"
                             onClick={handleOpenMenu}
                             title="Tùy chọn & Tác vụ khác"
-                            className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                            className={`w-10 h-9 sm:w-9 sm:h-8 min-w-[40px] min-h-[36px] sm:min-w-[36px] sm:min-h-[32px] rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
                                 showActionMenu 
                                     ? 'bg-blue-600 text-white shadow-md' 
-                                    : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                                    : 'text-zinc-200 hover:text-white hover:bg-white/15'
                             }`}
                         >
-                            <i className="fas fa-ellipsis-v text-xs"></i>
+                            <i className="fas fa-ellipsis-v text-base sm:text-sm"></i>
                         </button>
                     </div>
                 </div>
@@ -7016,7 +7003,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                 )}
 
                 {(isDone || isPendingHandover) && (pGoods || pBox || whPhoto) && (
-                    <div className="absolute right-2 top-12 flex gap-1.5 z-20">
+                    <div className="absolute right-2 top-14 sm:top-13 flex gap-1.5 z-20">
                         {pGoods && (
                             <div className="flex flex-col items-end">
                                 <img 
@@ -7101,7 +7088,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                         <div 
                             onClick={handleToggleUrgent}
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/50 text-rose-400 text-[12px] font-black uppercase tracking-wider mb-2 animate-bounce cursor-pointer hover:bg-rose-500/30 transition-colors shadow-sm"
-                            title="Đang bật HỎA TỐC — Bấm vào đây hoặc nút ⚡ để tắt ưu tiên"
+                            title="Đang bật HỎA TỐC — Bấm vào đây để tắt ưu tiên"
                         >
                             <span>🔥 ƯU TIÊN LÀM NGAY</span>
                             <span className="text-[10px] text-rose-300/80 font-normal ml-1">(Bấm để tắt)</span>
@@ -7109,7 +7096,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     )}
                     <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                         <div className={`flex items-center text-[8px] font-black rounded border uppercase tracking-wider shadow-sm overflow-hidden ${typeof getChannelBadge === 'function' ? getChannelBadge(_order.channel) : 'bg-gray-800 text-gray-300 border-gray-600'}`}>
-                            <span className="px-1.5 py-0.5">{_order.channel || 'OFFLINE'}</span>
+                            <span className="px-1.5 py-0.5">{typeof normalizeDisplayChannel === 'function' ? normalizeDisplayChannel(_order.channel) : (_order.channel || 'Bán Lẻ')}</span>
                             {isReturn && <span className="px-1.5 py-0.5 bg-black/30 border-l border-current animate-pulse">HÀNG HOÀN</span>}
                         </div>
                         {isPacking && (
@@ -7935,7 +7922,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     newOrders.push({
                         id: parsedOrder.existingId,
                         orderCode: finalOrderCode,
-                        channel: parsedOrder.existingRecord.channel || 'Shopee VN',
+                        channel: parsedOrder.existingRecord.channel || 'Shopee',
                         customer: (parsedOrder.customer && parsedOrder.customer !== 'Khách') ? parsedOrder.customer : (parsedOrder.existingRecord.customer || 'Khách'),
                         createdAt: parsedOrder.existingRecord.createdAt || safeDateFull,
                         deadline: parsedOrder.existingRecord.deadline,
@@ -7990,7 +7977,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                                         note: `Sản xuất BỂ LẺ SIZE cho đơn ${parsedOrder.orderCode || ''} (SL: ${orderQty})`,
                                         status: 'Pending', fulfilledFromStock: false,
                                         phases: workerPhases,
-                                        deadline: typeof getAutoDeadline === 'function' ? getAutoDeadline('Shopee VN') : defaultDeadline
+                                        deadline: typeof getAutoDeadline === 'function' ? getAutoDeadline('Shopee') : defaultDeadline
                                     });
                                 }
                             } else {
@@ -8016,7 +8003,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                                             note: `Sản xuất mới cho đơn ${parsedOrder.orderCode || ''} (Cái ${q + 1}/${orderQty})`,
                                             status: 'Pending', fulfilledFromStock: false,
                                             phases: workerPhases,
-                                            deadline: typeof getAutoDeadline === 'function' ? getAutoDeadline('Shopee VN') : defaultDeadline
+                                            deadline: typeof getAutoDeadline === 'function' ? getAutoDeadline('Shopee') : defaultDeadline
                                         });
                                     }
                                 }
@@ -8025,7 +8012,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     });
 
                     newOrders.push({
-                        id: orderId, orderCode: finalOrderCode, channel: 'Shopee VN', customer: parsedOrder.customer,
+                        id: orderId, orderCode: finalOrderCode, channel: 'Shopee', customer: parsedOrder.customer,
                         createdAt: safeDateFull, deadline: defaultDeadline, date: safeDateFull.split(' ')[0],
                         status: orderStatus, accessories: JSON.stringify(accessories),
                         hasProduction: newProdItems.length > 0, updatedBy: activeUser,

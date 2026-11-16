@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T20:04:05.696Z",
+  "generatedAt": "2026-11-16T06:49:30.233Z",
   "coreFiles": [
     "Config.html",
     "ReturnClaimRules.js",
@@ -24,7 +24,7 @@
     "Tab_Apprenticeship.html"
   ],
   "hashes": {
-    "Tab_Production.html": "702b34684b5306894035ea3a07948c9cff3ccf49d1ca770381eaa253c3126314",
+    "Tab_Production.html": "9ecc6588b4e6b83f3ea8b6535c7a53cae24d413205514a06278a0e6a4660b13d",
     "Tab_Inventory.html": "27c20c5fd461524c6201d17d91cef374c07a777941dbc0fb05f6653cae777079",
     "Tab_ImportExport.html": "67afe1509ef3e38d930eed6d3b7ad791e83ee3b450f869fedcbe3428f7d189ba",
     "Tab_Suppliers.html": "2cc2262f84ae8958aaa53248ccfce804d51b550f266f58e5e87886366d5e756c",
@@ -36,17 +36,17 @@
     "Tab_Analytics.html": "ac232f3fb35b46697f344030d4ca838d4b6fb37bb9fc4b2f16bc15aed02eb6e1",
     "Tab_Workspaces.html": "71d29d53ce7f942db49bb8dc9bb948d504ac1b6b08c4380ff5e3cf8d3b871104",
     "Tab_Apprenticeship.html": "057efb71bc22f1701cda6f32938a31414d7a1f22765023ab8742dc5ab11ee426",
-    "Config.html": "1ab3b80810723519dee136a56896f9f9a8a88366c7ef01877e52f856277855b0",
+    "Config.html": "0a3e4f7da9edfe70db075201aef22ee020319fafe7ca3ef217b948f6febdfdea",
     "ReturnClaimRules.js": "c98daef812bb417e1459347a64bc15daae1326355dca5952708a5496379c2e56",
     "Components.html": "37cdb97123c8810a9e48543487500e7fc1c901056c0b2f7c88c55dd5aac84d8c",
     "Modals.html": "9e83cc494cd0d5a6bc3804b13d77406f9f282b5c886fc1056ec463a4628db307",
-    "Modals_Orders.html": "9d5fd7ee37cdd69ddc58c3cf8f1f257407d2a6ee963d06936eaa7b54fd036bfd",
+    "Modals_Orders.html": "0055b979e6996d4e8767df28f2eecbeb79547a0c6b5670c6e193e19794e26b54",
     "Tab_Dashboard.html": "94b6e77dbbc431d365858de643e80e236860ebcb5202728366995648142b6651",
-    "Tab_Orders.html": "851bb105a9fef5ba7670f2df9249fe37896d06bfcc2df87f380ffe8157e9a568",
+    "Tab_Orders.html": "708389b56aa96df3ec0e5a13a6c7aaf5433d2a4823269131756c43ebb11065d2",
     "App_Main.html": "720579fef2546e3eb69a7e854f31217af9626e01497bfbc86b18807243305778"
   },
   "bundleHashes": {
-    "Compiled_Core.html": "c7566d02c501a6fe82b166e69849ea7568ac892ed7ff25551f87072b49df844f",
-    "Compiled_Deferred.html": "202ae02d6f6217e2a2826b31de4539ed4207959fc5ba6e8a34779c90d0b5dbb4"
+    "Compiled_Core.html": "f50af5b781802949487e3581a7f07906dea893f4037a2660db185494a11d6a94",
+    "Compiled_Deferred.html": "8b044db7e31f3e5a512b6a0459993a48bc960197a191c5c64a2371507cd8cb09"
   }
 }

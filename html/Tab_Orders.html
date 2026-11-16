@@ -2079,11 +2079,13 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
             } else if (targetChannel === 'SHOPEE') {
                 return !isInter && (channel.includes('SHOPEE') || channel.includes('SHP') || channel.includes('SPX'));
             } else if (targetChannel === 'BÁN LẺ') {
-                return channel.includes('BÁN LẺ') || channel.includes('BAN LE') || channel.includes('ZALO') || channel.includes('FACEBOOK') || channel.includes('MESSENGER');
+                return channel.includes('BÁN LẺ') || channel.includes('BAN LE') || channel.includes('ZALO') || channel.includes('FACEBOOK') || channel.includes('MESSENGER') || channel.includes('TRỰC TIẾP') || channel.includes('RETAIL');
             } else if (targetChannel === 'CTV') {
                 return channel.includes('CỘNG TÁC VIÊN') || channel.includes('CỘNG TAC') || channel === 'CTV';
             } else if (targetChannel === 'TIKTOK') {
                 return channel.includes('TIKTOK') || channel.includes('TT') || channel.includes('TIK TOK');
+            } else if (targetChannel === 'BẢO HÀNH') {
+                return channel.includes('BẢO HÀNH') || channel.includes('BAO HANH') || channel.includes('SỬA CHỮA') || channel.includes('SUA CHUA');
             }
             return true;
         }, []);
@@ -3062,12 +3064,13 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
 
         const getChannelBadge = React.useCallback((channel) => {
             const c = String(channel || '').toUpperCase().trim();
-            if (c.includes('SHOPEE VN') || c === 'SHOPEE') return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-shopping-bag text-zinc-400', label: 'Shopee VN' };
-            if (c.includes('SHOPEE MY') || c.includes('SHOPEE SG') || c.includes('SHOPEE TH') || c.includes('XUẤT KHẨU') || c.includes('EXPORT')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-globe-asia text-zinc-400', label: channel || 'Xuất Khẩu' };
-            if (c.includes('TIKTOK')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-video text-zinc-400', label: 'TikTok Shop' };
-            if (c.includes('CTV') || c.includes('CỘNG TÁC')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-handshake text-zinc-400', label: 'CTV' };
+            if (c.includes('SHOPEE MY') || c.includes('SHOPEE SG') || c.includes('SHOPEE TH') || c.includes('SHOPEE MA') || c.includes('SHOPEE PH') || c.includes('SHOPEE TW') || c.includes('XUẤT KHẨU') || c.includes('EXPORT')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-globe-asia text-zinc-400', label: 'Xuất Khẩu' };
+            if (c.includes('SHOPEE')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-shopping-bag text-zinc-400', label: 'Shopee' };
+            if (c.includes('TIKTOK')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-video text-zinc-400', label: 'Tiktok' };
+            if (c.includes('CTV') || c.includes('CỘNG TÁC')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-handshake text-zinc-400', label: 'Cộng Tác Viên' };
+            if (c.includes('BẢO HÀNH') || c.includes('SỬA CHỮA')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-shield-alt text-zinc-400', label: 'Bảo Hành' };
             if (c.includes('BÁN SỈ') || c.includes('WHOLESALE')) return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-boxes-stacked text-zinc-400', label: 'Bán Sỉ' };
-            return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-store text-zinc-400', label: channel || 'Bán Lẻ' };
+            return { bg: 'bg-[#18191d] text-zinc-300 border-0', icon: 'fa-store text-zinc-400', label: 'Bán Lẻ' };
         }, []);
 
         const getStatusBadge = React.useCallback((status) => {
@@ -3622,11 +3625,12 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                     <div className="hidden sm:flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
                         {[
                             { id: 'ALL', label: 'Tất Cả Kênh', icon: 'fa-layer-group' },
-                            { id: 'SHOPEE', label: 'Shopee VN', icon: 'fa-shopping-bag' },
-                            { id: 'EXPORT', label: 'Xuất Khẩu (MY/SG)', icon: 'fa-globe-asia' },
-                            { id: 'TIKTOK', label: 'TikTok Shop', icon: 'fa-video' },
-                            { id: 'BÁN LẺ', label: 'Trực Tiếp / Bán Lẻ', icon: 'fa-store' },
-                            { id: 'CTV', label: 'Cộng Tác Viên', icon: 'fa-handshake' }
+                            { id: 'SHOPEE', label: 'Shopee', icon: 'fa-shopping-bag' },
+                            { id: 'TIKTOK', label: 'Tiktok', icon: 'fa-video' },
+                            { id: 'EXPORT', label: 'Xuất Khẩu', icon: 'fa-globe-asia' },
+                            { id: 'BÁN LẺ', label: 'Bán Lẻ', icon: 'fa-store' },
+                            { id: 'CTV', label: 'Cộng Tác Viên', icon: 'fa-handshake' },
+                            { id: 'BẢO HÀNH', label: 'Bảo Hành', icon: 'fa-shield-alt' }
                         ].map(ch => {
                             const isActive = filterChannel === ch.id;
                             return (
@@ -3700,11 +3704,12 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
                                         { id: 'ALL', label: 'Tất Cả Kênh' },
-                                        { id: 'SHOPEE', label: 'Shopee VN' },
+                                        { id: 'SHOPEE', label: 'Shopee' },
+                                        { id: 'TIKTOK', label: 'Tiktok' },
                                         { id: 'EXPORT', label: 'Xuất Khẩu' },
-                                        { id: 'TIKTOK', label: 'TikTok Shop' },
-                                        { id: 'BÁN LẺ', label: 'Trực Tiếp / Bán Lẻ' },
-                                        { id: 'CTV', label: 'Cộng Tác Viên' }
+                                        { id: 'BÁN LẺ', label: 'Bán Lẻ' },
+                                        { id: 'CTV', label: 'Cộng Tác Viên' },
+                                        { id: 'BẢO HÀNH', label: 'Bảo Hành' }
                                     ].map(ch => (
                                         <button
                                             key={ch.id}
@@ -4195,9 +4200,9 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                     const channelPriorityMap = {
                                         'XUẤT KHẨU': 1,
                                         'BẢO HÀNH': 2,
-                                        'TIKTOK SHOP': 3,
-                                        'SHOPEE VN': 4,
-                                        'CỘNG TAC VIÊN': 5,
+                                        'TIKTOK': 3,
+                                        'SHOPEE': 4,
+                                        'CỘNG TÁC VIÊN': 5,
                                         'BÁN LẺ': 6,
                                         'BÁN SỈ': 7,
                                         'SẢN XUẤT TỒN': 8
@@ -4213,17 +4218,16 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                             /\b(SHOPEE_SG|SHOPEE_MY|SHOPEE_TH|SHOPEE_PH|SHOPEE_MA|SHOPEE_TW)\b/i.test(upperChan);
 
                                         if (isInter) return 'XUẤT KHẨU';
-                                        if (upperChan === 'SHOPEE' || upperChan === 'SHOPEE VN' || upperChan === 'SHOPEE_VN') return 'SHOPEE VN';
-                                        if (upperChan.includes('SHOPEE')) return 'SHOPEE VN';
-                                        if (upperChan.includes('TIKTOK') || upperChan.includes('TIK TOK')) return 'TIKTOK SHOP';
+                                        if (upperChan === 'SHOPEE' || upperChan === 'SHOPEE VN' || upperChan === 'SHOPEE_VN' || upperChan.includes('SHOPEE')) return 'SHOPEE';
+                                        if (upperChan.includes('TIKTOK') || upperChan.includes('TIK TOK')) return 'TIKTOK';
                                         if (upperChan.includes('CỘNG TÁC VIÊN') || upperChan.includes('CTV')) return 'CỘNG TÁC VIÊN';
-                                        if (upperChan.includes('BÁN LẺ') || upperChan.includes('BAN LE') || upperChan.includes('OFFLINE') || upperChan.includes('ZALO') || upperChan.includes('FACEBOOK') || upperChan.includes('MESSENGER')) return 'BÁN LẺ';
+                                        if (upperChan.includes('BÁN LẺ') || upperChan.includes('BAN LE') || upperChan.includes('OFFLINE') || upperChan.includes('ZALO') || upperChan.includes('FACEBOOK') || upperChan.includes('MESSENGER') || upperChan.includes('TRỰC TIẾP')) return 'BÁN LẺ';
                                         if (upperChan.includes('BÁN SỈ') || upperChan.includes('BAN SI') || upperChan.includes('WHOLESALE')) return 'BÁN SỈ';
                                         if (upperChan.includes('SẢN XUẤT TỒN') || upperChan.includes('SẢN XUẤT BÙ KHO') || upperChan.includes('TỒN XƯỞNG')) return 'SẢN XUẤT TỒN';
                                         if (upperChan.includes('BẢO HÀNH') || upperChan.includes('SỬA CHỮA')) return 'BẢO HÀNH';
 
-                                        if (codeStr.includes('SPXVN') || codeStr.includes('SHOPEE') || /^2\d{13,15}/.test(codeStr)) return 'SHOPEE VN';
-                                        if (codeStr.includes('TIKTOK') || /^57\d{16,18}/.test(codeStr)) return 'TIKTOK SHOP';
+                                        if (codeStr.includes('SPXVN') || codeStr.includes('SHOPEE') || /^2\d{13,15}/.test(codeStr)) return 'SHOPEE';
+                                        if (codeStr.includes('TIKTOK') || /^57\d{16,18}/.test(codeStr)) return 'TIKTOK';
 
                                         return 'BÁN LẺ';
                                     };

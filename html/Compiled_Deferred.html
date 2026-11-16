@@ -5014,6 +5014,7 @@ const ProductionTab = React.memo(function ProductionTab({
         if (filterChannel === 'TIKTOK' && !ch.includes('TIKTOK')) return false;
         if (filterChannel === 'BÁN LẺ' && !ch.includes('BÁN LẺ') && !ch.includes('LẺ')) return false;
         if (filterChannel === 'CTV' && !ch.includes('CỘNG TÁC') && !ch.includes('CTV')) return false;
+        if (filterChannel === 'BẢO HÀNH' && !ch.includes('BẢO HÀNH') && !ch.includes('SỬA CHỮA')) return false;
       }
       return true;
     }).sort((a, b) => {
@@ -5467,15 +5468,17 @@ const ProductionTab = React.memo(function ProductionTab({
     value: "ALL"
   }, "T\u1EA5t C\u1EA3 K\xEAnh"), /*#__PURE__*/React.createElement("option", {
     value: "SHOPEE"
-  }, "Shopee VN"), /*#__PURE__*/React.createElement("option", {
+  }, "Shopee"), /*#__PURE__*/React.createElement("option", {
+    value: "TIKTOK"
+  }, "Tiktok"), /*#__PURE__*/React.createElement("option", {
     value: "EXPORT"
   }, "Xu\u1EA5t Kh\u1EA9u"), /*#__PURE__*/React.createElement("option", {
-    value: "TIKTOK"
-  }, "TikTok Shop"), /*#__PURE__*/React.createElement("option", {
     value: "B\xC1N L\u1EBA"
-  }, "Tr\u1EF1c Ti\u1EBFp / B\xE1n L\u1EBB"), /*#__PURE__*/React.createElement("option", {
+  }, "B\xE1n L\u1EBB"), /*#__PURE__*/React.createElement("option", {
     value: "CTV"
-  }, "C\u1ED9ng T\xE1c Vi\xEAn")), /*#__PURE__*/React.createElement("select", {
+  }, "C\u1ED9ng T\xE1c Vi\xEAn"), /*#__PURE__*/React.createElement("option", {
+    value: "B\u1EA2O H\xC0NH"
+  }, "B\u1EA3o H\xE0nh")), /*#__PURE__*/React.createElement("select", {
     value: filterTime,
     onChange: e => {
       setFilterTime(e.target.value);

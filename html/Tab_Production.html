@@ -4980,6 +4980,7 @@
                     if (filterChannel === 'TIKTOK' && !ch.includes('TIKTOK')) return false;
                     if (filterChannel === 'BÁN LẺ' && !ch.includes('BÁN LẺ') && !ch.includes('LẺ')) return false;
                     if (filterChannel === 'CTV' && !ch.includes('CỘNG TÁC') && !ch.includes('CTV')) return false;
+                    if (filterChannel === 'BẢO HÀNH' && !ch.includes('BẢO HÀNH') && !ch.includes('SỬA CHỮA')) return false;
                 }
 
                 return true;
@@ -5474,11 +5475,12 @@
                                 className="h-8 px-2.5 bg-black/20 rounded-xl text-xs font-medium text-zinc-300 focus:outline-none focus:border-emerald-500/50 cursor-pointer border border-white/[0.08]"
                             >
                                 <option value="ALL">Tất Cả Kênh</option>
-                                <option value="SHOPEE">Shopee VN</option>
+                                <option value="SHOPEE">Shopee</option>
+                                <option value="TIKTOK">Tiktok</option>
                                 <option value="EXPORT">Xuất Khẩu</option>
-                                <option value="TIKTOK">TikTok Shop</option>
-                                <option value="BÁN LẺ">Trực Tiếp / Bán Lẻ</option>
+                                <option value="BÁN LẺ">Bán Lẻ</option>
                                 <option value="CTV">Cộng Tác Viên</option>
+                                <option value="BẢO HÀNH">Bảo Hành</option>
                             </select>
 
                             {/* Bộ Lọc Thời Gian */}

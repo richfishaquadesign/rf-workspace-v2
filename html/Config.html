@@ -111,7 +111,7 @@ const SALARY_PER_HOUR = 20000;
 
 const USER_PINS = {}; // Đã chuyển sang quản lý qua sheet Config_NhanSu – xem getUserConfig() ở backend
 const ADMIN_PIN = ''; // Đã chuyển sang quản lý qua sheet Config_NhanSu – xem validatePin() ở backend
-const CHANNELS = ['Shopee VN', 'Tiktok Shop', 'Bán Lẻ', 'Bán Sỉ', 'Cộng Tác Viên', 'Shopee SG', 'Shopee MA', 'Shopee TH', 'Shopee PH', 'Bảo Hành'];
+const CHANNELS = ['Shopee', 'Tiktok', 'Xuất Khẩu', 'Bán Lẻ', 'Cộng Tác Viên', 'Bảo Hành'];
 const ORDER_STATUS = { AUTO_SCAN: 'Quét Tự Động', PENDING_PROD: 'Chờ Sản Xuất', READY_PACK: 'Sẵn sàng đóng gói', PENDING_HANDOVER: 'Chờ Bàn Giao', HANDED_OVER: 'Đã Bàn Giao', CANCELLED: 'Đơn Huỷ' };
 const CATEGORIES = ['LAYOUT', 'BỂ KÍNH', 'PHỤ KIỆN', 'DANH MỤC SẢN XUẤT'];
 const SUB_CATEGORIES = { 
@@ -1070,6 +1070,21 @@ function getUserTitle(name, userConfigs) {
     } catch(e) { return ""; }
 }
 
+const normalizeDisplayChannel = (channel) => {
+    const ch = String(channel || '').toUpperCase().trim();
+    if (!ch) return 'Bán Lẻ';
+    if (ch.includes('XUẤT KHẨU') || ch.includes('EXPORT') || ch.includes('QUỐC TẾ') || ch.includes('SHOPEE SG') || ch.includes('SHOPEE TH') || ch.includes('SHOPEE TW') || ch.includes('SHOPEE PH') || ch.includes('SHOPEE MA') || ch.includes('SHOPEE MY') || /\b(SHOPEE_SG|SHOPEE_MY|SHOPEE_TH|SHOPEE_PH|SHOPEE_MA|SHOPEE_TW)\b/i.test(ch)) {
+        return 'Xuất Khẩu';
+    }
+    if (ch.includes('SHOPEE')) return 'Shopee';
+    if (ch.includes('TIKTOK')) return 'Tiktok';
+    if (ch.includes('CỘNG TÁC VIÊN') || ch.includes('CTV')) return 'Cộng Tác Viên';
+    if (ch.includes('BẢO HÀNH') || ch.includes('SỬA CHỮA')) return 'Bảo Hành';
+    if (ch.includes('BÁN SỈ') || ch.includes('WHOLESALE')) return 'Bán Sỉ';
+    if (ch.includes('SẢN XUẤT TỒN') || ch.includes('SẢN XUẤT BÙ KHO') || ch.includes('TỒN XƯỞNG')) return 'Sản Xuất Tồn';
+    return 'Bán Lẻ';
+};
+
 const getChannelBadge = (channel) => { 
     const ch = String(channel || '').toUpperCase().trim();
     if (ch.includes('SHOPEE')) {
@@ -1104,7 +1119,7 @@ const getChannelInlineStyle = (groupKey) => {
     let accent = '#14b8a6';
     let glow = 'rgba(20, 184, 166, 0.15)';
 
-    if (key.includes('SHOPEE VN')) {
+    if (key === 'SHOPEE' || key.includes('SHOPEE VN')) {
         accent = '#f97316';
         glow = 'rgba(249, 115, 22, 0.15)';
     } else if (key.includes('SHOPEE TH')) {
