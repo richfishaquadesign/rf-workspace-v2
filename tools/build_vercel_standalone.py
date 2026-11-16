@@ -1415,13 +1415,14 @@ deferred_script = f"""
   </script>
 """
 
-output_html = output_html.replace('</head>', bridge_script + '\n</head>')
+if '</head>' in output_html:
+    output_html = output_html.replace('</head>', bridge_script + '\n</head>', 1)
 
 target_core_marker = '<script type="text/plain" id="rf-bundle-Compiled_Core">'
 if target_core_marker in output_html:
-    output_html = output_html.replace(target_core_marker, deferred_script + '\n' + target_core_marker)
+    output_html = output_html.replace(target_core_marker, deferred_script + '\n' + target_core_marker, 1)
 else:
-    output_html = re.sub(r'(<script[^>]*id=["\']rf-bundle-Compiled_Core["\'])', deferred_script + r'\n\1', output_html)
+    output_html = re.sub(r'(<script[^>]*id=["\']rf-bundle-Compiled_Core["\'])', lambda m: deferred_script + '\n' + m.group(1), output_html, count=1)
 
 # Inject Pinned Customer Alert Dock (Bắt buộc xác nhận đã đọc khi khách gửi ghi chú từ Website)
 customer_alert_dock_html = """
@@ -1633,8 +1634,9 @@ customer_alert_dock_html = """
   </script>
 """
 
-if '</body>' in output_html:
-    output_html = output_html.replace('</body>', customer_alert_dock_html + '\n</body>')
+last_body_idx = output_html.rfind('</body>')
+if last_body_idx != -1:
+    output_html = output_html[:last_body_idx] + customer_alert_dock_html + '\n' + output_html[last_body_idx:]
 else:
     output_html += customer_alert_dock_html
 
