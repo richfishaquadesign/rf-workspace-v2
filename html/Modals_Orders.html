@@ -6656,24 +6656,35 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                 )}
 
                 {onToggleSelect && (
-                    <div 
-                        className={`absolute top-2 left-2 z-30 flex items-center gap-1.5 px-2 py-1 rounded-xl cursor-pointer transition-all shadow-md select-none ${
+                    <button
+                        type="button"
+                        className={`rf-compact-btn absolute top-2 left-2 z-30 flex items-center justify-center gap-1.5 px-2 rounded-xl cursor-pointer transition-all shadow-md select-none ${
                             isSelected 
-                                ? 'bg-emerald-500/25 border-2 border-emerald-500 text-emerald-300 shadow-emerald-950/50 scale-105' 
-                                : 'bg-[#121318]/90 border border-white/20 text-zinc-400 hover:text-white hover:border-white/40 hover:bg-white/10'
+                                ? 'border-2 border-emerald-500 text-emerald-300 shadow-emerald-950/50' 
+                                : 'border border-white/25 text-zinc-300 hover:text-white hover:border-white/40'
                         }`}
-                        style={!isSelected ? { backgroundColor: 'rgba(18,19,24,0.92)' } : undefined}
+                        style={{
+                            minWidth: '48px',
+                            minHeight: '30px',
+                            height: '30px',
+                            backgroundColor: isSelected ? 'rgba(16,185,129,0.22)' : 'rgba(18,19,24,0.95)'
+                        }}
                         onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
                         title={isSelected ? "Bấm để bỏ chọn thẻ này" : "Bấm để chọn thẻ này"}
                     >
-                        <input 
-                            type="checkbox" 
-                            checked={isSelected} 
-                            readOnly 
-                            className="w-4 h-4 accent-emerald-500 rounded cursor-pointer pointer-events-none" 
-                        />
+                        <span
+                            className="inline-flex items-center justify-center rounded border transition-colors"
+                            style={{
+                                width: '16px',
+                                height: '16px',
+                                borderColor: isSelected ? '#10b981' : 'rgba(255,255,255,0.45)',
+                                backgroundColor: isSelected ? '#10b981' : '#09090b'
+                            }}
+                        >
+                            {isSelected && <i className="fas fa-check text-[10px] text-black"></i>}
+                        </span>
                         <span className="text-[10px] font-black font-mono">{idx_num}</span>
-                    </div>
+                    </button>
                 )}
 
                 <div className="absolute top-2 right-2 flex items-center gap-0.5 z-30">

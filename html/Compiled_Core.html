@@ -16337,22 +16337,31 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
       setShowDetailModal(false);
     },
     className: "bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer"
-  }, "L\u01B0u Thay \u0110\u1ED5i")))))), document.body), onToggleSelect && /*#__PURE__*/React.createElement("div", {
-    className: `absolute top-2 left-2 z-30 flex items-center gap-1.5 px-2 py-1 rounded-xl cursor-pointer transition-all shadow-md select-none ${isSelected ? 'bg-emerald-500/25 border-2 border-emerald-500 text-emerald-300 shadow-emerald-950/50 scale-105' : 'bg-[#121318]/90 border border-white/20 text-zinc-400 hover:text-white hover:border-white/40 hover:bg-white/10'}`,
-    style: !isSelected ? {
-      backgroundColor: 'rgba(18,19,24,0.92)'
-    } : undefined,
+  }, "L\u01B0u Thay \u0110\u1ED5i")))))), document.body), onToggleSelect && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: `rf-compact-btn absolute top-2 left-2 z-30 flex items-center justify-center gap-1.5 px-2 rounded-xl cursor-pointer transition-all shadow-md select-none ${isSelected ? 'border-2 border-emerald-500 text-emerald-300 shadow-emerald-950/50' : 'border border-white/25 text-zinc-300 hover:text-white hover:border-white/40'}`,
+    style: {
+      minWidth: '48px',
+      minHeight: '30px',
+      height: '30px',
+      backgroundColor: isSelected ? 'rgba(16,185,129,0.22)' : 'rgba(18,19,24,0.95)'
+    },
     onClick: e => {
       e.stopPropagation();
       onToggleSelect();
     },
     title: isSelected ? "Bấm để bỏ chọn thẻ này" : "Bấm để chọn thẻ này"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: isSelected,
-    readOnly: true,
-    className: "w-4 h-4 accent-emerald-500 rounded cursor-pointer pointer-events-none"
-  }), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center justify-center rounded border transition-colors",
+    style: {
+      width: '16px',
+      height: '16px',
+      borderColor: isSelected ? '#10b981' : 'rgba(255,255,255,0.45)',
+      backgroundColor: isSelected ? '#10b981' : '#09090b'
+    }
+  }, isSelected && /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-check text-[10px] text-black"
+  })), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black font-mono"
   }, idx_num)), /*#__PURE__*/React.createElement("div", {
     className: "absolute top-2 right-2 flex items-center gap-0.5 z-30"
@@ -23800,12 +23809,12 @@ const RFOrderWrapper = React.memo(({
     if (onEditOrder && order) onEditOrder(order, prods);
   }, [onEditOrder, order, prods]);
   return /*#__PURE__*/React.createElement("div", {
-    className: "relative mb-6 mt-4"
+    className: "relative"
   }, /*#__PURE__*/React.createElement(OrderCardV2, _extends({
     order: order,
     prods: prods,
-    onToggleSelect: handleToggle,
-    onEditOrder: handleEdit
+    onToggleSelect: onToggleSelect ? handleToggle : undefined,
+    onEditOrder: onEditOrder ? handleEdit : undefined
   }, props)));
 });
 const OrdersTab = React.memo(function OrdersTab({

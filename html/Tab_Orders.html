@@ -1510,12 +1510,12 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
         }, [onEditOrder, order, prods]);
 
         return (
-            <div className="relative mb-6 mt-4">
+            <div className="relative">
                 <OrderCardV2 
                     order={order} 
                     prods={prods} 
-                    onToggleSelect={handleToggle}
-                    onEditOrder={handleEdit}
+                    onToggleSelect={onToggleSelect ? handleToggle : undefined}
+                    onEditOrder={onEditOrder ? handleEdit : undefined}
                     {...props} 
                 />
             </div>
