@@ -1423,6 +1423,218 @@ if target_core_marker in output_html:
 else:
     output_html = re.sub(r'(<script[^>]*id=["\']rf-bundle-Compiled_Core["\'])', deferred_script + r'\n\1', output_html)
 
+# Inject Pinned Customer Alert Dock (Bắt buộc xác nhận đã đọc khi khách gửi ghi chú từ Website)
+customer_alert_dock_html = """
+  <!-- 🔔 RF CUSTOMER ORDER ALERTS DOCK (PINNED UNTIL ACKNOWLEDGED) 🔔 -->
+  <div id="rf-customer-alert-dock" style="position:fixed; top:14px; right:14px; z-index:99999; max-width:420px; width:calc(100% - 28px); display:flex; flex-direction:column; gap:10px; pointer-events:none;"></div>
+  <script>
+    (function initCustomerAlertWatcher() {
+      var SB_URL = 'https://oxtttywpelbyitgxspfm.supabase.co';
+      var SB_KEY = 'sb_publishable_Bi-hpAsVX5nS10wE_LugRA_RF8wnu0W';
+      var dock = document.getElementById('rf-customer-alert-dock');
+      if (!dock) return;
+
+      var seenAlertIds = {};
+      var hasLoadedOnce = false;
+      var ws = null;
+      var hbTimer = null;
+
+      function playAlertBeep() {
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          var ctx = new AudioCtx();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.setValueAtTime(1046.5, ctx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.36);
+        } catch(e) {}
+      }
+
+      function renderAlerts(alerts) {
+        dock.innerHTML = '';
+        if (!Array.isArray(alerts) || alerts.length === 0) return;
+
+        var hasNew = false;
+        alerts.forEach(function(item) {
+          if (item && item.id && !seenAlertIds[item.id]) {
+            seenAlertIds[item.id] = true;
+            if (hasLoadedOnce) hasNew = true;
+          }
+
+          var card = document.createElement('div');
+          card.style.cssText = 'pointer-events:auto; background:#fff7ed; border:2px solid #ea580c; border-radius:14px; padding:14px 16px; box-shadow:0 12px 28px rgba(0,0,0,0.35); font-family:"Plus Jakarta Sans",Inter,sans-serif;';
+
+          var topRow = document.createElement('div');
+          topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;';
+
+          var badge = document.createElement('span');
+          badge.style.cssText = 'background:#ea580c; color:#ffffff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; letter-spacing:0.3px;';
+          badge.textContent = 'GHI CHÚ KHÁCH • ĐƠN ' + String(item.order_code || item.order_id || '');
+
+          var timeEl = document.createElement('span');
+          timeEl.style.cssText = 'font-size:11px; font-weight:600; color:#9a3412; white-space:nowrap;';
+          try {
+            timeEl.textContent = new Date(item.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          } catch(e) { timeEl.textContent = ''; }
+
+          topRow.appendChild(badge);
+          topRow.appendChild(timeEl);
+
+          var msgEl = document.createElement('div');
+          msgEl.style.cssText = 'font-size:14px; font-weight:700; color:#431407; margin-bottom:10px; line-height:1.45; word-break:break-word;';
+          msgEl.textContent = '"' + String(item.note_content || '') + '"';
+
+          var bottomRow = document.createElement('div');
+          bottomRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px;';
+
+          var custEl = document.createElement('span');
+          custEl.style.cssText = 'font-size:12px; color:#7c2d12; font-weight:600;';
+          custEl.textContent = 'Khách: ' + String(item.customer_name || 'Khách lẻ');
+
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.style.cssText = 'background:#15803d; color:#ffffff; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;';
+          btn.textContent = '✓ Xác nhận đã đọc';
+          btn.onclick = function() {
+            btn.disabled = true;
+            btn.textContent = 'Đang xác nhận...';
+            window.acknowledgeCustomerAlert(item.id, function() {
+              btn.disabled = false;
+              btn.textContent = '✓ Xác nhận đã đọc';
+            });
+          };
+
+          bottomRow.appendChild(custEl);
+          bottomRow.appendChild(btn);
+
+          card.appendChild(topRow);
+          card.appendChild(msgEl);
+          card.appendChild(bottomRow);
+          dock.appendChild(card);
+        });
+
+        if (hasNew) playAlertBeep();
+        hasLoadedOnce = true;
+      }
+
+      async function fetchUnreadAlerts() {
+        var pin = '';
+        try { pin = localStorage.getItem('rf_pin') || ''; } catch(e) {}
+        if (!pin) {
+          dock.innerHTML = '';
+          return;
+        }
+        try {
+          var res = await fetch(SB_URL + '/rest/v1/rpc/rf_get_unread_customer_alerts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SB_KEY,
+              'Authorization': 'Bearer ' + SB_KEY
+            },
+            body: JSON.stringify({ p_pin: pin })
+          });
+          if (res.ok) {
+            var data = await res.json();
+            if (data && data.success && Array.isArray(data.alerts)) {
+              renderAlerts(data.alerts);
+            }
+          }
+        } catch(e) {}
+      }
+
+      window.acknowledgeCustomerAlert = async function(alertId, onError) {
+        var pin = '';
+        var staffName = 'Nhân viên xưởng';
+        try {
+          pin = localStorage.getItem('rf_pin') || '';
+          staffName = localStorage.getItem('rf_user') || 'Nhân viên xưởng';
+        } catch(e) {}
+        if (!pin) return;
+        try {
+          var res = await fetch(SB_URL + '/rest/v1/rpc/rf_acknowledge_customer_alert', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SB_KEY,
+              'Authorization': 'Bearer ' + SB_KEY
+            },
+            body: JSON.stringify({
+              p_pin: pin,
+              p_alert_id: alertId,
+              p_actor: staffName
+            })
+          });
+          if (res.ok) {
+            await fetchUnreadAlerts();
+            return;
+          }
+        } catch(e) {}
+        if (typeof onError === 'function') onError();
+      };
+
+      function connectRealtime() {
+        try {
+          var wsUrl = SB_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(SB_KEY) + '&vsn=1.0.0';
+          ws = new WebSocket(wsUrl);
+          ws.onopen = function() {
+            ws.send(JSON.stringify({
+              topic: 'realtime:public:Order_Customer_Alerts',
+              event: 'phx_join',
+              payload: {
+                config: {
+                  broadcast: { self: false },
+                  presence: { key: '' },
+                  postgres_changes: [{ event: '*', schema: 'public', table: 'Order_Customer_Alerts' }]
+                }
+              },
+              ref: '1'
+            }));
+            if (hbTimer) clearInterval(hbTimer);
+            hbTimer = setInterval(function() {
+              if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+              }
+            }, 25000);
+          };
+          ws.onmessage = function(ev) {
+            try {
+              var msg = JSON.parse(ev.data);
+              if (msg && msg.event === 'postgres_changes') {
+                fetchUnreadAlerts();
+              }
+            } catch(e) {}
+          };
+          ws.onclose = function() {
+            if (hbTimer) clearInterval(hbTimer);
+            setTimeout(connectRealtime, 5000);
+          };
+        } catch(e) {}
+      }
+
+      fetchUnreadAlerts();
+      connectRealtime();
+      setInterval(fetchUnreadAlerts, 10000);
+      window.addEventListener('storage', function(ev) {
+        if (ev.key === 'rf_pin' || ev.key === 'rf_user') fetchUnreadAlerts();
+      });
+    })();
+  </script>
+"""
+
+if '</body>' in output_html:
+    output_html = output_html.replace('</body>', customer_alert_dock_html + '\n</body>')
+else:
+    output_html += customer_alert_dock_html
+
 
 # 5. Write to V2 directory as index.html
 output_file = os.path.join(v2_dir, 'index.html')
