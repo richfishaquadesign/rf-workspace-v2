@@ -1426,7 +1426,7 @@ else:
 # Inject Pinned Customer Alert Dock (Bắt buộc xác nhận đã đọc khi khách gửi ghi chú từ Website)
 customer_alert_dock_html = """
   <!-- 🔔 RF CUSTOMER ORDER ALERTS DOCK (PINNED UNTIL ACKNOWLEDGED) 🔔 -->
-  <div id="rf-customer-alert-dock" style="position:fixed; top:14px; right:14px; z-index:99999; max-width:420px; width:calc(100% - 28px); display:flex; flex-direction:column; gap:10px; pointer-events:none;"></div>
+  <div id="rf-customer-alert-dock" style="position:fixed; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); right:12px; z-index:99999; max-width:340px; width:calc(100% - 24px); max-height:36vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px; pointer-events:none;"></div>
   <script>
     (function initCustomerAlertWatcher() {
       var SB_URL = 'https://oxtttywpelbyitgxspfm.supabase.co';
@@ -1470,54 +1470,57 @@ customer_alert_dock_html = """
           }
 
           var card = document.createElement('div');
-          card.style.cssText = 'pointer-events:auto; background:#fff7ed; border:2px solid #ea580c; border-radius:14px; padding:14px 16px; box-shadow:0 12px 28px rgba(0,0,0,0.35); font-family:"Plus Jakarta Sans",Inter,sans-serif;';
+          card.style.cssText = 'pointer-events:auto; background:rgba(18,18,21,0.96); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.16); border-left:3px solid #f59e0b; border-radius:10px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,0.55); font-family:"Be Vietnam Pro","Plus Jakarta Sans",Inter,sans-serif;';
 
           var topRow = document.createElement('div');
-          topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;';
+          topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;';
 
-          var badge = document.createElement('span');
-          badge.style.cssText = 'background:#ea580c; color:#ffffff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; letter-spacing:0.3px;';
-          badge.textContent = 'GHI CHÚ KHÁCH • ĐƠN ' + String(item.order_code || item.order_id || '');
+          var metaEl = document.createElement('div');
+          metaEl.style.cssText = 'font-size:11px; color:#a1a1aa; display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
 
-          var timeEl = document.createElement('span');
-          timeEl.style.cssText = 'font-size:11px; font-weight:600; color:#9a3412; white-space:nowrap;';
+          var dotEl = document.createElement('span');
+          dotEl.style.cssText = 'color:#fbbf24; font-size:9px; flex-shrink:0;';
+          dotEl.textContent = '●';
+
+          var codeEl = document.createElement('span');
+          codeEl.style.cssText = 'color:#f4f4f5; font-weight:700;';
+          codeEl.textContent = 'Đơn ' + String(item.order_code || item.order_id || '');
+
+          var subText = String(item.customer_name || 'Khách lẻ');
           try {
-            timeEl.textContent = new Date(item.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          } catch(e) { timeEl.textContent = ''; }
+            var tStr = new Date(item.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            if (tStr) subText += ' · ' + tStr;
+          } catch(e) {}
+          var subEl = document.createElement('span');
+          subEl.style.cssText = 'overflow:hidden; text-overflow:ellipsis;';
+          subEl.textContent = '· ' + subText;
 
-          topRow.appendChild(badge);
-          topRow.appendChild(timeEl);
-
-          var msgEl = document.createElement('div');
-          msgEl.style.cssText = 'font-size:14px; font-weight:700; color:#431407; margin-bottom:10px; line-height:1.45; word-break:break-word;';
-          msgEl.textContent = '"' + String(item.note_content || '') + '"';
-
-          var bottomRow = document.createElement('div');
-          bottomRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px;';
-
-          var custEl = document.createElement('span');
-          custEl.style.cssText = 'font-size:12px; color:#7c2d12; font-weight:600;';
-          custEl.textContent = 'Khách: ' + String(item.customer_name || 'Khách lẻ');
+          metaEl.appendChild(dotEl);
+          metaEl.appendChild(codeEl);
+          metaEl.appendChild(subEl);
 
           var btn = document.createElement('button');
           btn.type = 'button';
-          btn.style.cssText = 'background:#15803d; color:#ffffff; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;';
-          btn.textContent = '✓ Xác nhận đã đọc';
+          btn.style.cssText = 'background:#f4f4f5; color:#09090b; border:none; border-radius:6px; padding:4px 9px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0;';
+          btn.textContent = '✓ Đã đọc';
           btn.onclick = function() {
             btn.disabled = true;
-            btn.textContent = 'Đang xác nhận...';
+            btn.textContent = '...';
             window.acknowledgeCustomerAlert(item.id, function() {
               btn.disabled = false;
-              btn.textContent = '✓ Xác nhận đã đọc';
+              btn.textContent = '✓ Đã đọc';
             });
           };
 
-          bottomRow.appendChild(custEl);
-          bottomRow.appendChild(btn);
+          topRow.appendChild(metaEl);
+          topRow.appendChild(btn);
+
+          var msgEl = document.createElement('div');
+          msgEl.style.cssText = 'font-size:12px; color:#e4e4e7; line-height:1.35; word-break:break-word;';
+          msgEl.textContent = '"' + String(item.note_content || '') + '"';
 
           card.appendChild(topRow);
           card.appendChild(msgEl);
-          card.appendChild(bottomRow);
           dock.appendChild(card);
         });
 
