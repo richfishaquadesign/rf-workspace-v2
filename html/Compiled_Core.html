@@ -15992,16 +15992,8 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
         }
       };
     }
-    if (isDone) {
-      return {
-        label: 'ĐÃ BÀN GIAO',
-        bg: 'bg-slate-800/80 text-emerald-400 border border-emerald-800/40',
-        icon: 'fas fa-check-circle',
-        isBadge: true
-      };
-    }
     return null;
-  }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, isDone, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
+  }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
   return /*#__PURE__*/React.createElement("div", {
     className: `bg-[#121214] rounded-xl relative overflow-hidden transition-all ${isUrgent ? 'border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse' : isReturn ? 'border border-amber-600/60' : 'border border-white/[0.08]'} p-2 hover:border-white/[0.12] hover:bg-white/[0.02] ${isSelected ? 'ring-2 ring-emerald-500 bg-emerald-500/[0.03]' : ''}`,
     style: {
@@ -16621,63 +16613,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     className: `px-5 py-2.5 rounded-xl font-black text-xs text-white transition flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 ${confirmAction.color === 'purple' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-900/40' : confirmAction.color === 'rose' ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-rose-900/40' : 'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 shadow-red-900/40'}`
   }, /*#__PURE__*/React.createElement("i", {
     className: `fas ${confirmAction.icon}`
-  }), /*#__PURE__*/React.createElement("span", null, confirmAction.confirmText))))), document.body), (isDone || isPendingHandover) && (pGoods || pBox || whPhoto) && /*#__PURE__*/React.createElement("div", {
-    className: "absolute right-2 flex gap-1.5 z-20",
-    style: {
-      top: '56px'
-    }
-  }, pGoods && /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col items-end"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: pGoods,
-    alt: "H\xE0ng h\xF3a",
-    onClick: e => {
-      e.stopPropagation();
-      if (typeof window.previewImage === 'function') {
-        window.previewImage(pGoods, 'Ảnh Hàng Hóa Trước Khi Gói', fullOrderCode);
-      } else if (typeof openSafeImageTab === 'function') {
-        openSafeImageTab(pGoods);
-      } else {
-        window.open(pGoods, '_blank');
-      }
-    },
-    className: "w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95",
-    title: "B\u1EA5m xem \u1EA3nh ph\xF3ng to: H\xE0ng H\xF3a Tr\u01B0\u1EDBc Khi G\xF3i"
-  })), pBox && /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col items-end"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: pBox,
-    alt: "\u0110\xF3ng g\xF3i",
-    onClick: e => {
-      e.stopPropagation();
-      if (typeof window.previewImage === 'function') {
-        window.previewImage(pBox, 'Ảnh Kiện Hàng Đã Gói', fullOrderCode);
-      } else if (typeof openSafeImageTab === 'function') {
-        openSafeImageTab(pBox);
-      } else {
-        window.open(pBox, '_blank');
-      }
-    },
-    className: "w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95",
-    title: "B\u1EA5m xem \u1EA3nh ph\xF3ng to: Ki\u1EC7n H\xE0ng \u0110\xE3 G\xF3i"
-  })), whPhoto && /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col items-end"
-  }, /*#__PURE__*/React.createElement("img", {
-    src: whPhoto,
-    alt: "Ch\u1EDF kho",
-    onClick: e => {
-      e.stopPropagation();
-      if (typeof window.previewImage === 'function') {
-        window.previewImage(whPhoto, 'Ảnh Bàn Giao Ra Kho', fullOrderCode);
-      } else if (typeof openSafeImageTab === 'function') {
-        openSafeImageTab(whPhoto);
-      } else {
-        window.open(whPhoto, '_blank');
-      }
-    },
-    className: "w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95",
-    title: "B\u1EA5m xem \u1EA3nh ph\xF3ng to: B\xE0n Giao Ra Kho"
-  }))), showHistoryModal && ReactDOM.createPortal( /*#__PURE__*/React.createElement(OrderHistoryModal, {
+  }), /*#__PURE__*/React.createElement("span", null, confirmAction.confirmText))))), document.body), showHistoryModal && ReactDOM.createPortal( /*#__PURE__*/React.createElement(OrderHistoryModal, {
     order: _order,
     onClose: () => setShowHistoryModal(false)
   }), document.body), showGHNModal && ReactDOM.createPortal( /*#__PURE__*/React.createElement(GHNPushModal, {
@@ -16694,7 +16630,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       paddingLeft: onToggleSelect ? '56px' : '0px',
-      paddingRight: thumbnailCount === 3 ? '132px' : '118px'
+      paddingRight: '118px'
     }
   }, isUrgent && /*#__PURE__*/React.createElement("div", {
     onClick: handleToggleUrgent,
@@ -16778,11 +16714,43 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     className: "font-bold text-[10.5px] text-[#aaa] truncate flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-user text-[9px] text-[#555]"
-  }), " ", _order.customer)), chameleonConfig && (chameleonConfig.isBadge ? /*#__PURE__*/React.createElement("span", {
-    className: `h-7 px-2.5 rounded-lg text-[11px] font-black flex items-center gap-1 ${chameleonConfig.bg}`
-  }, /*#__PURE__*/React.createElement("i", {
-    className: `${chameleonConfig.icon} text-[11px]`
-  }), /*#__PURE__*/React.createElement("span", null, chameleonConfig.label)) : chameleonConfig.isFileUpload ? /*#__PURE__*/React.createElement("label", {
+  }), " ", _order.customer)), ((isDone || isPendingHandover) && (pGoods || pBox || whPhoto) || chameleonConfig) && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 shrink-0"
+  }, (isDone || isPendingHandover) && [pGoods && {
+    url: pGoods,
+    alt: 'Hàng hóa',
+    title: 'Ảnh Hàng Hóa Trước Khi Gói'
+  }, pBox && {
+    url: pBox,
+    alt: 'Đóng gói',
+    title: 'Ảnh Kiện Hàng Đã Gói'
+  }, whPhoto && {
+    url: whPhoto,
+    alt: 'Chở kho',
+    title: 'Ảnh Bàn Giao Ra Kho'
+  }].filter(Boolean).map((ph, phIdx) => /*#__PURE__*/React.createElement("img", {
+    key: phIdx,
+    src: ph.url,
+    alt: ph.alt,
+    onClick: e => {
+      e.stopPropagation();
+      if (typeof window.previewImage === 'function') {
+        window.previewImage(ph.url, ph.title, fullOrderCode);
+      } else if (typeof openSafeImageTab === 'function') {
+        openSafeImageTab(ph.url);
+      } else {
+        window.open(ph.url, '_blank');
+      }
+    },
+    className: "rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95",
+    style: {
+      width: '32px',
+      height: '32px',
+      objectFit: 'cover',
+      flexShrink: 0
+    },
+    title: `Bấm xem ảnh phóng to: ${ph.title}`
+  })), chameleonConfig && (chameleonConfig.isFileUpload ? /*#__PURE__*/React.createElement("label", {
     onClick: e => e.stopPropagation(),
     className: `h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`
   }, /*#__PURE__*/React.createElement("i", {
@@ -16806,7 +16774,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     className: `h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`
   }, /*#__PURE__*/React.createElement("i", {
     className: `${chameleonConfig.icon} text-[11px]`
-  }), /*#__PURE__*/React.createElement("span", null, chameleonConfig.label)))), parsedNote.text && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, chameleonConfig.label))))), parsedNote.text && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-[#93c5fd] font-medium mt-1.5 leading-tight italic flex items-start gap-1.5 border-l-2 border-[#3b82f6]/50 pl-2 py-0.5"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-comment-alt mt-0.5 opacity-70 shrink-0 text-[10px]"

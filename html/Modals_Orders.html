@@ -6320,16 +6320,8 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     }
                 };
             }
-            if (isDone) {
-                return {
-                    label: 'ĐÃ BÀN GIAO',
-                    bg: 'bg-slate-800/80 text-emerald-400 border border-emerald-800/40',
-                    icon: 'fas fa-check-circle',
-                    isBadge: true
-                };
-            }
             return null;
-        }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, isDone, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
+        }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
 
         return (
             <div
@@ -7010,71 +7002,6 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     document.body
                 )}
 
-                {(isDone || isPendingHandover) && (pGoods || pBox || whPhoto) && (
-                    <div className="absolute right-2 flex gap-1.5 z-20" style={{ top: '56px' }}>
-                        {pGoods && (
-                            <div className="flex flex-col items-end">
-                                <img 
-                                    src={pGoods} 
-                                    alt="Hàng hóa" 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof window.previewImage === 'function') {
-                                            window.previewImage(pGoods, 'Ảnh Hàng Hóa Trước Khi Gói', fullOrderCode);
-                                        } else if (typeof openSafeImageTab === 'function') {
-                                            openSafeImageTab(pGoods);
-                                        } else {
-                                            window.open(pGoods, '_blank');
-                                        }
-                                    }} 
-                                    className="w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95" 
-                                    title="Bấm xem ảnh phóng to: Hàng Hóa Trước Khi Gói" 
-                                />
-                            </div>
-                        )}
-                        {pBox && (
-                            <div className="flex flex-col items-end">
-                                <img 
-                                    src={pBox} 
-                                    alt="Đóng gói" 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof window.previewImage === 'function') {
-                                            window.previewImage(pBox, 'Ảnh Kiện Hàng Đã Gói', fullOrderCode);
-                                        } else if (typeof openSafeImageTab === 'function') {
-                                            openSafeImageTab(pBox);
-                                        } else {
-                                            window.open(pBox, '_blank');
-                                        }
-                                    }} 
-                                    className="w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95" 
-                                    title="Bấm xem ảnh phóng to: Kiện Hàng Đã Gói" 
-                                />
-                            </div>
-                        )}
-                        {whPhoto && (
-                            <div className="flex flex-col items-end">
-                                <img 
-                                    src={whPhoto} 
-                                    alt="Chở kho" 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof window.previewImage === 'function') {
-                                            window.previewImage(whPhoto, 'Ảnh Bàn Giao Ra Kho', fullOrderCode);
-                                        } else if (typeof openSafeImageTab === 'function') {
-                                            openSafeImageTab(whPhoto);
-                                        } else {
-                                            window.open(whPhoto, '_blank');
-                                        }
-                                    }} 
-                                    className="w-10 h-10 object-cover rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95" 
-                                    title="Bấm xem ảnh phóng to: Bàn Giao Ra Kho" 
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
-
                 {showHistoryModal && ReactDOM.createPortal(
                     <OrderHistoryModal order={_order} onClose={() => setShowHistoryModal(false)} />,
                     document.body
@@ -7095,7 +7022,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     <div
                         style={{
                             paddingLeft: onToggleSelect ? '56px' : '0px',
-                            paddingRight: thumbnailCount === 3 ? '132px' : '118px'
+                            paddingRight: '118px'
                         }}
                     >
                         {isUrgent && (
@@ -7176,39 +7103,62 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                                 <i className="fas fa-user text-[9px] text-[#555]"></i> {_order.customer}
                             </span>
                         </div>
-                        {chameleonConfig && (
-                            chameleonConfig.isBadge ? (
-                                <span className={`h-7 px-2.5 rounded-lg text-[11px] font-black flex items-center gap-1 ${chameleonConfig.bg}`}>
-                                    <i className={`${chameleonConfig.icon} text-[11px]`}></i>
-                                    <span>{chameleonConfig.label}</span>
-                                </span>
-                            ) : chameleonConfig.isFileUpload ? (
-                                <label 
-                                    onClick={e => e.stopPropagation()} 
-                                    className={`h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`}
-                                >
-                                    <i className={`${chameleonConfig.icon} text-[11px]`}></i>
-                                    <span>{chameleonConfig.label}</span>
-                                    <input 
-                                        type="file" 
-                                        accept="image/png, image/jpeg, image/jpg, image/webp" 
-                                        capture="environment" 
-                                        disabled={processing}
-                                        className="hidden" 
-                                        onChange={chameleonConfig.onFileChange} 
-                                        onClick={e => { e.stopPropagation(); try { e.target.value = ''; } catch(_) {} }} 
+                        {((isDone || isPendingHandover) && (pGoods || pBox || whPhoto) || chameleonConfig) && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {(isDone || isPendingHandover) && [
+                                    pGoods && { url: pGoods, alt: 'Hàng hóa', title: 'Ảnh Hàng Hóa Trước Khi Gói' },
+                                    pBox && { url: pBox, alt: 'Đóng gói', title: 'Ảnh Kiện Hàng Đã Gói' },
+                                    whPhoto && { url: whPhoto, alt: 'Chở kho', title: 'Ảnh Bàn Giao Ra Kho' }
+                                ].filter(Boolean).map((ph, phIdx) => (
+                                    <img
+                                        key={phIdx}
+                                        src={ph.url}
+                                        alt={ph.alt}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (typeof window.previewImage === 'function') {
+                                                window.previewImage(ph.url, ph.title, fullOrderCode);
+                                            } else if (typeof openSafeImageTab === 'function') {
+                                                openSafeImageTab(ph.url);
+                                            } else {
+                                                window.open(ph.url, '_blank');
+                                            }
+                                        }}
+                                        className="rounded-lg border border-[#444] cursor-pointer hover:opacity-80 transition-opacity shadow-sm active:scale-95"
+                                        style={{ width: '32px', height: '32px', objectFit: 'cover', flexShrink: 0 }}
+                                        title={`Bấm xem ảnh phóng to: ${ph.title}`}
                                     />
-                                </label>
-                            ) : (
-                                <button
-                                    onClick={chameleonConfig.onClick}
-                                    disabled={processing}
-                                    className={`h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`}
-                                >
-                                    <i className={`${chameleonConfig.icon} text-[11px]`}></i>
-                                    <span>{chameleonConfig.label}</span>
-                                </button>
-                            )
+                                ))}
+                                {chameleonConfig && (
+                                    chameleonConfig.isFileUpload ? (
+                                        <label
+                                            onClick={e => e.stopPropagation()}
+                                            className={`h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`}
+                                        >
+                                            <i className={`${chameleonConfig.icon} text-[11px]`}></i>
+                                            <span>{chameleonConfig.label}</span>
+                                            <input
+                                                type="file"
+                                                accept="image/png, image/jpeg, image/jpg, image/webp"
+                                                capture="environment"
+                                                disabled={processing}
+                                                className="hidden"
+                                                onChange={chameleonConfig.onFileChange}
+                                                onClick={e => { e.stopPropagation(); try { e.target.value = ''; } catch(_) {} }}
+                                            />
+                                        </label>
+                                    ) : (
+                                        <button
+                                            onClick={chameleonConfig.onClick}
+                                            disabled={processing}
+                                            className={`h-7 px-3 rounded-lg text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer shrink-0 ${chameleonConfig.bg}`}
+                                        >
+                                            <i className={`${chameleonConfig.icon} text-[11px]`}></i>
+                                            <span>{chameleonConfig.label}</span>
+                                        </button>
+                                    )
+                                )}
+                            </div>
                         )}
                     </div>
 
