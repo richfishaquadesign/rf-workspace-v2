@@ -16003,7 +16003,13 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     return null;
   }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, isDone, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
   return /*#__PURE__*/React.createElement("div", {
-    className: `bg-[#121214] rounded-2xl relative overflow-hidden transition-all ${isUrgent ? 'border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse' : isReturn ? 'border border-amber-600/60' : 'border border-white/[0.08]'} p-3 hover:border-white/[0.12] hover:bg-white/[0.02] ${isSelected ? 'ring-2 ring-emerald-500 bg-emerald-500/[0.03]' : ''}`
+    className: `bg-[#121214] rounded-xl relative overflow-hidden transition-all ${isUrgent ? 'border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse' : isReturn ? 'border border-amber-600/60' : 'border border-white/[0.08]'} p-2.5 hover:border-white/[0.12] hover:bg-white/[0.02] ${isSelected ? 'ring-2 ring-emerald-500 bg-emerald-500/[0.03]' : ''}`,
+    style: {
+      width: '100%',
+      maxWidth: '350px',
+      marginLeft: 'auto',
+      marginRight: 'auto'
+    }
   }, sosTarget && ReactDOM.createPortal( /*#__PURE__*/React.createElement(ReturnSosModal, {
     sosTarget: sosTarget,
     erpProducts: erpProducts,
@@ -16359,12 +16365,11 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black font-mono"
   }, idx_num)), /*#__PURE__*/React.createElement("div", {
-    className: "absolute top-2 right-2 flex items-center gap-1 z-30"
+    className: "absolute top-2 right-2 flex items-center gap-0.5 z-30"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 rounded-xl border border-white/15 backdrop-blur-md shadow-lg",
+    className: "flex items-center gap-0.5",
     style: {
-      backgroundColor: 'rgba(19, 20, 26, 0.94)',
-      padding: '4px'
+      padding: '2px'
     }
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -16801,7 +16806,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-user text-[10px] text-[#555]"
   }), " ", _order.customer), parsedNote.text && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-[#60a5fa] font-medium mt-1 leading-tight italic flex items-start gap-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 p-1.5 rounded-md"
+    className: "text-[10px] text-[#93c5fd] font-medium mt-1.5 leading-tight italic flex items-start gap-1.5 border-l-2 border-[#3b82f6]/50 pl-2 py-0.5"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-comment-alt mt-0.5 opacity-70 shrink-0 text-[10px]"
   }), /*#__PURE__*/React.createElement("span", {
@@ -16931,9 +16936,9 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-cogs text-sky-400"
     }), " H\xE0ng S\u1EA3n Xu\u1EA5t"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 shrink-0 pl-2"
+      className: "flex items-center gap-1.5 shrink-0 pl-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-zinc-200 bg-white/[0.06] border border-white/[0.1] px-2.5 py-1 rounded-lg text-[11.5px] font-mono font-bold"
+      className: "text-zinc-200 bg-white/[0.06] px-2 py-0.5 rounded-md text-[11px] font-mono font-bold"
     }, "x", a.quantity || 1, getUnit(a.name)), (isReadyPack || isPendingHandover || isDone) && /*#__PURE__*/React.createElement("i", {
       className: "fas fa-check-circle text-emerald-400 text-[12px]"
     })));
@@ -25400,34 +25405,40 @@ const OrdersTab = React.memo(function OrdersTab({
     className: "hidden",
     onChange: handleReconciliationImport
   }), /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#121214] border border-white/[0.08] rounded-2xl p-2.5 sm:p-3 space-y-2.5 relative z-30 shadow-lg"
+    className: "space-y-2 relative z-30"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 relative"
+    className: "flex-1 relative min-w-0"
   }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"
+    className: "fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: searchCode,
     onChange: e => setSearchCode(e.target.value),
-    placeholder: "T\xECm m\xE3 \u0111\u01A1n, m\xE3 v\u1EADn \u0111\u01A1n, kh\xE1ch h\xE0ng, s\u1ED1 \u0111i\u1EC7n tho\u1EA1i...",
+    placeholder: "T\xECm m\xE3 \u0111\u01A1n, MV\u0110, kh\xE1ch, S\u0110T...",
     style: {
-      paddingLeft: '2.5rem',
-      paddingRight: searchCode ? '2.25rem' : '0.875rem'
+      paddingLeft: '2.2rem',
+      paddingRight: searchCode ? '2rem' : '0.75rem',
+      height: '38px',
+      minHeight: '38px'
     },
-    className: "w-full h-10 pl-10 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
+    className: "rf-compact-input w-full bg-[#141416] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
   }), searchCode && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSearchCode(''),
-    className: "absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center text-xs cursor-pointer border-0 bg-transparent",
+    className: "rf-compact-btn absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center text-xs cursor-pointer border-0 bg-transparent",
     title: "X\xF3a t\xECm ki\u1EBFm"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-times"
   }))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setIsFilterDrawerOpen(true),
-    className: `h-10 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${activeFilterCount > 0 ? 'bg-white text-zinc-950 font-bold border-white shadow-sm' : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'}`,
+    style: {
+      height: '38px',
+      minHeight: '38px'
+    },
+    className: `rf-compact-btn px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${activeFilterCount > 0 ? 'bg-white text-zinc-950 font-bold border-white' : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'}`,
     title: "M\u1EDF b\u1ED9 l\u1ECDc n\xE2ng cao"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-sliders text-xs"
@@ -25436,9 +25447,15 @@ const OrdersTab = React.memo(function OrdersTab({
   }, "B\u1ED9 L\u1ECDc"), activeFilterCount > 0 && /*#__PURE__*/React.createElement("span", {
     className: "w-4 h-4 rounded-full bg-zinc-950 text-white text-[10px] font-mono flex items-center justify-center font-bold"
   }, activeFilterCount))), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-white/[0.04]"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 shrink-0"
+    className: "no-scrollbar",
+    style: {
+      display: 'flex',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '6px',
+      overflowX: 'auto'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
   }, /*#__PURE__*/React.createElement("select", {
@@ -25447,7 +25464,13 @@ const OrdersTab = React.memo(function OrdersTab({
       setFilterTime(e.target.value);
       if (e.target.value !== 'Chọn Tháng') setCustomMonth('');
     },
-    className: "h-8.5 px-2.5 bg-[#18181b] border border-white/[0.08] hover:border-white/[0.15] rounded-xl text-xs font-semibold text-zinc-300 outline-none cursor-pointer transition-colors"
+    style: {
+      height: '32px',
+      minHeight: '32px',
+      fontSize: '11.5px',
+      padding: '0 6px'
+    },
+    className: "rf-compact-select bg-[#141416] border border-white/[0.08] hover:border-white/[0.15] rounded-lg font-semibold text-zinc-200 outline-none cursor-pointer transition-colors shrink-0"
   }, /*#__PURE__*/React.createElement("option", {
     value: "Th\xE1ng N\xE0y"
   }, "Th\xE1ng N\xE0y"), /*#__PURE__*/React.createElement("option", {
@@ -25460,29 +25483,43 @@ const OrdersTab = React.memo(function OrdersTab({
     type: "month",
     value: customMonth,
     onChange: e => setCustomMonth(e.target.value),
-    className: "h-8.5 px-2 bg-[#18181b] border border-white/[0.08] rounded-xl text-xs font-semibold text-zinc-300 outline-none"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center bg-[#18181b] p-0.5 rounded-xl border border-white/[0.08] shrink-0"
+    style: {
+      height: '32px',
+      minHeight: '32px',
+      fontSize: '11px',
+      padding: '0 4px'
+    },
+    className: "rf-compact-input bg-[#141416] border border-white/[0.08] rounded-lg font-semibold text-zinc-300 outline-none shrink-0"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-0.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setViewMode('TABLE'),
-    className: `h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border-0 ${viewMode === 'TABLE' ? 'bg-[#27272a] text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`,
-    title: "Ch\u1EBF \u0111\u1ED9 b\u1EA3ng n\xE9n High-Density"
+    style: {
+      height: '32px',
+      minHeight: '32px'
+    },
+    className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border-0 ${viewMode === 'TABLE' ? 'bg-[#27272a] text-white font-bold' : 'bg-transparent text-zinc-500 hover:text-zinc-200'}`,
+    title: "Ch\u1EBF \u0111\u1ED9 b\u1EA3ng n\xE9n"
   }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-table-list text-[10px]"
+    className: "fas fa-table-list text-[11px]"
   }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, "B\u1EA3ng")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setViewMode('CARDS'),
-    className: `h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border-0 ${viewMode === 'CARDS' ? 'bg-[#27272a] text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`,
-    title: "Ch\u1EBF \u0111\u1ED9 th\u1EBB gom theo k\xEAnh"
+    style: {
+      height: '32px',
+      minHeight: '32px'
+    },
+    className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border-0 ${viewMode === 'CARDS' ? 'bg-[#27272a] text-white font-bold' : 'bg-transparent text-zinc-500 hover:text-zinc-200'}`,
+    title: "Ch\u1EBF \u0111\u1ED9 th\u1EBB k\xEAnh"
   }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-grip text-[10px]"
+    className: "fas fa-grip text-[11px]"
   }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, "Th\u1EBB")))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 shrink-0 ml-auto"
+    className: "flex items-center gap-1 shrink-0"
   }, (!isCTV || isAdmin || isBossRole) && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
@@ -25493,14 +25530,22 @@ const OrdersTab = React.memo(function OrdersTab({
         setIsSelectMode(true);
       }
     },
-    className: `h-8.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${isSelectMode || selectedIds.length > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold' : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'}`,
+    style: {
+      height: '32px',
+      minHeight: '32px'
+    },
+    className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${isSelectMode || selectedIds.length > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold' : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'}`,
     title: isSelectMode ? "Thoát chế độ chọn đơn" : "Bật chế độ chọn nhiều đơn"
   }, /*#__PURE__*/React.createElement("i", {
-    className: `fas ${isSelectMode || selectedIds.length > 0 ? 'fa-check-double' : 'fa-check-square'} text-[11px]`
+    className: `fas ${isSelectMode || selectedIds.length > 0 ? 'fa-check-double' : 'fa-check-square'} text-[10px]`
   }), /*#__PURE__*/React.createElement("span", null, isSelectMode || selectedIds.length > 0 ? `Xong${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}` : 'Chọn')), hasPerm('ORDER_CREATE') && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setAddingMode(true),
-    className: "h-8.5 px-3 bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer border-0",
+    style: {
+      height: '32px',
+      minHeight: '32px'
+    },
+    className: "rf-compact-btn px-2.5 bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-[11px] rounded-lg flex items-center gap-1 active:scale-95 transition-all cursor-pointer border-0 whitespace-nowrap",
     title: "T\u1EA1o \u0111\u01A1n h\xE0ng m\u1EDBi"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-plus text-[10px]"
@@ -25509,15 +25554,17 @@ const OrdersTab = React.memo(function OrdersTab({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setIsActionsMenuOpen(prev => !prev),
-    className: `h-8.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${isActionsMenuOpen ? 'bg-zinc-800 text-white border-zinc-600' : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'}`,
+    style: {
+      height: '32px',
+      minHeight: '32px'
+    },
+    className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${isActionsMenuOpen ? 'bg-zinc-800 text-white border-zinc-600' : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'}`,
     title: "C\xE1c thao t\xE1c m\u1EDF r\u1ED9ng"
   }, /*#__PURE__*/React.createElement("i", {
-    className: "fas fa-ellipsis-vertical text-xs"
+    className: "fas fa-ellipsis-vertical text-[11px]"
   }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
-  }, "Thao T\xE1c"), /*#__PURE__*/React.createElement("i", {
-    className: `fas fa-chevron-${isActionsMenuOpen ? 'up' : 'down'} text-[9px] text-zinc-500`
-  })), isActionsMenuOpen && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "Thao T\xE1c")), isActionsMenuOpen && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-40",
     onClick: () => setIsActionsMenuOpen(false)
   }), /*#__PURE__*/React.createElement("div", {
@@ -25788,9 +25835,13 @@ const OrdersTab = React.memo(function OrdersTab({
       key: item.id,
       type: "button",
       onClick: () => setFilterStatus(item.id),
-      className: `h-8 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer border ${isActive ? 'bg-zinc-100 text-zinc-950 font-bold border-white shadow-sm' : 'bg-[#121215] hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'}`
+      style: {
+        height: '30px',
+        minHeight: '30px'
+      },
+      className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer border whitespace-nowrap ${isActive ? 'bg-zinc-100 text-zinc-950 font-bold border-white' : 'bg-transparent hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'}`
     }, /*#__PURE__*/React.createElement("span", null, item.label), /*#__PURE__*/React.createElement("span", {
-      className: `px-1.5 py-0.5 rounded-md text-[10px] font-mono min-w-[18px] text-center ${isActive ? 'bg-black/15 text-zinc-950 font-bold' : 'bg-white/10 text-zinc-300'}`
+      className: `px-1 rounded text-[10px] font-mono text-center ${isActive ? 'bg-black/15 text-zinc-950 font-bold' : 'bg-white/10 text-zinc-400'}`
     }, item.count));
   }), /*#__PURE__*/React.createElement("div", {
     className: "relative shrink-0"
@@ -25808,7 +25859,11 @@ const OrdersTab = React.memo(function OrdersTab({
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setIsStatusMoreOpen(prev => !prev),
-      className: `h-8 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${isSecondaryActive ? 'bg-zinc-100 text-zinc-950 font-bold border-white shadow-sm' : 'bg-[#141416] hover:bg-[#1f1f23] text-zinc-400 hover:text-zinc-200 border-white/[0.06]'}`,
+      style: {
+        height: '30px',
+        minHeight: '30px'
+      },
+      className: `rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${isSecondaryActive ? 'bg-zinc-100 text-zinc-950 font-bold border-white' : 'bg-transparent hover:bg-white/10 text-zinc-400 hover:text-zinc-200 border-white/10'}`,
       title: "C\xE1c tr\u1EA1ng th\xE1i kh\xE1c"
     }, /*#__PURE__*/React.createElement("span", null, activeSecondaryLabel || 'Khác'), /*#__PURE__*/React.createElement("i", {
       className: "fas fa-chevron-down text-[9px] text-zinc-500"
@@ -26371,9 +26426,9 @@ const OrdersTab = React.memo(function OrdersTab({
       const isCollapsed = collapsedGroups[groupKey] === true;
       return /*#__PURE__*/React.createElement("div", {
         key: `order_group_${groupKey}`,
-        className: "space-y-3"
+        className: "space-y-2.5"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full h-10 px-3.5 my-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#151517] border border-white/[0.08] hover:border-white/[0.12] transition-colors select-none font-semibold"
+        className: "w-full py-1.5 px-1 my-1 flex items-center justify-between gap-2 border-b border-white/[0.08] select-none font-semibold"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-xs font-bold text-zinc-200 flex items-center gap-2 truncate cursor-pointer hover:text-white transition-colors",
         onClick: () => setCollapsedGroups(prev => ({
@@ -26420,7 +26475,7 @@ const OrdersTab = React.memo(function OrdersTab({
       }, /*#__PURE__*/React.createElement("i", {
         className: `fas fa-chevron-${isCollapsed ? 'down' : 'up'} text-xs`
       })))), !isCollapsed && /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3"
+        className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5"
       }, groupOrders.map(({
         order: o,
         originalIdx

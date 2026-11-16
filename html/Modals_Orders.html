@@ -6332,13 +6332,16 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
         }, [isReturn, isReadyPack, isPacking, isPackOwner, isPendingHandover, isDone, _order.isCarriedToWH, processing, effectiveProds, getProducerOrigin, isMaxPackingReached]);
 
         return (
-            <div className={`bg-[#121214] rounded-2xl relative overflow-hidden transition-all ${
-                isUrgent 
-                    ? 'border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse' 
-                    : isReturn 
-                    ? 'border border-amber-600/60' 
-                    : 'border border-white/[0.08]'
-            } p-3 hover:border-white/[0.12] hover:bg-white/[0.02] ${isSelected ? 'ring-2 ring-emerald-500 bg-emerald-500/[0.03]' : ''}`}>
+            <div
+                className={`bg-[#121214] rounded-xl relative overflow-hidden transition-all ${
+                    isUrgent 
+                        ? 'border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse' 
+                        : isReturn 
+                        ? 'border border-amber-600/60' 
+                        : 'border border-white/[0.08]'
+                } p-2.5 hover:border-white/[0.12] hover:bg-white/[0.02] ${isSelected ? 'ring-2 ring-emerald-500 bg-emerald-500/[0.03]' : ''}`}
+                style={{ width: '100%', maxWidth: '350px', marginLeft: 'auto', marginRight: 'auto' }}
+            >
                 {sosTarget && ReactDOM.createPortal(
                     <ReturnSosModal sosTarget={sosTarget} erpProducts={erpProducts} order={_order} packRecord={packRecord} onClose={() => setSosTarget(null)} pushDeltas={pushDeltas} triggerToast={triggerToast} setOptimisticOrder={setOptimisticOrder} prods={prods} accessories={accessories} />,
                     document.body
@@ -6681,10 +6684,10 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                     </div>
                 )}
 
-                <div className="absolute top-2 right-2 flex items-center gap-1 z-30">
+                <div className="absolute top-2 right-2 flex items-center gap-0.5 z-30">
                     <div
-                        className="flex items-center gap-1 rounded-xl border border-white/15 backdrop-blur-md shadow-lg"
-                        style={{ backgroundColor: 'rgba(19, 20, 26, 0.94)', padding: '4px' }}
+                        className="flex items-center gap-0.5"
+                        style={{ padding: '2px' }}
                     >
                         {/* 1. NÚT IN HÓA ĐƠN / BILL 📄 */}
                         <button
@@ -7210,7 +7213,7 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
 
                     {/* GHI CHÚ ĐƠN HÀNG (DƯỚI TÊN KHÁCH) */}
                     {parsedNote.text && (
-                        <div className="text-[10px] text-[#60a5fa] font-medium mt-1 leading-tight italic flex items-start gap-1.5 bg-[#2563eb]/10 border border-[#2563eb]/20 p-1.5 rounded-md">
+                        <div className="text-[10px] text-[#93c5fd] font-medium mt-1.5 leading-tight italic flex items-start gap-1.5 border-l-2 border-[#3b82f6]/50 pl-2 py-0.5">
                             <i className="fas fa-comment-alt mt-0.5 opacity-70 shrink-0 text-[10px]"></i>
                             <span className="whitespace-pre-wrap">{parsedNote.text}</span>
                         </div>
@@ -7294,8 +7297,8 @@ Số tiền đề nghị bồi thường: [Cần xác minh]
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 shrink-0 pl-2">
-                                                <span className="text-zinc-200 bg-white/[0.06] border border-white/[0.1] px-2.5 py-1 rounded-lg text-[11.5px] font-mono font-bold">x{a.quantity || 1}{getUnit(a.name)}</span>
+                                            <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                                                <span className="text-zinc-200 bg-white/[0.06] px-2 py-0.5 rounded-md text-[11px] font-mono font-bold">x{a.quantity || 1}{getUnit(a.name)}</span>
 
                                                 {(isReadyPack || isPendingHandover || isDone) && (
                                                     <i className="fas fa-check-circle text-emerald-400 text-[12px]"></i>

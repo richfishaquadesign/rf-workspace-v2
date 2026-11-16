@@ -3093,26 +3093,26 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                 <input type="file" accept=".xlsx, .xls" ref={reconciliationInputRef} className="hidden" onChange={handleReconciliationImport} />
 
                 {/* ======================================================== */}
-                {/* 02. ENTERPRISE ORDERS COMMAND BAR                        */}
+                {/* 02. ENTERPRISE ORDERS COMMAND BAR (FLAT, NO NESTED BOX) */}
                 {/* ======================================================== */}
-                <div className="bg-[#121214] border border-white/[0.08] rounded-2xl p-2.5 sm:p-3 space-y-2.5 relative z-30 shadow-lg">
+                <div className="space-y-2 relative z-30">
                     {/* HÀNG 1: SEARCH BAR + NÚT BỘ LỌC NÂNG CAO */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 relative">
-                            <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"></i>
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex-1 relative min-w-0">
+                            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none"></i>
                             <input
                                 type="text"
                                 value={searchCode}
                                 onChange={e => setSearchCode(e.target.value)}
-                                placeholder="Tìm mã đơn, mã vận đơn, khách hàng, số điện thoại..."
-                                style={{ paddingLeft: '2.5rem', paddingRight: searchCode ? '2.25rem' : '0.875rem' }}
-                                className="w-full h-10 pl-10 pr-9 bg-[#18181b] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
+                                placeholder="Tìm mã đơn, MVĐ, khách, SĐT..."
+                                style={{ paddingLeft: '2.2rem', paddingRight: searchCode ? '2rem' : '0.75rem', height: '38px', minHeight: '38px' }}
+                                className="rf-compact-input w-full bg-[#141416] focus:bg-black border border-white/[0.08] focus:border-zinc-500 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none transition-all"
                             />
                             {searchCode && (
                                 <button
                                     type="button"
                                     onClick={() => setSearchCode('')}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center text-xs cursor-pointer border-0 bg-transparent"
+                                    className="rf-compact-btn absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center text-xs cursor-pointer border-0 bg-transparent"
                                     title="Xóa tìm kiếm"
                                 >
                                     <i className="fas fa-times"></i>
@@ -3124,10 +3124,11 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                         <button
                             type="button"
                             onClick={() => setIsFilterDrawerOpen(true)}
-                            className={`h-10 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${
+                            style={{ height: '38px', minHeight: '38px' }}
+                            className={`rf-compact-btn px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${
                                 activeFilterCount > 0
-                                    ? 'bg-white text-zinc-950 font-bold border-white shadow-sm'
-                                    : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'
+                                    ? 'bg-white text-zinc-950 font-bold border-white'
+                                    : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'
                             }`}
                             title="Mở bộ lọc nâng cao"
                         >
@@ -3141,61 +3142,65 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                         </button>
                     </div>
 
-                    {/* HÀNG 2: THỜI GIAN + VIEW SWITCH + TẠO ĐƠN + MENU THAO TÁC */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-white/[0.04]">
+                    {/* HÀNG 2: THỜI GIAN + VIEW SWITCH + TẠO ĐƠN + THAO TÁC (GỌN 1 DÒNG DUY NHẤT) */}
+                    <div
+                        className="no-scrollbar"
+                        style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: '6px', overflowX: 'auto' }}
+                    >
                         {/* Nhóm trái: Thời gian + View mode */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Bộ lọc thời gian */}
-                            <div className="flex items-center gap-1 shrink-0">
-                                <select
-                                    value={filterTime}
-                                    onChange={e => { setFilterTime(e.target.value); if (e.target.value !== 'Chọn Tháng') setCustomMonth(''); }}
-                                    className="h-8.5 px-2.5 bg-[#18181b] border border-white/[0.08] hover:border-white/[0.15] rounded-xl text-xs font-semibold text-zinc-300 outline-none cursor-pointer transition-colors"
-                                >
-                                    <option value="Tháng Này">Tháng Này</option>
-                                    <option value="Tháng Trước">Tháng Trước</option>
-                                    <option value="Chọn Tháng">Chọn Tháng</option>
-                                    <option value="Tất Cả">Tất Cả</option>
-                                </select>
-                                {filterTime === 'Chọn Tháng' && (
-                                    <input
-                                        type="month"
-                                        value={customMonth}
-                                        onChange={e => setCustomMonth(e.target.value)}
-                                        className="h-8.5 px-2 bg-[#18181b] border border-white/[0.08] rounded-xl text-xs font-semibold text-zinc-300 outline-none"
-                                    />
-                                )}
-                            </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                            <select
+                                value={filterTime}
+                                onChange={e => { setFilterTime(e.target.value); if (e.target.value !== 'Chọn Tháng') setCustomMonth(''); }}
+                                style={{ height: '32px', minHeight: '32px', fontSize: '11.5px', padding: '0 6px' }}
+                                className="rf-compact-select bg-[#141416] border border-white/[0.08] hover:border-white/[0.15] rounded-lg font-semibold text-zinc-200 outline-none cursor-pointer transition-colors shrink-0"
+                            >
+                                <option value="Tháng Này">Tháng Này</option>
+                                <option value="Tháng Trước">Tháng Trước</option>
+                                <option value="Chọn Tháng">Chọn Tháng</option>
+                                <option value="Tất Cả">Tất Cả</option>
+                            </select>
+                            {filterTime === 'Chọn Tháng' && (
+                                <input
+                                    type="month"
+                                    value={customMonth}
+                                    onChange={e => setCustomMonth(e.target.value)}
+                                    style={{ height: '32px', minHeight: '32px', fontSize: '11px', padding: '0 4px' }}
+                                    className="rf-compact-input bg-[#141416] border border-white/[0.08] rounded-lg font-semibold text-zinc-300 outline-none shrink-0"
+                                />
+                            )}
 
-                            {/* Chuyển đổi View Mode: Bảng nén vs Thẻ kênh */}
-                            <div className="flex items-center bg-[#18181b] p-0.5 rounded-xl border border-white/[0.08] shrink-0">
+                            {/* Chuyển đổi View Mode gọn không khung lồng */}
+                            <div className="flex items-center gap-0.5 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('TABLE')}
-                                    className={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border-0 ${
-                                        viewMode === 'TABLE' ? 'bg-[#27272a] text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'
+                                    style={{ height: '32px', minHeight: '32px' }}
+                                    className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border-0 ${
+                                        viewMode === 'TABLE' ? 'bg-[#27272a] text-white font-bold' : 'bg-transparent text-zinc-500 hover:text-zinc-200'
                                     }`}
-                                    title="Chế độ bảng nén High-Density"
+                                    title="Chế độ bảng nén"
                                 >
-                                    <i className="fas fa-table-list text-[10px]"></i>
+                                    <i className="fas fa-table-list text-[11px]"></i>
                                     <span className="hidden sm:inline">Bảng</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('CARDS')}
-                                    className={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border-0 ${
-                                        viewMode === 'CARDS' ? 'bg-[#27272a] text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'
+                                    style={{ height: '32px', minHeight: '32px' }}
+                                    className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border-0 ${
+                                        viewMode === 'CARDS' ? 'bg-[#27272a] text-white font-bold' : 'bg-transparent text-zinc-500 hover:text-zinc-200'
                                     }`}
-                                    title="Chế độ thẻ gom theo kênh"
+                                    title="Chế độ thẻ kênh"
                                 >
-                                    <i className="fas fa-grip text-[10px]"></i>
+                                    <i className="fas fa-grip text-[11px]"></i>
                                     <span className="hidden sm:inline">Thẻ</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Nhóm phải: Nút Chọn + Tạo Đơn + Menu Thao Tác */}
-                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                        <div className="flex items-center gap-1 shrink-0">
                             {(!isCTV || isAdmin || isBossRole) && (
                                 <button
                                     type="button"
@@ -3207,14 +3212,15 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                             setIsSelectMode(true);
                                         }
                                     }}
-                                    className={`h-8.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                                    style={{ height: '32px', minHeight: '32px' }}
+                                    className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${
                                         (isSelectMode || selectedIds.length > 0)
                                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
-                                            : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'
+                                            : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'
                                     }`}
                                     title={isSelectMode ? "Thoát chế độ chọn đơn" : "Bật chế độ chọn nhiều đơn"}
                                 >
-                                    <i className={`fas ${(isSelectMode || selectedIds.length > 0) ? 'fa-check-double' : 'fa-check-square'} text-[11px]`}></i>
+                                    <i className={`fas ${(isSelectMode || selectedIds.length > 0) ? 'fa-check-double' : 'fa-check-square'} text-[10px]`}></i>
                                     <span>{(isSelectMode || selectedIds.length > 0) ? `Xong${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}` : 'Chọn'}</span>
                                 </button>
                             )}
@@ -3223,7 +3229,8 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                 <button
                                     type="button"
                                     onClick={() => setAddingMode(true)}
-                                    className="h-8.5 px-3 bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer border-0"
+                                    style={{ height: '32px', minHeight: '32px' }}
+                                    className="rf-compact-btn px-2.5 bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-[11px] rounded-lg flex items-center gap-1 active:scale-95 transition-all cursor-pointer border-0 whitespace-nowrap"
                                     title="Tạo đơn hàng mới"
                                 >
                                     <i className="fas fa-plus text-[10px]"></i>
@@ -3236,14 +3243,14 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                 <button
                                     type="button"
                                     onClick={() => setIsActionsMenuOpen(prev => !prev)}
-                                    className={`h-8.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                                        isActionsMenuOpen ? 'bg-zinc-800 text-white border-zinc-600' : 'bg-[#18181b] hover:bg-[#27272a] text-zinc-300 border-white/[0.08]'
+                                    style={{ height: '32px', minHeight: '32px' }}
+                                    className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${
+                                        isActionsMenuOpen ? 'bg-zinc-800 text-white border-zinc-600' : 'bg-[#141416] hover:bg-[#222226] text-zinc-300 border-white/[0.08]'
                                     }`}
                                     title="Các thao tác mở rộng"
                                 >
-                                    <i className="fas fa-ellipsis-vertical text-xs"></i>
+                                    <i className="fas fa-ellipsis-vertical text-[11px]"></i>
                                     <span className="hidden sm:inline">Thao Tác</span>
-                                    <i className={`fas fa-chevron-${isActionsMenuOpen ? 'up' : 'down'} text-[9px] text-zinc-500`}></i>
                                 </button>
 
                                 {/* DROPDOWN POPOVER TRÊN DESKTOP (ĐÃ FIX LỆCH VÀ CLIPPING) */}
@@ -3535,15 +3542,16 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                     key={item.id}
                                     type="button"
                                     onClick={() => setFilterStatus(item.id)}
-                                    className={`h-8 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer border ${
+                                    style={{ height: '30px', minHeight: '30px' }}
+                                    className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer border whitespace-nowrap ${
                                         isActive
-                                            ? 'bg-zinc-100 text-zinc-950 font-bold border-white shadow-sm'
-                                            : 'bg-[#121215] hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
+                                            ? 'bg-zinc-100 text-zinc-950 font-bold border-white'
+                                            : 'bg-transparent hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
                                     }`}
                                 >
                                     <span>{item.label}</span>
-                                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono min-w-[18px] text-center ${
-                                        isActive ? 'bg-black/15 text-zinc-950 font-bold' : 'bg-white/10 text-zinc-300'
+                                    <span className={`px-1 rounded text-[10px] font-mono text-center ${
+                                        isActive ? 'bg-black/15 text-zinc-950 font-bold' : 'bg-white/10 text-zinc-400'
                                     }`}>
                                         {item.count}
                                     </span>
@@ -3570,10 +3578,11 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                         <button
                                             type="button"
                                             onClick={() => setIsStatusMoreOpen(prev => !prev)}
-                                            className={`h-8 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                                            style={{ height: '30px', minHeight: '30px' }}
+                                            className={`rf-compact-btn px-2 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer border whitespace-nowrap ${
                                                 isSecondaryActive
-                                                    ? 'bg-zinc-100 text-zinc-950 font-bold border-white shadow-sm'
-                                                    : 'bg-[#141416] hover:bg-[#1f1f23] text-zinc-400 hover:text-zinc-200 border-white/[0.06]'
+                                                    ? 'bg-zinc-100 text-zinc-950 font-bold border-white'
+                                                    : 'bg-transparent hover:bg-white/10 text-zinc-400 hover:text-zinc-200 border-white/10'
                                             }`}
                                             title="Các trạng thái khác"
                                         >
@@ -4250,9 +4259,9 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                         const isCollapsed = collapsedGroups[groupKey] === true;
 
                                         return (
-                                            <div key={`order_group_${groupKey}`} className="space-y-3">
+                                            <div key={`order_group_${groupKey}`} className="space-y-2.5">
                                                 <div
-                                                    className="w-full h-10 px-3.5 my-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#151517] border border-white/[0.08] hover:border-white/[0.12] transition-colors select-none font-semibold"
+                                                    className="w-full py-1.5 px-1 my-1 flex items-center justify-between gap-2 border-b border-white/[0.08] select-none font-semibold"
                                                 >
                                                     <div 
                                                         className="text-xs font-bold text-zinc-200 flex items-center gap-2 truncate cursor-pointer hover:text-white transition-colors" 
@@ -4304,7 +4313,7 @@ function RFBulkPackingTools({ items, selectedIds, setSelectedIds, role, users, o
                                                 </div>
 
                                                 {!isCollapsed && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                                                         {groupOrders.map(({ order: o, originalIdx }) => {
                                                             const oIdStr = String(o.id || '').trim();
                                                             const oCodeStr = String(o.orderCode || '').trim();

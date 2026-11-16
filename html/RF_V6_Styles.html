@@ -91,12 +91,12 @@ nav.rf-mobile-dock {
   pointer-events: none !important;
   position: absolute !important;
  }
- .rf-v6-workspace [data-rf-v6-main]{padding:10px 10px 16px!important;scroll-padding-bottom:16px!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}
- .rf-v6-workspace [data-rf-v6-main] button:not([class*="h-6"]):not([class*="h-7"]):not([class*="w-6"]):not([class*="w-7"]):not(.rf-compact-btn){min-height:40px}
- .rf-v6-workspace [data-rf-v6-main] input:not([type="checkbox"]):not([type="radio"]),.rf-v6-workspace [data-rf-v6-main] select,.rf-v6-workspace [data-rf-v6-main] textarea{font-size:16px!important;min-height:42px}
+ .rf-v6-workspace [data-rf-v6-main]{padding:6px 6px 14px!important;scroll-padding-bottom:14px!important;width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box!important}
+ .rf-v6-workspace [data-rf-v6-main] button:not([class*="h-6"]):not([class*="h-7"]):not([class*="h-8"]):not([class*="w-6"]):not([class*="w-7"]):not(.rf-compact-btn){min-height:38px}
+ .rf-v6-workspace [data-rf-v6-main] input:not([type="checkbox"]):not([type="radio"]):not(.rf-compact-input),.rf-v6-workspace [data-rf-v6-main] select:not(.rf-compact-select),.rf-v6-workspace [data-rf-v6-main] textarea{font-size:16px!important;min-height:40px}
  .rf-v6-workspace [data-rf-v6-main] input[type="checkbox"],.rf-v6-workspace [data-rf-v6-main] input[type="radio"],.rf-order-modal input[type="checkbox"],.rf-order-modal input[type="radio"]{min-height:0!important;min-width:0!important}
- .rf-v6-workspace .rf-v6-page-heading{gap:8px;margin-bottom:14px}
- .rf-v6-workspace .rf-v6-page-heading h1{font-size:24px!important;letter-spacing:-.7px}
+ .rf-v6-workspace .rf-v6-page-heading{gap:4px;margin-bottom:8px}
+ .rf-v6-workspace .rf-v6-page-heading h1{font-size:21px!important;letter-spacing:-.5px}
  .rf-v6-workspace .rf-v6-page-description{display:none}
  .rf-v6-workspace .rf-v6-data-badge{border:0;background:transparent;padding:0;font-size:11px}
  .rf-v6-workspace .rf-v6-data-status small{font-size:11px}
@@ -323,10 +323,10 @@ div[data-rf-sidebar-backdrop="true"] {
     min-height: 44px !important;
   }
 
-  /* MAIN CONTENT: Đệm đáy 44px an toàn tuyệt đối cho thanh gạt Home Bar của iPhone */
+  /* MAIN CONTENT: Full màn hình di động (viền mỏng 6px, đệm đáy gọn gàng) */
   .rf-v6-workspace [data-rf-v6-main] {
-    padding: 14px 14px 44px !important;
-    scroll-padding-bottom: 44px !important;
+    padding: 6px 6px 24px !important;
+    scroll-padding-bottom: 24px !important;
   }
 
   /* ẨN HOÀN TOÀN BOTTOM DOCK */
